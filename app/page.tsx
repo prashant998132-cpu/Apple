@@ -154,7 +154,7 @@ export default function ChatPage() {
                 } catch {}
               }
             }
-            setLoading(false); return
+            setLoad(false); return
           }
         } catch { setToolProgress([]) }
       }
