@@ -53,7 +53,7 @@ async function googleTTS({ text, lang = 'hi', speed = 1, quality = 'fast', voice
     en: { high: 'en-US-Wavenet-D', fast: 'en-US-Standard-B' },
     mixed: { high: 'hi-IN-Wavenet-D', fast: 'hi-IN-Standard-A' },
   }
-  const name = voiceName || voiceMap[lang]?.[quality ?? 'fast'] ?? 'hi-IN-Standard-A'
+  const name = voiceName || (voiceMap[lang]?.[quality ?? 'fast'] ?? 'hi-IN-Standard-A')
   const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${key}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ input: { text }, voice: { languageCode: lang === 'en' ? 'en-US' : 'hi-IN', name }, audioConfig: { audioEncoding: 'MP3', speakingRate: speed } }),
