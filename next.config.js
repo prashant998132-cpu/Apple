@@ -1,7 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Compress all responses
+  compress: true,
+
+  // Image optimization — use external URLs directly (no Vercel resizing = no bandwidth)
   images: {
+    unoptimized: true, // Don't proxy images through Vercel image optimizer (saves bandwidth)
     remotePatterns: [
       { protocol: 'https', hostname: 'image.pollinations.ai' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -15,14 +21,47 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.huggingface.co' },
     ],
   },
+
   async headers() {
-    return [{
-      source: '/sw.js',
-      headers: [
-        { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        { key: 'Service-Worker-Allowed', value: '/' },
-      ],
-    }];
+    return [
+      // Service Worker — no cache
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      // Static JS/CSS — cache 1 year (immutable, Vercel adds hash)
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // API routes — no cache by default
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      // Manifest and icons — cache 24h
+      {
+        source: '/manifest.json',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+      {
+        source: '/icons/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800' }],
+      },
+    ];
+  },
+
+  // Reduce bundle size
+  experimental: {
+    optimizePackageImports: [],
   },
 };
 
