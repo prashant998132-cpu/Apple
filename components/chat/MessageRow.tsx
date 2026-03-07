@@ -25,7 +25,7 @@ export default function MessageRow({ msg }: { msg: any }) {
         : (parsed?.answer || '');
 
       return (
-        <div style={{ padding:'10px 14px', borderTop:'1px solid rgba(255,255,255,.04)' }}>
+        <div style={{ padding:'6px 10px', borderTop:'1px solid rgba(255,255,255,.04)' }}>
           <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
             <div style={{
               width:22, height:22, borderRadius:5, flexShrink:0,

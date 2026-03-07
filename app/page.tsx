@@ -283,7 +283,7 @@ export default function ChatPage() {
               <MessageRow msg={m}/>
               {m.status && <div style={{ fontSize:11, color:'#4a90a4', padding:'4px 14px', fontStyle:'italic' }}>{m.status}</div>}
               {i === msgs.length-1 && m.role === 'assistant' && !loading && (
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6, paddingLeft:12 }}>
+                <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:4, paddingLeft:10 }}>
                   {getFollowUpChips(m.content||'').map(chip => (
                     <button key={chip} onClick={() => send(chip, mode)}
                       style={{ padding:'4px 11px', borderRadius:20, fontSize:11, cursor:'pointer',
