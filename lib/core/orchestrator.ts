@@ -22,6 +22,7 @@ export interface OrchestratorInput {
   chatMode?: 'auto' | 'flash' | 'think' | 'deep'
   forcedProvider?: string
   memoryPrompt?: string
+  userName?: string
 }
 
 export interface OrchestratorOutput {
@@ -42,7 +43,7 @@ export interface OrchestratorOutput {
 function buildUserProfile(input: OrchestratorInput) {
   return {
     userId: input.userId,
-    name: input.userName || 'Mayur',
+    name: input.userName || 'Boss',
     language: 'hindi' as const,
     location: input.location || { city: '', lat: 0, lon: 0 },
     timezone: 'Asia/Kolkata',
