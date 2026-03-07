@@ -231,6 +231,27 @@ export function detectQueryType(msg: string): QueryType {
 // ════════════════════════════════════════════════════════
 // MAIN MEGA CASCADE — all 11 providers, smart order
 // ════════════════════════════════════════════════════════
+
+// ── Pollinations AI (100% FREE, no key needed) ───────────
+export async function askPollinations(messages: any[], systemPrompt: string): Promise<LLMResult> {
+  const start = Date.now()
+  const allMsgs = [{ role: 'system', content: systemPrompt }, ...messages]
+  const res = await fetch('https://text.pollinations.ai/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'openai', messages: allMsgs, max_tokens: 500,
+      seed: Math.floor(Math.random() * 9999)
+    }),
+    signal: AbortSignal.timeout(25000)
+  })
+  if (!res.ok) throw new Error('pollinations_failed')
+  const d = await res.json()
+  const text = d.choices?.[0]?.message?.content || ''
+  if (!text) throw new Error('empty')
+  return { text, provider: 'Pollinations AI (free)', model: 'openai', ms: Date.now() - start }
+}
+
 export async function askLLM(
   messages: any[],
   systemPrompt: string,
@@ -299,10 +320,11 @@ export async function askLLM(
     ],
   }
 
-  const providers = cascades[queryType]
-  for (const fn of providers) {
+  // Add Pollinations as universal last resort (no key needed)
+  const allProviders = [...cascades[queryType], () => askPollinations(messages, systemPrompt)]
+  for (const fn of allProviders) {
     try { return await fn() } catch { /* next */ }
   }
 
-  return { text:'माफ़ करना, सभी AI models unavailable हैं। कुछ देर बाद try करो।', provider:'none', model:'none', ms:0 }
+  return { text:'Kuch gadbad ho gayi. Thodi der mein try karo.', provider:'none', model:'none', ms:0 }
 }
