@@ -53,7 +53,7 @@ export async function askGroq(messages: any[], systemPrompt: string, model = 'll
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method:'POST', headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model, max_tokens: budget?.maxTokens ?? 350, temperature:0.7,
+      model, max_tokens: 8192, temperature:0.7,
       messages: [
         { role:'system', content:systemPrompt },
         ...messages.map((m: any) => ({ role: m.role==='user'?'user':'assistant', content: m.parts?.[0]?.text||m.content||'' }))
@@ -74,7 +74,7 @@ export async function askDeepSeek(messages: any[], systemPrompt: string): Promis
   const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method:'POST', headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'deepseek-chat', max_tokens: budget?.maxTokens ?? 700, temperature:0.7,
+      model:'deepseek-chat', max_tokens: 700, temperature:0.7,
       messages:[{ role:'system', content:systemPrompt }, ...messages.map((m: any) => ({ role:m.role==='user'?'user':'assistant', content:m.parts?.[0]?.text||m.content||'' }))]
     }),
     signal: AbortSignal.timeout(20000)
@@ -92,7 +92,7 @@ export async function askMistral(messages: any[], systemPrompt: string): Promise
   const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method:'POST', headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'mistral-small-latest', max_tokens: budget?.maxTokens ?? 350, temperature:0.7,
+      model:'mistral-small-latest', max_tokens: 350, temperature:0.7,
       messages:[{ role:'system', content:systemPrompt }, ...messages.map((m: any) => ({ role:m.role==='user'?'user':'assistant', content:m.parts?.[0]?.text||m.content||'' }))]
     }),
     signal: AbortSignal.timeout(20000)
@@ -110,7 +110,7 @@ export async function askGrok(messages: any[], systemPrompt: string): Promise<LL
   const res = await fetch('https://api.x.ai/v1/chat/completions', {
     method:'POST', headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'grok-3-fast', max_tokens: budget?.maxTokens ?? 350, temperature:0.7,
+      model:'grok-3-fast', max_tokens: 350, temperature:0.7,
       messages:[{ role:'system', content:systemPrompt }, ...messages.map((m: any) => ({ role:m.role==='user'?'user':'assistant', content:m.parts?.[0]?.text||m.content||'' }))]
     }),
     signal: AbortSignal.timeout(20000)
@@ -140,7 +140,7 @@ export async function askOpenRouter(messages: any[], systemPrompt: string): Prom
         method:'POST',
         headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json', 'HTTP-Referer':'https://jarvis.app' },
         body: JSON.stringify({
-          model, max_tokens: budget?.maxTokens ?? 350,
+          model, max_tokens: 350,
           messages:[{ role:'system', content:systemPrompt }, ...messages.map((m: any) => ({ role:m.role==='user'?'user':'assistant', content:m.parts?.[0]?.text||m.content||'' }))]
         }),
         signal: AbortSignal.timeout(20000)
@@ -162,7 +162,7 @@ export async function askTogether(messages: any[], systemPrompt: string): Promis
   const res = await fetch('https://api.together.xyz/v1/chat/completions', {
     method:'POST', headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'meta-llama/Llama-4-Scout-17B-16E-Instruct', max_tokens: budget?.maxTokens ?? 350, temperature:0.7,
+      model:'meta-llama/Llama-4-Scout-17B-16E-Instruct', max_tokens: 350, temperature:0.7,
       messages:[{ role:'system', content:systemPrompt }, ...messages.map((m: any) => ({ role:m.role==='user'?'user':'assistant', content:m.parts?.[0]?.text||m.content||'' }))]
     }),
     signal: AbortSignal.timeout(25000)
@@ -200,7 +200,7 @@ export async function askAIMLAPI(messages: any[], systemPrompt: string): Promise
   const res = await fetch('https://api.aimlapi.com/v1/chat/completions', {
     method:'POST', headers:{ Authorization:`Bearer ${key}`, 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'gpt-4o-mini', max_tokens: budget?.maxTokens ?? 350,
+      model:'gpt-4o-mini', max_tokens: 350,
       messages:[{ role:'system', content:systemPrompt }, ...messages.map((m: any) => ({ role:m.role==='user'?'user':'assistant', content:m.parts?.[0]?.text||m.content||'' }))]
     }),
     signal: AbortSignal.timeout(20000)
