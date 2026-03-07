@@ -241,18 +241,18 @@ export default function ChatPage() {
           <div style={{ width:26, height:26, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.1),rgba(109,40,217,.1))', border:'1px solid rgba(0,229,255,.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, color:'#00e5ff', fontFamily:"'Space Mono',monospace" }}>J</div>
           <div>
             <div style={{ fontSize:11, fontWeight:700, color:'#e8f4ff', letterSpacing:3, fontFamily:"'Space Mono',monospace" }}>JARVIS</div>
-            <div style={{ fontSize:8, color:'#152030', letterSpacing:1 }}></div>
+            <div style={{ fontSize:8, color:'#546e7a', letterSpacing:1 }}></div>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:7 }}>
           {locLbl && (
-            <button onClick={refreshLoc} style={{ padding:'2px 8px', borderRadius:20, background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.07)', color:'#1e4060', fontSize:9, cursor:'pointer' }}>
+            <button onClick={refreshLoc} style={{ padding:'2px 8px', borderRadius:20, background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.07)', color:'#78909c', fontSize:9, cursor:'pointer' }}>
               {locLbl}
             </button>
           )}
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
           {msgs.length > 0 && (
-            <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#1e3040', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
+            <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
           )}
         </div>
       </header>
@@ -271,7 +271,7 @@ export default function ChatPage() {
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, width:'100%', maxWidth:440 }}>
               {(studyMode ? STUDY_PROMPTS : STARTERS).map(s => (
-                <button key={s.t} onClick={() => send(s.t, mode)} style={{ padding:'9px 10px', borderRadius:9, background: studyMode ? 'rgba(167,139,250,.04)' : 'rgba(255,255,255,.02)', border:`1px solid ${studyMode?'rgba(167,139,250,.1)':'rgba(255,255,255,.05)'}`, color:'#607890', fontSize:11, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'flex-start', gap:6, lineHeight:1.4 }}>
+                <button key={s.t} onClick={() => send(s.t, mode)} style={{ padding:'9px 10px', borderRadius:9, background: studyMode ? 'rgba(167,139,250,.07)' : 'rgba(0,229,255,.04)', border:`1px solid ${studyMode?'rgba(167,139,250,.25)':'rgba(0,229,255,.15)'}`, color:'#90b4c8', fontSize:11, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'flex-start', gap:6, lineHeight:1.4 }}>
                   <span style={{ fontSize:14, flexShrink:0 }}>{s.icon}</span><span>{s.t}</span>
                 </button>
               ))}
@@ -281,13 +281,13 @@ export default function ChatPage() {
           msgs.map((m, i) => (
             <div key={m.id} className="msg-enter">
               <MessageRow msg={m}/>
-              {m.status && <div style={{ fontSize:11, color:'#1e6080', padding:'4px 14px', fontStyle:'italic' }}>{m.status}</div>}
+              {m.status && <div style={{ fontSize:11, color:'#4a90a4', padding:'4px 14px', fontStyle:'italic' }}>{m.status}</div>}
               {i === msgs.length-1 && m.role === 'assistant' && !loading && (
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6, paddingLeft:12 }}>
                   {getFollowUpChips(m.content||'').map(chip => (
                     <button key={chip} onClick={() => send(chip, mode)}
                       style={{ padding:'4px 11px', borderRadius:20, fontSize:11, cursor:'pointer',
-                        background:'rgba(0,229,255,.06)', border:'1px solid rgba(0,229,255,.12)', color:'#3a7090' }}>
+                        background:'rgba(0,229,255,.08)', border:'1px solid rgba(0,229,255,.25)', color:'#00b4d8' }}>
                       {chip}
                     </button>
                   ))}
@@ -302,7 +302,7 @@ export default function ChatPage() {
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ width:22, height:22, borderRadius:5, background:'rgba(120,60,255,.12)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#a78bfa' }}>J</span>
               <span style={{ fontSize:12, fontWeight:600, color:'#a78bfa' }}>JARVIS</span>
-              <span style={{ fontSize:10, color:'#1e3050' }}>
+              <span style={{ fontSize:10, color:'#607d8b' }}>
                 {mode === 'think' ? '🧠 soch raha hun...' : mode === 'deep' ? '🔬 deep analysis...' : 'soch raha hun...'}
               </span>
               <span style={{ display:'flex', gap:3, marginLeft:3 }}>

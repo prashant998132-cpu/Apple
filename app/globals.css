@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Mono:wght@700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#090d18;color:#ddeeff;font-family:'Inter','Noto Sans Devanagari',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,229,255,.12);border-radius:3px}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,229,255,.25);border-radius:3px}
 /* Markdown */
 .h1{font-size:16px;font-weight:700;color:#f0f8ff;margin:14px 0 5px}
 .h2{font-size:15px;font-weight:600;color:#e8f4ff;margin:12px 0 4px}
@@ -41,3 +41,5 @@ input::placeholder,textarea::placeholder{color:#1e3248}
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.5; }
 }
+
+.chat-content{color:#d4e8f5;}
