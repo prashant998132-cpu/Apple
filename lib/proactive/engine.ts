@@ -329,7 +329,7 @@ export async function sendAlert(alert: ProactiveAlert): Promise<boolean> {
           icon:  '/icons/icon-192x192.png',
           badge: '/icons/badge-96x96.png',
           data:  { url: alert.url || '/' },
-          vibrate: [200, 100, 200],  // haptic pattern
+          // vibrate: [200, 100, 200], // removed: not in TS NotificationOptions
         })
         return true
       }
