@@ -599,4 +599,391 @@ export function toGeminiFunctions(tools: ToolDefinition[] = TOOLS_CONFIG) {
   }));
 }
 
+// ══════════════════════════════════════════════════════════
+// NEW TOOLS v10.3 — Category-wise expansion (25 new tools)
+// ══════════════════════════════════════════════════════════
+
+TOOLS_CONFIG.push(
+
+  // ─── 🏏 SPORTS ──────────────────────────────────────────
+  {
+    name: 'get_cricket_scores',
+    description: 'Get live cricket scores, recent results and upcoming matches. Uses ESPN Cricinfo. No key needed.',
+    category: 'sports',
+    requiresKey: false,
+    autoTrigger: ['cricket', 'क्रिकेट', 'score', 'match', 'india vs', 'test match', 'odi', 't20', 'ipl', 'live score', 'विकेट', 'रन'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['live', 'recent', 'upcoming'], description: 'Type of matches to fetch' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_ipl_info',
+    description: 'IPL 2025 info — standings, schedule, team scores. No key needed.',
+    category: 'sports',
+    requiresKey: false,
+    autoTrigger: ['ipl', 'इंडियन प्रीमियर लीग', 'ipl 2025', 'csk', 'mi mumbai', 'rcb', 'kkr', 'dc delhi', 'ipl standings', 'ipl schedule'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['standings', 'schedule', 'stats'], description: 'What IPL info to fetch' }
+      }, required: []
+    }
+  },
+
+  // ─── 📱 SOCIAL & TRENDING ───────────────────────────────
+  {
+    name: 'get_github_trending',
+    description: 'Get trending GitHub repositories. Filter by programming language. Shows stars, description, topics.',
+    category: 'social',
+    requiresKey: false,
+    autoTrigger: ['github trending', 'trending repos', 'popular code', 'open source trending', 'github stars', 'hot repos', 'trending projects'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        language: { type: 'string', description: 'Programming language filter e.g. Python, JavaScript, TypeScript' },
+        period: { type: 'string', enum: ['daily', 'weekly', 'monthly'], description: 'Trending period' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_devto_posts',
+    description: 'Get popular developer articles from dev.to by tag. Shows title, author, reactions, reading time.',
+    category: 'social',
+    requiresKey: false,
+    autoTrigger: ['dev.to', 'developer articles', 'coding articles', 'tech blog', 'devto', 'programming posts'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tag: { type: 'string', description: 'Article tag: javascript, python, ai, webdev, beginners, etc.' },
+        top: { type: 'number', description: 'Number of articles (1-10). Default: 5' }
+      }, required: []
+    }
+  },
+
+  // ─── 🎮 ENTERTAINMENT ───────────────────────────────────
+  {
+    name: 'get_meme',
+    description: 'Get a random meme from Reddit. Returns meme image URL, title and upvotes.',
+    category: 'entertainment',
+    requiresKey: false,
+    autoTrigger: ['meme', 'मीम', 'funny', 'हँसाओ', 'joke image', 'memes bhejo', 'random meme', 'funny image'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        subreddit: { type: 'string', description: 'Reddit subreddit for memes. Default: memes. Try: dankmemes, ProgrammerHumor, memes_of_the_dank' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_anime_info',
+    description: 'Search anime info or get top/trending anime. Returns title, score, episodes, genres, synopsis.',
+    category: 'entertainment',
+    requiresKey: false,
+    autoTrigger: ['anime', 'एनिमे', 'manga', 'naruto', 'dragon ball', 'one piece', 'attack on titan', 'demon slayer', 'jujutsu kaisen', 'top anime', 'trending anime'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Anime title to search' },
+        type: { type: 'string', enum: ['search', 'trending', 'top'], description: 'What to fetch. Default: top' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'search_tv_shows',
+    description: 'Search TV shows and web series info — rating, genre, network, status, synopsis.',
+    category: 'entertainment',
+    requiresKey: false,
+    autoTrigger: ['tv show', 'web series', 'series', 'show info', 'breaking bad', 'stranger things', 'mirzapur', 'scam 1992', 'family man', 'show details'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'TV show name to search' }
+      }, required: ['query']
+    }
+  },
+
+  {
+    name: 'get_cocktail_recipe',
+    description: 'Get cocktail/mocktail recipes with ingredients and instructions. Can search by name or get random.',
+    category: 'entertainment',
+    requiresKey: false,
+    autoTrigger: ['cocktail', 'mocktail', 'drink recipe', 'bartender', 'पीने की recipe', 'cold drink recipe', 'random drink'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Cocktail/drink name' },
+        random: { type: 'boolean', description: 'Get a random drink' }
+      }, required: []
+    }
+  },
+
+  // ─── 🧠 KNOWLEDGE & EDUCATION ───────────────────────────
+  {
+    name: 'get_trivia_question',
+    description: 'Get quiz/trivia questions by category and difficulty. Perfect for NEET prep, GK practice, competitive exams.',
+    category: 'education',
+    requiresKey: false,
+    autoTrigger: ['quiz', 'trivia', 'question', 'test me', 'mcq', 'multiple choice', 'gk question', 'science question', 'biology question', 'chemistry question', 'क्विज', 'सवाल पूछो'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Category: science, biology, chemistry, physics, math, geography, history, sports, computers, general' },
+        difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'], description: 'Question difficulty' },
+        type: { type: 'string', enum: ['multiple', 'boolean'], description: 'MCQ or true/false' },
+        amount: { type: 'number', description: 'Number of questions (1-10). Default: 5' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_advice',
+    description: 'Get wise advice or life tips. Random or by specific ID.',
+    category: 'knowledge',
+    requiresKey: false,
+    autoTrigger: ['advice', 'सलाह', 'life tips', 'tip do', 'कोई सलाह', 'guidance', 'wise words'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'Specific advice ID (optional)' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_random_fact',
+    description: 'Get an interesting random fact. Works in Hindi and English.',
+    category: 'knowledge',
+    requiresKey: false,
+    autoTrigger: ['random fact', 'interesting fact', 'did you know', 'fun fact', 'रोचक तथ्य', 'interesting', 'fact bolo'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        language: { type: 'string', enum: ['hindi', 'english'], description: 'Response language' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_number_fact',
+    description: 'Get interesting trivia about any number — math, history, trivia.',
+    category: 'knowledge',
+    requiresKey: false,
+    autoTrigger: ['number fact', 'number trivia', 'about number', 'संख्या तथ्य', 'math fact'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        number: { type: 'number', description: 'The number to get facts about' },
+        type: { type: 'string', enum: ['trivia', 'math', 'date', 'year'], description: 'Type of fact' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_country_info',
+    description: 'Get detailed info about any country — capital, population, language, currency, timezone, borders.',
+    category: 'knowledge',
+    requiresKey: false,
+    autoTrigger: ['country info', 'देश की जानकारी', 'capital of', 'population of', 'currency of', 'about country', 'which country', 'राष्ट्र'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        country: { type: 'string', description: 'Country name' },
+        field: { type: 'string', description: 'Specific field: capital, population, currency, etc.' }
+      }, required: ['country']
+    }
+  },
+
+  // ─── 🛠️ PRODUCTIVITY & UTILITIES ────────────────────────
+  {
+    name: 'generate_qr_code',
+    description: 'Generate QR code for any text, URL, contact info, UPI ID. Returns QR code image URL.',
+    category: 'utility',
+    requiresKey: false,
+    autoTrigger: ['qr code', 'qr बनाओ', 'qr generate', 'qr for', 'qr बनाना', 'scan code', 'make qr'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text/URL/contact/UPI ID to encode in QR' },
+        size: { type: 'number', description: 'QR size in pixels. Default: 300' }
+      }, required: ['text']
+    }
+  },
+
+  {
+    name: 'shorten_url',
+    description: 'Shorten any long URL using TinyURL. Returns short link.',
+    category: 'utility',
+    requiresKey: false,
+    autoTrigger: ['shorten url', 'short link', 'url छोटा', 'link short karo', 'tinyurl', 'link shorten'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Long URL to shorten' }
+      }, required: ['url']
+    }
+  },
+
+  {
+    name: 'generate_password',
+    description: 'Generate strong random password with custom length, uppercase, numbers, symbols.',
+    category: 'utility',
+    requiresKey: false,
+    autoTrigger: ['password generate', 'strong password', 'पासवर्ड बनाओ', 'random password', 'secure password', 'password chahiye'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        length: { type: 'number', description: 'Password length (8-64). Default: 16' },
+        uppercase: { type: 'boolean', description: 'Include uppercase. Default: true' },
+        numbers: { type: 'boolean', description: 'Include numbers. Default: true' },
+        symbols: { type: 'boolean', description: 'Include symbols like !@#. Default: false' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'convert_units',
+    description: 'Convert units: length, weight, temperature, volume, speed, area (including Indian units like bigha, acre). Returns converted value.',
+    category: 'utility',
+    requiresKey: false,
+    autoTrigger: ['convert', 'कन्वर्ट', 'km to miles', 'celsius to fahrenheit', 'kg to lb', 'unit convert', 'बदलो', 'meter to feet', 'bigha to acre', 'inch to cm'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        value: { type: 'number', description: 'Value to convert' },
+        from: { type: 'string', description: 'Unit to convert from: km, miles, kg, lb, c, f, l, gallon, km/h, mph, sqm, sqft, bigha, acre' },
+        to: { type: 'string', description: 'Unit to convert to' }
+      }, required: ['value', 'from', 'to']
+    }
+  },
+
+  {
+    name: 'calculate_bmi',
+    description: 'Calculate BMI (Body Mass Index) and health category. Supports metric and imperial.',
+    category: 'health',
+    requiresKey: false,
+    autoTrigger: ['bmi', 'body mass', 'weight height', 'मेरा bmi', 'bmi calculate', 'healthy weight', 'overweight check'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        weight: { type: 'number', description: 'Weight in kg (or lbs if imperial)' },
+        height: { type: 'number', description: 'Height in cm (or inches if imperial)' },
+        unit: { type: 'string', enum: ['metric', 'imperial'], description: 'Unit system. Default: metric' }
+      }, required: ['weight', 'height']
+    }
+  },
+
+  {
+    name: 'calculate_age',
+    description: 'Calculate exact age from birthdate. Shows years, months, days and days until next birthday.',
+    category: 'utility',
+    requiresKey: false,
+    autoTrigger: ['my age', 'age calculate', 'birthday', 'जन्मदिन', 'उम्र', 'age from birthdate', 'how old', 'born on', 'जन्म तारीख'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        birthdate: { type: 'string', description: 'Birthdate in YYYY-MM-DD format' }
+      }, required: ['birthdate']
+    }
+  },
+
+  // ─── 🎨 CREATIVITY ──────────────────────────────────────
+  {
+    name: 'get_color_palette',
+    description: 'Generate beautiful color palettes for design — analogic, complementary, monochrome modes.',
+    category: 'creativity',
+    requiresKey: false,
+    autoTrigger: ['color palette', 'रंग', 'color scheme', 'design colors', 'hex colors', 'palette generate', 'color combination'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        hex: { type: 'string', description: 'Base hex color (without #). Random if not provided.' },
+        mode: { type: 'string', enum: ['random', 'analogic', 'complement', 'monochrome'], description: 'Palette type. Default: analogic' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_color_meaning',
+    description: 'Get psychology and meaning of colors — useful for design, marketing, branding decisions.',
+    category: 'creativity',
+    requiresKey: false,
+    autoTrigger: ['color meaning', 'what does red mean', 'blue color psychology', 'रंग का मतलब', 'color psychology', 'brand color'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        color: { type: 'string', description: 'Color name: red, blue, green, yellow, orange, purple, white, black, pink, saffron' }
+      }, required: ['color']
+    }
+  },
+
+  {
+    name: 'generate_text_art',
+    description: 'Generate ASCII text art from any text. Good for headers, banners, fun messages.',
+    category: 'creativity',
+    requiresKey: false,
+    autoTrigger: ['ascii art', 'text art', 'ascii text', 'banner art', 'cool text', 'text banner'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text to convert (max 10 chars)' },
+        style: { type: 'string', enum: ['banner', 'block', 'simple'], description: 'Art style' }
+      }, required: ['text']
+    }
+  },
+
+  // ─── 🇮🇳 INDIA SPECIFIC ──────────────────────────────────
+  {
+    name: 'get_india_fuel_price',
+    description: 'Get petrol and diesel prices for Indian cities. Includes Rewa, Bhopal, Delhi, Mumbai, Bangalore.',
+    category: 'india',
+    requiresKey: false,
+    autoTrigger: ['petrol price', 'diesel price', 'fuel rate', 'पेट्रोल', 'डीजल', 'petrol ka daam', 'fuel price today', 'petrol rate rewa'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        city: { type: 'string', description: 'Indian city name. Default: Delhi' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_india_govt_schemes',
+    description: 'Get information about Indian government schemes — PM Kisan, Ayushman Bharat, Ladli Behna, housing, education.',
+    category: 'india',
+    requiresKey: false,
+    autoTrigger: ['government scheme', 'सरकारी योजना', 'pm kisan', 'ayushman', 'ladli behna', 'yojana', 'sambal', 'scholarship', 'pm awas', 'सरकारी मदद'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Scheme category: farmer, education, health, housing, mp (MP-specific)' },
+        state: { type: 'string', description: 'State filter (optional)' },
+        query: { type: 'string', description: 'Search keyword' }
+      }, required: []
+    }
+  },
+
+  {
+    name: 'get_stock_market',
+    description: 'Get Nifty 50 and Indian stock market data — current price, change, day high/low.',
+    category: 'finance',
+    requiresKey: false,
+    autoTrigger: ['nifty', 'sensex', 'stock market', 'share market', 'शेयर बाजार', 'nse', 'bse', 'market today', 'stock price'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        symbol: { type: 'string', description: 'Stock symbol e.g. RELIANCE.NS, TCS.NS (optional)' },
+        index: { type: 'string', enum: ['nifty', 'sensex', 'all'], description: 'Index to check. Default: all' }
+      }, required: []
+    }
+  }
+
+); // end TOOLS_CONFIG.push
+
 export default TOOLS_CONFIG;

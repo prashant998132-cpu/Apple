@@ -51,7 +51,8 @@ export interface ToolDefinition {
 export type ToolCategory =
   | 'weather' | 'time' | 'knowledge' | 'news' | 'entertainment'
   | 'finance' | 'location' | 'image-gen' | 'video' | 'productivity'
-  | 'india' | 'fun' | 'science';
+  | 'india' | 'fun' | 'science'
+  | 'sports' | 'social' | 'education' | 'utility' | 'health' | 'creativity';
 
 export interface ToolResult {
   success: boolean;
