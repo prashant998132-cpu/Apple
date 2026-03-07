@@ -171,11 +171,11 @@ export async function getFullLocation(): Promise<LocationPoint | null> {
     }
 
     // Periodically try to auto-detect home (every 20 points)
-    const history = await idbGetAll('history')
+    const history = await loadLocationHistory()
     if (history.length % 20 === 0 && history.length > 0) {
       detectHome().then(async (home) => {
         if (home) {
-          const existing = await idbGet('places', 'home')
+          const existing = (await loadPlaces()).find((p:any) => p.id === 'home')
           if (!existing) await savePlace(home) // only set if not manually set
         }
       }).catch(() => {})
