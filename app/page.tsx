@@ -410,8 +410,8 @@ export default function ChatPage() {
         <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(5,10,20,.97)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24 }}>
           <div style={{ maxWidth:340, width:'100%', textAlign:'center' }}>
             <div style={{ fontSize:54, marginBottom:10 }}>ð¤</div>
-            <div style={{ fontSize:24, fontWeight:800, color:'#e8f4ff', letterSpacing:4, marginBottom:6 }}>JARVIS</div>
-            <div style={{ fontSize:13, color:'#4a7090', marginBottom:28, lineHeight:1.7 }}>
+            <div style={{ fontSize:24, fontWeight:800, color:theme.text, letterSpacing:4, marginBottom:6 }}>JARVIS</div>
+            <div style={{ fontSize:13, color:theme.subtext, marginBottom:28, lineHeight:1.7 }}>
               Tumhara personal AI assistant.<br/>
               Pehle bata do â tumhara naam kya hai?
             </div>
@@ -445,24 +445,24 @@ export default function ChatPage() {
       )}
 
       {/* Header */}
-      <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 9px 58px', borderBottom:'1px solid rgba(255,255,255,.05)', flexShrink:0, background:'rgba(9,13,24,.96)', backdropFilter:'blur(10px)', zIndex:10 }}>
+      <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 9px 58px', borderBottom:`1px solid ${theme.border}`, flexShrink:0, background:theme.headerBg, backdropFilter:'blur(10px)', zIndex:10 }}>
         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
           <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.18),rgba(109,40,217,.12))', border:'1px solid rgba(0,229,255,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#00e5ff' }}>J</div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#e8f4ff', letterSpacing:3 }}>JARVIS</div>
-          {userName && <div style={{ fontSize:10, color:'#2a5070' }}>Â· {userName}</div>}
-          {locLbl && <div style={{ fontSize:9, color:'#1a3050', marginLeft:4 }}>{locLbl}</div>}
+          <div style={{ fontSize:11, fontWeight:700, color:theme.text, letterSpacing:3 }}>JARVIS</div>
+          {userName && <div style={{ fontSize:10, color:theme.subtext }}>Â· {userName}</div>}
+          {locLbl && <div style={{ fontSize:9, color:theme.muted, marginLeft:4 }}>{locLbl}</div>}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
           {/* Search button */}
           <button onClick={() => { setShowSearch(p => !p); setSearchQuery(''); setSearchResults([]); }}
-            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:'#4a7090' }}>
+            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:`1px solid ${theme.border}`, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:theme.subtext }}>
             ð
           </button>
 
           {/* Tools link */}
           <button onClick={() => router.push('/tools')}
-            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:'#4a7090' }}>
+            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:`1px solid ${theme.border}`, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:theme.subtext }}>
             ð§
           </button>
 
