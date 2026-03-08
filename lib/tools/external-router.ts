@@ -46,6 +46,44 @@ export function detectIntent(msg: string): string[] {
   if (m.match(/chuck norris|norris|joke about chuck/)) intents.push('chuck')
   if (m.match(/holiday|chutti|national day|festival date/)) intents.push('holiday')
   if (m.match(/sports|cricket|ipl|score|match|icc|fifa|football/)) intents.push('sports')
+  if (m.match(/currency|exchange rate|dollar|euro|pound|yen|aed|rupee to|convert.*currency/)) intents.push('currency')
+  if (m.match(/air quality|aqi|pollution|pm2|smog/)) intents.push('airquality')
+  if (m.match(/qr code|qr banana|generate qr|qr banao/)) intents.push('qr')
+  if (m.match(/cocktail|mocktail|drink recipe|bartender/)) intents.push('cocktail')
+  if (m.match(/pokemon|pikachu|charizard|bulbasaur|pokedex/)) intents.push('pokemon')
+  if (m.match(/space news|rocket launch|spacex|isro|spacecraft/)) intents.push('spacenews')
+  if (m.match(/age predict|naam se age|agify|naam ki umar/)) intents.push('agify')
+  if (m.match(/color|colour|hex code|rgb|hsl|palette/)) intents.push('color')
+  if (m.match(/random fact|useless fact|interesting fact|did you know/)) intents.push('fact')
+  if (m.match(/meme|funny image|meme dikhao/)) intents.push('meme')
+  if (m.match(/forecast|kal ka mausam|3 day|weekly weather|agle hafte/)) intents.push('forecast')
+  if (m.match(/public holiday|national holiday|chutti kab|next holiday/)) intents.push('holiday')
+  if (m.match(/youtube trending|viral video|trending india/)) intents.push('youtube')
+  if (m.match(/short url|url short|link short|tinyurl/)) intents.push('shorturl')
+  if (m.match(/math fact|mathematical|number math/)) intents.push('mathfact')
+  if (m.match(/aaj ke din|on this day|date fact|historical event today/)) intents.push('datefact')
+  if (m.match(/gutenberg|free book|classic novel|public domain book/)) intents.push('gutenberg')
+  if (m.match(/nutrition|calories|ingredients|food info|protein.*carb|khane mein kitna/)) intents.push('food')
+  if (m.match(/mars weather|mangal|red planet weather/)) intents.push('mars')
+  if (m.match(/stock|share price|nse|bse|sensex|nifty|reliance|tata|infosys/)) intents.push('stock')
+  if (m.match(/cricket|ipl|match score|wicket|batting|bowling|test match/)) intents.push('cricket')
+  if (m.match(/github trending|trending repo|popular github/)) intents.push('ghtrending')
+  if (m.match(/generate image|create image|draw|photo banana|ai image|picture create/)) intents.push('aiimage')
+  if (m.match(/word of day|aaj ka shabd|vocabulary|new word/)) intents.push('wordofday')
+  if (m.match(/science news|research news|discovery|scientific/)) intents.push('sciencenews')
+  if (m.match(/network info|internet speed|who am i|mera network/)) intents.push('ipinfo')
+  if (m.match(/password check|password strength|strong password|password test/)) intents.push('password')
+  if (m.match(/sha256|hash generate|encrypt text|hash karo/)) intents.push('hash')
+  if (m.match(/base64|encode decode|base 64/)) intents.push('base64')
+  if (m.match(/uuid|unique id|random id|generate id/)) intents.push('uuid')
+  if (m.match(/world clock|time zone|timezone|different country time/)) intents.push('timezone')
+  if (m.match(/age calculate|kitni umar|age kya hai|dob|date of birth.*age/)) intents.push('agecalc')
+  if (m.match(/bmi|body mass|weight height check/)) intents.push('bmi')
+  if (m.match(/emi|loan emi|home loan|car loan|equated monthly/)) intents.push('emi')
+  if (m.match(/sip|mutual fund|systematic investment|sip calculator/)) intents.push('sip')
+  if (m.match(/anime|manga|jikan|naruto|one piece|dragon ball/)) intents.push('anime')
+  if (m.match(/motivat|inspire|himmat|josh|positive|kuch sunao achha/)) intents.push('motivation')
+  if (m.match(/ip location|ip address lookup|trace ip|kahan se hai/)) intents.push('geoip')
   return [...new Set(intents)]
 }
 
@@ -378,6 +416,45 @@ export async function routeTools(message: string): Promise<ToolResult[]> {
     reddit:     () => getHackerNews(), // fallback
     holiday:    () => getCountry(message),
     sports:     () => getNews('sports cricket ipl score'),
+    currency:   () => getCurrency(message),
+    airquality: () => getAirQuality(message),
+    qr:         () => getQRCode(message),
+    cocktail:   () => getCocktail(message),
+    pokemon:    () => getPokemon(message),
+    spacenews:  () => getSpaceNews(),
+    agify:      () => getAgify(message),
+    color:      () => getColorInfo(message),
+    fact:       () => getRandomFact(),
+    meme:       () => getMeme(),
+    forecast:   () => getForecast(message),
+    holiday:    () => getPublicHoliday(),
+    youtube:    () => getYouTubeTrending(),
+    shorturl:   () => getShortURL(message),
+    mathfact:   () => getMathFact(message),
+    datefact:   () => getDateFact(),
+    gutenberg:  () => getGutenbergBook(message),
+    food:       () => getOpenFoodFacts(message),
+    mars:       () => getMarsWeather(),
+    jokehindi:  () => getJokeHindi(),
+    stock:      () => getStockQuote(message),
+    cricket:    () => getCricketScore(),
+    ghtrending: () => getGitHubTrending(),
+    aiimage:    () => getAIImageURL(message),
+    wordofday:  () => getWordOfDay(),
+    sciencenews:() => getScienceNews(),
+    ipinfo:     () => getIPv6Info(),
+    password:   () => getPasswordStrength(message),
+    hash:       () => getHashGenerator(message),
+    base64:     () => getBase64(message),
+    uuid:       () => getUUID(),
+    timezone:   () => getTimezoneConverter(message),
+    agecalc:    () => getAgeCalculator(message),
+    bmi:        () => getBMICalculator(message),
+    emi:        () => getLoanEMI(message),
+    sip:        () => getSIPCalculator(message),
+    anime:      () => getAnimeInfo(message),
+    motivation: () => getMotivationalQuote(),
+    geoip:      () => getIPGeolocation(message),
   }
 
   const toRun = intents.slice(0, 2).filter(i => toolMap[i])
@@ -385,4 +462,421 @@ export async function routeTools(message: string): Promise<ToolResult[]> {
   return settled
     .filter(r => r.status === 'fulfilled' && r.value.success)
     .map(r => (r as PromiseFulfilledResult<ToolResult>).value)
+}
+
+// ══════════════════════════════════════════════
+// NEW SERVICES — v10.5 — All FREE, no key needed
+// ══════════════════════════════════════════════
+
+async function getCurrency(q: string): Promise<ToolResult> {
+  try {
+    // exchangerate-api open endpoint — free, no key
+    const from = q.match(/\b(usd|inr|eur|gbp|jpy|cad|aud|cny|pkr|aed|sgd)\b/gi)?.[0]?.toUpperCase() || 'USD'
+    const r = await fetch(`https://open.er-api.com/v6/latest/${from}`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const rates = ['INR','USD','EUR','GBP','JPY','AED','SGD'].map((c:string) => `${c}: ${d.rates?.[c]?.toFixed(2)}`).join(' | ')
+    return { tool:'currency', success:true, data:`💱 Exchange Rates (base: ${from}):\n${rates}\nUpdated: ${d.time_last_update_utc?.slice(0,16)}` }
+  } catch { return { tool:'currency', success:false, data:'Currency rates unavailable' } }
+}
+
+async function getAirQuality(q: string): Promise<ToolResult> {
+  try {
+    const city = q.match(/(?:air|quality|aqi|pollution)\s+(?:in|of|at)?\s*([a-zA-Z\s]+?)(?:\?|$)/i)?.[1]?.trim() || 'delhi'
+    const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=28.6&longitude=77.2&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const aqi = d.current?.us_aqi
+    const level = aqi < 50 ? 'Good 🟢' : aqi < 100 ? 'Moderate 🟡' : aqi < 150 ? 'Unhealthy for Sensitive 🟠' : 'Unhealthy 🔴'
+    return { tool:'airquality', success:true, data:`🌫️ Air Quality:\nAQI: ${aqi} — ${level}\nPM2.5: ${d.current?.pm2_5} μg/m³ | PM10: ${d.current?.pm10} μg/m³\nNO₂: ${d.current?.nitrogen_dioxide} μg/m³` }
+  } catch { return { tool:'airquality', success:false, data:'Air quality data unavailable' } }
+}
+
+async function getQRCode(q: string): Promise<ToolResult> {
+  try {
+    const text = q.replace(/qr|code|banana|generate|banao|for|ka/gi,'').trim()
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(text)}`
+    return { tool:'qr', success:true, data:`📱 QR Code generated!\nText: "${text}"\nImage URL: ${url}` }
+  } catch { return { tool:'qr', success:false, data:'QR generation failed' } }
+}
+
+async function getCocktail(q: string): Promise<ToolResult> {
+  try {
+    const drink = q.replace(/cocktail|drink|recipe|mocktail|banana|kaise/gi,'').trim()
+    const r = await fetch(`https://www.thecocktaildb.com/api/json/v1/1/search.php?s=${encodeURIComponent(drink)}`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const c = d.drinks?.[0]
+    if (!c) return { tool:'cocktail', success:false, data:'Drink not found' }
+    return { tool:'cocktail', success:true, data:`🍹 ${c.strDrink} (${c.strCategory}):\nGlass: ${c.strGlass}\nAlcoholic: ${c.strAlcoholic}\nInstructions: ${c.strInstructions?.slice(0,300)}...` }
+  } catch { return { tool:'cocktail', success:false, data:'Cocktail data unavailable' } }
+}
+
+async function getPokemon(q: string): Promise<ToolResult> {
+  try {
+    const name = q.replace(/pokemon|stats|kaun|hai|about/gi,'').trim().toLowerCase().split(' ')[0]
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(5000) })
+    if (!r.ok) throw new Error('Not found')
+    const d = await r.json()
+    const types = d.types?.map((t:any) => t.type?.name).join(', ')
+    const stats = d.stats?.map((s:any) => `${s.stat?.name}: ${s.base_stat}`).join(' | ')
+    return { tool:'pokemon', success:true, data:`⚡ ${d.name?.toUpperCase()} (#${d.id})\nType: ${types}\nHeight: ${d.height/10}m | Weight: ${d.weight/10}kg\nStats: ${stats}` }
+  } catch { return { tool:'pokemon', success:false, data:'Pokemon not found' } }
+}
+
+async function getSpaceNews(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://api.spaceflightnewsapi.net/v4/articles/?limit=4', { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const news = d.results?.slice(0,4).map((a:any) => `• ${a.title}`).join('\n')
+    return { tool:'spacenews', success:true, data:`🚀 Space News:\n${news}` }
+  } catch { return { tool:'spacenews', success:false, data:'Space news unavailable' } }
+}
+
+async function getAgify(q: string): Promise<ToolResult> {
+  try {
+    const name = q.replace(/age|umar|kitni|naam|name|of|ka/gi,'').trim().split(' ')[0]
+    const r = await fetch(`https://api.agify.io/?name=${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    return { tool:'agify', success:true, data:`🎂 "${d.name}" naam ke logon ki average age: ${d.age} saal\n(${d.count?.toLocaleString()} log ke data pe based)` }
+  } catch { return { tool:'agify', success:false, data:'Age prediction unavailable' } }
+}
+
+async function getColorInfo(q: string): Promise<ToolResult> {
+  try {
+    const hex = q.match(/#?([0-9a-fA-F]{6})/)?.[1] || 'ff6b35'
+    const r = await fetch(`https://www.thecolorapi.com/id?hex=${hex}&format=json`, { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    return { tool:'color', success:true, data:`🎨 Color #${hex}:\nName: ${d.name?.value}\nRGB: ${d.rgb?.value}\nHSL: ${d.hsl?.value}` }
+  } catch { return { tool:'color', success:false, data:'Color info unavailable' } }
+}
+
+async function getRandomFact(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random', { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    return { tool:'fact', success:true, data:`🤯 Random Fact:\n${d.text}` }
+  } catch { return { tool:'fact', success:false, data:'Fact unavailable' } }
+}
+
+async function getMeme(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://meme-api.com/gimme', { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    return { tool:'meme', success:true, data:`😂 Meme: ${d.title}\nSubreddit: r/${d.subreddit}\nImage: ${d.url}` }
+  } catch { return { tool:'meme', success:false, data:'Meme unavailable' } }
+}
+
+async function getForecast(q: string): Promise<ToolResult> {
+  try {
+    const city = q.match(/(?:forecast|kal|parson|agle|next)\s+(?:in|at|of)?\s*([a-zA-Z\s]+?)(?:\?|$)/i)?.[1]?.trim() || 'Rewa'
+    const r = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const days = d.weather?.slice(0,3).map((w:any,i:number) => {
+      const label = i===0?'Aaj':i===1?'Kal':'Parson'
+      return `${label}: ${w.mintempC}°-${w.maxtempC}°C, ${w.hourly?.[4]?.weatherDesc?.[0]?.value}`
+    }).join('\n')
+    return { tool:'forecast', success:true, data:`📅 3-Day Forecast (${city}):\n${days}` }
+  } catch { return { tool:'forecast', success:false, data:'Forecast unavailable' } }
+}
+
+async function getPublicHoliday(): Promise<ToolResult> {
+  try {
+    const year = new Date().getFullYear()
+    const r = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/IN`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const upcoming = d.filter((h:any) => new Date(h.date) >= new Date()).slice(0,5)
+    const list = upcoming.map((h:any) => `• ${h.date} — ${h.localName || h.name}`).join('\n')
+    return { tool:'holiday', success:true, data:`🎉 Upcoming Indian Holidays:\n${list}` }
+  } catch { return { tool:'holiday', success:false, data:'Holiday data unavailable' } }
+}
+
+async function getYouTubeTrending(): Promise<ToolResult> {
+  try {
+    // YouTube RSS feed — no key needed
+    const r = await fetch('https://www.youtube.com/feeds/videos.xml?chart=trending&hl=en&regionCode=IN', { signal: AbortSignal.timeout(5000) })
+    const text = await r.text()
+    const titles = [...text.matchAll(/<title>(.+?)<\/title>/g)].slice(1,5).map(m => `• ${m[1]}`).join('\n')
+    return { tool:'youtube', success:true, data:`▶️ YouTube Trending India:\n${titles}` }
+  } catch { return { tool:'youtube', success:false, data:'YouTube trending unavailable' } }
+}
+
+async function getShortURL(q: string): Promise<ToolResult> {
+  try {
+    const url = q.match(/https?:\/\/[^\s]+/)?.[0]
+    if (!url) return { tool:'shorturl', success:false, data:'URL nahi mili' }
+    const r = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(5000) })
+    const short = await r.text()
+    return { tool:'shorturl', success:true, data:`🔗 Short URL:\n${short}` }
+  } catch { return { tool:'shorturl', success:false, data:'URL shortening failed' } }
+}
+
+async function getMathFact(q: string): Promise<ToolResult> {
+  try {
+    const num = q.match(/\d+/)?.[0] || Math.floor(Math.random()*100).toString()
+    const r = await fetch(`http://numbersapi.com/${num}/math`, { signal: AbortSignal.timeout(4000) })
+    const text = await r.text()
+    return { tool:'mathfact', success:true, data:`🧮 Math Fact:\n${text}` }
+  } catch { return { tool:'mathfact', success:false, data:'Math fact unavailable' } }
+}
+
+async function getDateFact(q: string): Promise<ToolResult> {
+  try {
+    const today = new Date()
+    const r = await fetch(`http://numbersapi.com/${today.getMonth()+1}/${today.getDate()}/date`, { signal: AbortSignal.timeout(4000) })
+    const text = await r.text()
+    return { tool:'datefact', success:true, data:`📅 Aaj ke din ki baat:\n${text}` }
+  } catch { return { tool:'datefact', success:false, data:'Date fact unavailable' } }
+}
+
+async function getGutenbergBook(q: string): Promise<ToolResult> {
+  try {
+    const query = q.replace(/gutenberg|classic|free book|download/gi,'').trim()
+    const r = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(query)}&mime_type=text`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const books = d.results?.slice(0,3).map((b:any) => `• "${b.title}" — ${b.authors?.[0]?.name || 'Unknown'}\n  📖 ${b.formats?.['text/html'] || b.formats?.['text/plain; charset=utf-8'] || 'Available on Gutenberg'}`).join('\n')
+    return { tool:'gutenberg', success:true, data:`📚 Free Classic Books:\n${books}` }
+  } catch { return { tool:'gutenberg', success:false, data:'Gutenberg unavailable' } }
+}
+
+async function getOpenFoodFacts(q: string): Promise<ToolResult> {
+  try {
+    const product = q.replace(/nutrition|food info|calories|ingredients|khane mein|product/gi,'').trim()
+    const r = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(product)}&json=1&page_size=1`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const p = d.products?.[0]
+    if (!p) return { tool:'food', success:false, data:'Product not found' }
+    const n = p.nutriments
+    return { tool:'food', success:true, data:`🍎 ${p.product_name || product}:\nCalories: ${n?.['energy-kcal_100g'] || '?'} kcal/100g\nProtein: ${n?.proteins_100g || '?'}g | Carbs: ${n?.carbohydrates_100g || '?'}g | Fat: ${n?.fat_100g || '?'}g\nBrand: ${p.brands || '?'}` }
+  } catch { return { tool:'food', success:false, data:'Food info unavailable' } }
+}
+
+async function getMarsWeather(): Promise<ToolResult> {
+  try {
+    const key = process.env.NASA_API_KEY || 'DEMO_KEY'
+    const r = await fetch(`https://api.nasa.gov/insight_weather/?api_key=${key}&feedtype=json&ver=1.0`, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const sol = d.sol_keys?.[0]
+    if (!sol) throw new Error('No data')
+    const w = d[sol]
+    return { tool:'mars', success:true, data:`🔴 Mars Weather (Sol ${sol}):\nTemp: Min ${w.AT?.mn?.toFixed(1)}°C, Max ${w.AT?.mx?.toFixed(1)}°C\nWind: ${w.HWS?.av?.toFixed(1)} m/s\nSeason: ${w.Season}` }
+  } catch { return { tool:'mars', success:false, data:'Mars weather unavailable' } }
+}
+
+async function getJokeHindi(): Promise<ToolResult> {
+  try {
+    // Fallback: JokeAPI in English if Hindi not available
+    const r = await fetch('https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,racist,sexist&type=twopart', { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    return { tool:'jokehindi', success:true, data:`😂 Joke:\n${d.setup}\n\n🥁 ${d.delivery}` }
+  } catch { return { tool:'jokehindi', success:false, data:'Joke unavailable' } }
+}
+
+// ══════════════════════════════════════════════
+// BATCH 3 — v10.6 — 20 more services
+// ══════════════════════════════════════════════
+
+async function getStockQuote(q: string): Promise<ToolResult> {
+  try {
+    const sym = q.match(/\b([A-Z]{1,5})\b/)?.[1] || q.replace(/stock|share|price|ka|kya|hai/gi,'').trim().toUpperCase().split(' ')[0] || 'RELIANCE'
+    // Yahoo Finance unofficial — no key needed
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}.NS?interval=1d&range=1d`, { signal: AbortSignal.timeout(6000) })
+    const d = await r.json()
+    const meta = d.chart?.result?.[0]?.meta
+    if (!meta) throw new Error('Not found')
+    return { tool:'stock', success:true, data:`📈 ${meta.symbol} (${meta.shortName || sym})\nPrice: ₹${meta.regularMarketPrice?.toFixed(2)}\nChange: ${(meta.regularMarketPrice - meta.previousClose).toFixed(2)} (${((meta.regularMarketPrice - meta.previousClose)/meta.previousClose*100).toFixed(2)}%)\nHigh: ₹${meta.regularMarketDayHigh?.toFixed(2)} | Low: ₹${meta.regularMarketDayLow?.toFixed(2)}` }
+  } catch { return { tool:'stock', success:false, data:'Stock data unavailable — NSE/BSE ke liye .NS suffix use hota hai' } }
+}
+
+async function getCricketScore(): Promise<ToolResult> {
+  try {
+    // cricbuzz unofficial RSS
+    const r = await fetch('https://rss.espncricinfo.com/rss/content/story/series.xml', { signal: AbortSignal.timeout(5000) })
+    const text = await r.text()
+    const items = [...text.matchAll(/<title><!\[CDATA\[(.+?)\]\]><\/title>/g)].slice(0,4).map(m => `• ${m[1]}`).join('\n')
+    return { tool:'cricket', success:true, data:`🏏 Cricket Latest:\n${items || 'No live matches'}` }
+  } catch { return { tool:'cricket', success:false, data:'Cricket scores unavailable' } }
+}
+
+async function getGitHubTrending(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://gh-trending-api.deno.dev/repositories?language=&since=daily&spoken_language=', { signal: AbortSignal.timeout(6000) })
+    const d = await r.json()
+    const repos = d.slice(0,5).map((r:any) => `• ${r.author}/${r.name} ⭐${r.stars} — ${r.description?.slice(0,60)}`).join('\n')
+    return { tool:'ghtrending', success:true, data:`🔥 GitHub Trending Today:\n${repos}` }
+  } catch { return { tool:'ghtrending', success:false, data:'GitHub trending unavailable' } }
+}
+
+async function getAIImageURL(q: string): Promise<ToolResult> {
+  try {
+    const prompt = q.replace(/image|photo|picture|generate|create|banao|dikhao|draw/gi,'').trim()
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`
+    return { tool:'image', success:true, data:`🎨 Image generated!\nPrompt: "${prompt}"\nImage URL: ${url}` }
+  } catch { return { tool:'image', success:false, data:'Image generation failed' } }
+}
+
+async function getWordOfDay(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://wordsapiv1.p.rapidapi.com/words/?random=true&hasDetails=definitions', { signal: AbortSignal.timeout(4000) })
+    // Fallback: random word from wordnik-style
+    const words = ['ephemeral','serendipity','mellifluous','petrichor','sonder','hiraeth','vellichor','chrysalism','kenopsia']
+    const word = words[Math.floor(Math.random()*words.length)]
+    const dictR = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`, { signal: AbortSignal.timeout(4000) })
+    const d = await dictR.json()
+    const def = d[0]?.meanings?.[0]?.definitions?.[0]?.definition
+    return { tool:'wordofday', success:true, data:`📝 Word of the Day: "${word}"\n\nMeaning: ${def || 'A beautiful word worth knowing'}` }
+  } catch { return { tool:'wordofday', success:false, data:'Word unavailable' } }
+}
+
+async function getScienceNews(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://api.spaceflightnewsapi.net/v4/articles/?limit=5&news_site=NASA', { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    const list = d.results?.slice(0,4).map((a:any) => `• ${a.title}`).join('\n')
+    return { tool:'sciencenews', success:true, data:`🔬 Science & NASA News:\n${list}` }
+  } catch { return { tool:'sciencenews', success:false, data:'Science news unavailable' } }
+}
+
+async function getIPv6Info(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://ip-api.com/json/?fields=status,message,country,regionName,city,isp,org,query', { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    return { tool:'ipinfo', success:true, data:`🌐 Network Info:\nIP: ${d.query}\nCity: ${d.city}, ${d.regionName}, ${d.country}\nISP: ${d.isp}\nOrg: ${d.org}` }
+  } catch { return { tool:'ipinfo', success:false, data:'Network info unavailable' } }
+}
+
+async function getPasswordStrength(q: string): Promise<ToolResult> {
+  try {
+    const pass = q.replace(/password|check|strength|strong|weak|test|kitna/gi,'').trim()
+    if (!pass || pass.length < 2) return { tool:'password', success:false, data:'Password text nahi mila' }
+    const score = [pass.length >= 12, /[A-Z]/.test(pass), /[a-z]/.test(pass), /[0-9]/.test(pass), /[^A-Za-z0-9]/.test(pass)].filter(Boolean).length
+    const label = score <= 2 ? '🔴 Weak' : score === 3 ? '🟡 Fair' : score === 4 ? '🟢 Strong' : '💎 Very Strong'
+    const tips = []
+    if (pass.length < 12) tips.push('12+ characters use karo')
+    if (!/[A-Z]/.test(pass)) tips.push('Uppercase letter add karo')
+    if (!/[0-9]/.test(pass)) tips.push('Number add karo')
+    if (!/[^A-Za-z0-9]/.test(pass)) tips.push('Special char (!@#) add karo')
+    return { tool:'password', success:true, data:`🔒 Password: "${pass.slice(0,3)}***"\nStrength: ${label} (${score}/5)\n${tips.length ? 'Tips: ' + tips.join(', ') : '✅ Bahut achha password hai!'}` }
+  } catch { return { tool:'password', success:false, data:'Strength check failed' } }
+}
+
+async function getHashGenerator(q: string): Promise<ToolResult> {
+  try {
+    const text = q.replace(/hash|generate|md5|sha|sha256|encode|of|ka/gi,'').trim()
+    // Use crypto.subtle (available in edge runtime)
+    const encoder = new TextEncoder()
+    const data = encoder.encode(text)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hash = hashArray.map(b => b.toString(16).padStart(2,'0')).join('')
+    return { tool:'hash', success:true, data:`🔐 SHA-256 Hash:\nInput: "${text}"\nHash: ${hash}` }
+  } catch { return { tool:'hash', success:false, data:'Hash generation failed' } }
+}
+
+async function getBase64(q: string): Promise<ToolResult> {
+  try {
+    const isDecoding = /decode|convert from|se wapas|decrypt/i.test(q)
+    const text = q.replace(/base64|encode|decode|convert|ka|karo|karna/gi,'').trim()
+    const result = isDecoding ? atob(text) : btoa(unescape(encodeURIComponent(text)))
+    return { tool:'base64', success:true, data:`🔤 Base64 ${isDecoding?'Decoded':'Encoded'}:\nInput: "${text.slice(0,50)}"\nResult: ${result}` }
+  } catch { return { tool:'base64', success:false, data:'Base64 convert failed' } }
+}
+
+async function getUUID(): Promise<ToolResult> {
+  try {
+    const uuid = crypto.randomUUID()
+    return { tool:'uuid', success:true, data:`🆔 Random UUID:\n${uuid}\n\n(Copy karo — ek baar hi show hoga)` }
+  } catch { return { tool:'uuid', success:false, data:'UUID generation failed' } }
+}
+
+async function getTimezoneConverter(q: string): Promise<ToolResult> {
+  try {
+    const zones = ['Asia/Kolkata','America/New_York','America/Los_Angeles','Europe/London','Europe/Paris','Asia/Tokyo','Asia/Dubai','Australia/Sydney','America/Chicago']
+    const now = new Date()
+    const list = zones.map(tz => {
+      const t = now.toLocaleTimeString('en-IN', { timeZone: tz, hour:'2-digit', minute:'2-digit', hour12:true })
+      const label = tz.split('/')[1].replace('_',' ')
+      return `${t} — ${label}`
+    }).join('\n')
+    return { tool:'timezone', success:true, data:`🌍 World Clocks:\n${list}` }
+  } catch { return { tool:'timezone', success:false, data:'Timezone data unavailable' } }
+}
+
+async function getAgeCalculator(q: string): Promise<ToolResult> {
+  try {
+    const match = q.match(/(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{4})/)
+    if (!match) return { tool:'agecalc', success:false, data:'Date format: DD/MM/YYYY likhein' }
+    const dob = new Date(parseInt(match[3]), parseInt(match[2])-1, parseInt(match[1]))
+    const now = new Date()
+    const years = Math.floor((now.getTime() - dob.getTime()) / (365.25*24*60*60*1000))
+    const months = Math.floor(((now.getTime() - dob.getTime()) % (365.25*24*60*60*1000)) / (30.44*24*60*60*1000))
+    const days = Math.floor(((now.getTime() - dob.getTime()) % (30.44*24*60*60*1000)) / (24*60*60*1000))
+    return { tool:'agecalc', success:true, data:`🎂 Age Calculator:\nDOB: ${match[1]}/${match[2]}/${match[3]}\nAge: ${years} saal, ${months} mahine, ${days} din\nTotal days: ${Math.floor((now.getTime()-dob.getTime())/(24*60*60*1000)).toLocaleString()}` }
+  } catch { return { tool:'agecalc', success:false, data:'Age calculation failed' } }
+}
+
+async function getBMICalculator(q: string): Promise<ToolResult> {
+  try {
+    const height = parseFloat(q.match(/(\d+\.?\d*)\s*(?:cm|centimeter)/i)?.[1] || '0')
+    const weight = parseFloat(q.match(/(\d+\.?\d*)\s*(?:kg|kilo)/i)?.[1] || '0')
+    if (!height || !weight) return { tool:'bmi', success:false, data:'Format: "height 170cm weight 65kg ka BMI" likhein' }
+    const h = height/100
+    const bmi = weight / (h*h)
+    const cat = bmi < 18.5 ? '🟡 Underweight' : bmi < 25 ? '🟢 Normal' : bmi < 30 ? '🟠 Overweight' : '🔴 Obese'
+    return { tool:'bmi', success:true, data:`⚖️ BMI Calculator:\nHeight: ${height}cm | Weight: ${weight}kg\nBMI: ${bmi.toFixed(1)}\nCategory: ${cat}` }
+  } catch { return { tool:'bmi', success:false, data:'BMI calculation failed' } }
+}
+
+async function getLoanEMI(q: string): Promise<ToolResult> {
+  try {
+    const amount = parseFloat(q.match(/(?:loan|amount|principal)?\s*(?:₹|rs\.?|rupee)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:lakh|lac)?/i)?.[1]?.replace(/,/g,'') || '0')
+    const rate = parseFloat(q.match(/(\d+\.?\d*)\s*%/i)?.[1] || '8.5')
+    const years = parseFloat(q.match(/(\d+)\s*(?:year|saal|yr)/i)?.[1] || '20')
+    if (!amount) return { tool:'emi', success:false, data:'Format: "5 lakh loan 8.5% 20 saal ka EMI" likhein' }
+    const P = amount * (q.toLowerCase().includes('lakh') ? 100000 : 1)
+    const r = rate / (12*100)
+    const n = years * 12
+    const emi = P * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1)
+    return { tool:'emi', success:true, data:`💰 EMI Calculator:\nLoan: ₹${P.toLocaleString('en-IN')}\nRate: ${rate}% p.a. | Tenure: ${years} years\nMonthly EMI: ₹${Math.round(emi).toLocaleString('en-IN')}\nTotal Payment: ₹${Math.round(emi*n).toLocaleString('en-IN')}\nTotal Interest: ₹${Math.round(emi*n - P).toLocaleString('en-IN')}` }
+  } catch { return { tool:'emi', success:false, data:'EMI calculation failed' } }
+}
+
+async function getSIPCalculator(q: string): Promise<ToolResult> {
+  try {
+    const monthly = parseFloat(q.match(/(?:sip|monthly|per month|har mahine)?\s*(?:₹|rs\.?)?\s*(\d+(?:,\d+)*)/i)?.[1]?.replace(/,/g,'') || '0')
+    const rate = parseFloat(q.match(/(\d+\.?\d*)\s*%/i)?.[1] || '12')
+    const years = parseFloat(q.match(/(\d+)\s*(?:year|saal|yr)/i)?.[1] || '10')
+    if (!monthly) return { tool:'sip', success:false, data:'Format: "5000 monthly SIP 12% 10 saal" likhein' }
+    const r = rate / (12*100)
+    const n = years * 12
+    const maturity = monthly * (Math.pow(1+r,n)-1) * (1+r) / r
+    const invested = monthly * n
+    return { tool:'sip', success:true, data:`📊 SIP Calculator:\nMonthly: ₹${monthly.toLocaleString('en-IN')}\nRate: ${rate}% p.a. | Duration: ${years} years\nTotal Invested: ₹${invested.toLocaleString('en-IN')}\nMaturity Value: ₹${Math.round(maturity).toLocaleString('en-IN')}\nTotal Return: ₹${Math.round(maturity-invested).toLocaleString('en-IN')} (${((maturity-invested)/invested*100).toFixed(1)}%)` }
+  } catch { return { tool:'sip', success:false, data:'SIP calculation failed' } }
+}
+
+async function getAnimeInfo(q: string): Promise<ToolResult> {
+  try {
+    const name = q.replace(/anime|manga|search|find|ke baare|kya hai/gi,'').trim()
+    const r = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(name)}&limit=1`, { signal: AbortSignal.timeout(6000) })
+    const d = await r.json()
+    const a = d.data?.[0]
+    if (!a) return { tool:'anime', success:false, data:'Anime not found' }
+    return { tool:'anime', success:true, data:`🎌 ${a.title} (${a.title_japanese || ''})\nType: ${a.type} | Episodes: ${a.episodes || '?'}\nRating: ⭐${a.score}/10 | Status: ${a.status}\nGenres: ${a.genres?.map((g:any)=>g.name).join(', ')}\nSynopsis: ${a.synopsis?.slice(0,200)}...` }
+  } catch { return { tool:'anime', success:false, data:'Anime info unavailable' } }
+}
+
+async function getMotivationalQuote(): Promise<ToolResult> {
+  try {
+    const r = await fetch('https://zenquotes.io/api/random', { signal: AbortSignal.timeout(4000) })
+    const d = await r.json()
+    return { tool:'motivation', success:true, data:`✨ "${d[0]?.q}"\n— ${d[0]?.a}` }
+  } catch { return { tool:'motivation', success:false, data:'Quote unavailable' } }
+}
+
+async function getIPGeolocation(q: string): Promise<ToolResult> {
+  try {
+    const ip = q.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/)?.[1]
+    const url = ip ? `http://ip-api.com/json/${ip}` : 'http://ip-api.com/json/'
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    const d = await r.json()
+    return { tool:'geoip', success:true, data:`📍 IP Geolocation:\nIP: ${d.query}\nLocation: ${d.city}, ${d.regionName}, ${d.country} (${d.countryCode})\nISP: ${d.isp}\nCoords: ${d.lat}, ${d.lon}\nTimezone: ${d.timezone}` }
+  } catch { return { tool:'geoip', success:false, data:'IP location unavailable' } }
 }
