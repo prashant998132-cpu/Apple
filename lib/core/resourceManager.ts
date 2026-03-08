@@ -1,0 +1,286 @@
+// lib/core/resourceManager.ts
+// JARVIS Resource Manager — Credits + Limits kabhi khatam na hon
+// STRATEGY: Primary (best) → Alternative → Backup → Emergency fallback
+
+// ═══════════════════════════════════════════════
+// 1. LLM PROVIDER ROUTING
+// Primary: Groq (fastest free)
+// Alt: Gemini (Google free)
+// Backup: Pollinations (unlimited, forever free)
+// Emergency: Puter.js (browser-side, no server)
+// ═══════════════════════════════════════════════
+
+export function getMaxTokens(msg: string): number {
+  const w = msg.trim().split(/\s+/).length
+  const ml = msg.toLowerCase()
+  // nano: greeting/simple
+  if (w <= 3) return 60
+  // simple: short factual
+  if (w <= 8 && !ml.match(/explain|why|how|derive|solve|code|write/)) return 150
+  // deep: code/math/reasoning
+  if (ml.match(/derive|solve|code|function|algorithm|write.*code|debug/)) return 600
+  // research: explicit or long
+  if (w > 50 || ml.match(/research|full detail|comprehensive|step by step/)) return 1000
+  // normal: default
+  return 350
+}
+
+export function getHistoryLimit(msg: string): number {
+  const w = msg.trim().split(/\s+/).length
+  if (w <= 3) return 2   // greetings — no history needed
+  if (w <= 8) return 4
+  if (w > 50) return 10
+  return 6
+}
+
+// Trim history to limit (newest first kept)
+export function trimHistory(messages: any[], limit: number): any[] {
+  if (messages.length <= limit) return messages
+  return messages.slice(-limit) // keep last N messages
+}
+
+// ═══════════════════════════════════════════════
+// 2. VERCEL FUNCTION LIMITS GUARD
+// Hobby: 100K invocations/month, 10s per function
+// Strategy: Edge runtime + short timeouts + cache
+// ═══════════════════════════════════════════════
+
+// Vercel Hobby plan soft limits
+export const VERCEL_LIMITS = {
+  invocationsPerMonth: 100_000,
+  functionTimeoutMs: 9500,    // 9.5s — 0.5s buffer before 10s limit
+  bandwidthGBPerMonth: 100,
+}
+
+// Response caching — same query within 60s → return cached
+const responseCache = new Map<string, { data: string; ts: number }>()
+const CACHE_TTL = 60_000 // 60 seconds
+
+export function getCachedResponse(key: string): string | null {
+  const cached = responseCache.get(key)
+  if (!cached) return null
+  if (Date.now() - cached.ts > CACHE_TTL) {
+    responseCache.delete(key)
+    return null
+  }
+  return cached.data
+}
+
+export function setCachedResponse(key: string, data: string): void {
+  // Max 50 entries in cache
+  if (responseCache.size >= 50) {
+    const oldest = [...responseCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0]
+    responseCache.delete(oldest[0])
+  }
+  responseCache.set(key, { data, ts: Date.now() })
+}
+
+// ═══════════════════════════════════════════════
+// 3. EXTERNAL API RATE LIMIT TRACKER
+// Track calls per service per day
+// If limit near → skip that service
+// ═══════════════════════════════════════════════
+
+interface ServiceUsage {
+  count: number
+  resetAt: number // timestamp of next daily reset
+  dailyLimit: number
+}
+
+// In-memory tracker (resets with each cold start — that's fine)
+const serviceUsage: Record<string, ServiceUsage> = {}
+
+const SERVICE_LIMITS: Record<string, number> = {
+  gnews: 100,
+  newsapi: 100,
+  nasa: 50,          // DEMO_KEY
+  omdb: 1000,
+  ipapi: 1000,
+  coingecko: 200,    // soft limit (public API)
+  // unlimited services — no tracking needed:
+  // wttr, wikipedia, jokeapi, quotable, worldtime, restcountries,
+  // usgs, opentdb, catfact, openlibrary, hackernews, themealdb
+}
+
+export function canCallService(service: string): boolean {
+  const limit = SERVICE_LIMITS[service]
+  if (!limit) return true // unlimited service
+
+  const now = Date.now()
+  const usage = serviceUsage[service]
+
+  if (!usage || now > usage.resetAt) {
+    // Reset daily counter
+    serviceUsage[service] = {
+      count: 0,
+      resetAt: now + 86_400_000, // 24 hours
+      dailyLimit: limit
+    }
+    return true
+  }
+
+  return usage.count < usage.dailyLimit * 0.9 // stop at 90% of limit
+}
+
+export function trackServiceCall(service: string): void {
+  if (!SERVICE_LIMITS[service]) return
+  if (serviceUsage[service]) {
+    serviceUsage[service].count++
+  }
+}
+
+// ═══════════════════════════════════════════════
+// 4. LLM CREDIT ESTIMATOR
+// Track approximate token usage per provider
+// Switch to cheaper/free if nearing limit
+// ═══════════════════════════════════════════════
+
+interface ProviderUsage {
+  tokensToday: number
+  callsToday: number
+  resetAt: number
+}
+
+const providerUsage: Record<string, ProviderUsage> = {}
+
+// Approximate free tier limits (tokens/day or requests/day)
+export const PROVIDER_FREE_LIMITS: Record<string, { tokensPerDay: number; reqPerDay: number }> = {
+  groq:       { tokensPerDay: 500_000, reqPerDay: 1000 },  // ~6000 req/day actually
+  gemini:     { tokensPerDay: 1_000_000, reqPerDay: 1500 }, // gemini-2.0-flash free
+  together:   { tokensPerDay: 999_999_999, reqPerDay: 999_999 }, // $25 credit
+  cerebras:   { tokensPerDay: 1_000_000, reqPerDay: 1000 },
+  mistral:    { tokensPerDay: 500_000, reqPerDay: 500 },
+  cohere:     { tokensPerDay: 100_000, reqPerDay: 1000 },
+  fireworks:  { tokensPerDay: 600_000, reqPerDay: 600 },
+  openrouter: { tokensPerDay: 200_000, reqPerDay: 200 },
+  deepinfra:  { tokensPerDay: 500_000, reqPerDay: 500 },
+  huggingface:{ tokensPerDay: 300_000, reqPerDay: 1000 },
+  pollinations:{ tokensPerDay: 999_999_999, reqPerDay: 999_999 }, // truly unlimited
+}
+
+export function shouldSkipProvider(provider: string, estimatedTokens: number): boolean {
+  const limits = PROVIDER_FREE_LIMITS[provider]
+  if (!limits) return false
+
+  const now = Date.now()
+  const usage = providerUsage[provider]
+
+  if (!usage || now > usage.resetAt) {
+    providerUsage[provider] = { tokensToday: 0, callsToday: 0, resetAt: now + 86_400_000 }
+    return false
+  }
+
+  // Skip if at 85% of daily token limit
+  if (usage.tokensToday + estimatedTokens > limits.tokensPerDay * 0.85) return true
+  // Skip if at 85% of daily request limit
+  if (usage.callsToday >= limits.reqPerDay * 0.85) return true
+
+  return false
+}
+
+export function trackProviderUsage(provider: string, tokensUsed: number): void {
+  const now = Date.now()
+  if (!providerUsage[provider] || now > providerUsage[provider].resetAt) {
+    providerUsage[provider] = { tokensToday: 0, callsToday: 0, resetAt: now + 86_400_000 }
+  }
+  providerUsage[provider].tokensToday += tokensUsed
+  providerUsage[provider].callsToday++
+}
+
+// ═══════════════════════════════════════════════
+// 5. BANDWIDTH SAVER
+// Images: URL only (zero Vercel bandwidth)
+// TTS: Edge TTS URL / browser Web Speech
+// Audio: browser MediaRecorder (never proxied)
+// ═══════════════════════════════════════════════
+
+export const BANDWIDTH_RULES = {
+  images: 'URL_ONLY',          // Never proxy images through Vercel
+  tts: 'EDGE_TTS_URL',         // Return audio URL, not binary
+  audio: 'BROWSER_ONLY',       // MediaRecorder = client-side
+  video: 'EXTERNAL_URL_ONLY',  // YouTube embeds etc
+  maxResponseSize: 50_000,     // 50KB max per API response
+}
+
+// If response > maxResponseSize, truncate with summary
+export function truncateIfNeeded(text: string, maxChars = 10_000): string {
+  if (text.length <= maxChars) return text
+  return text.slice(0, maxChars) + '\n\n[...truncated for bandwidth efficiency]'
+}
+
+// ═══════════════════════════════════════════════
+// 6. STORAGE FALLBACK CHAIN
+// Primary: IndexedDB (device, unlimited)
+// Alt: localStorage (device, 5MB)
+// Backup: GitHub Gist (cloud, free)
+// Emergency: sessionStorage (tab-only)
+// ═══════════════════════════════════════════════
+
+export const STORAGE_STRATEGY = {
+  chatHistory:  ['indexedDB'],                              // local only (privacy)
+  profile:      ['indexedDB', 'localStorage_mirror'],       // fast reads
+  memory:       ['indexedDB', 'githubGist'],                // cloud backup
+  goals:        ['indexedDB', 'githubGist'],                // cloud backup
+  apiKeys:      ['localStorage'],                           // never to cloud
+  pinHash:      ['localStorage'],                           // never to cloud
+  theme:        ['localStorage'],                           // tiny
+}
+
+// ═══════════════════════════════════════════════
+// 7. COMPLETE FALLBACK TREE (visual reference)
+// ═══════════════════════════════════════════════
+/*
+JARVIS Resource Fallback Tree:
+
+AI RESPONSES:
+  Primary  → Groq (fastest, free 6K req/day)
+  Alt 1    → Gemini 2.0 Flash (1M tok/day free)
+  Alt 2    → Together AI ($25 credit)
+  Alt 3    → Cerebras (fast inference free)
+  Alt 4    → Mistral Small (free tier)
+  Alt 5    → Cohere Command-R (free tier)
+  Alt 6    → Fireworks AI (free tier)
+  Alt 7    → OpenRouter (some free models)
+  Alt 8    → Deepinfra (free tier)
+  Alt 9    → HuggingFace (free inference)
+  Backup   → Pollinations (unlimited, forever free)
+  Emergency→ Puter.js (browser-side, no server)
+
+IMAGES:
+  Primary  → Pollinations (free, URL only)
+  Alt      → fal.ai (credits)
+  Alt      → HuggingFace FLUX (free)
+  Backup   → Gemini Imagen
+
+TTS:
+  Primary  → Edge TTS (Microsoft, free)
+  Alt      → Pollinations TTS (free)
+  Alt      → gTTS (Google, free)
+  Backup   → Web Speech API (browser, offline)
+
+SEARCH:
+  Primary  → Serper.dev (2500/month free)
+  Alt      → Jina AI r.jina.ai (URL reader free)
+  Backup   → DuckDuckGo (free, no key)
+
+WEATHER:
+  Primary  → wttr.in (unlimited free)
+  Alt      → OpenWeatherMap (1000/day free)
+  Backup   → open-meteo.com (unlimited free)
+
+NEWS:
+  Primary  → GNews (100/day free)
+  Alt      → NewsAPI (100/day free)
+  Backup   → HackerNews Firebase (unlimited)
+
+STORAGE:
+  Primary  → IndexedDB (device, unlimited)
+  Alt      → localStorage (device, 5MB)
+  Backup   → GitHub Gist (cloud, free)
+  Future   → Vercel KV (256MB free)
+
+HOSTING:
+  Primary  → Vercel Hobby (100K invocations/month)
+  Alt      → Netlify (125K req/month free)
+  Backup   → Cloudflare Pages (unlimited req free!)
+*/

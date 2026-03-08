@@ -13,18 +13,12 @@
 // 11. Pollinations — 100% FREE, no key, no limit
 // 12. Puter AI     — browser-side fallback (client handles)
 import { NextRequest } from 'next/server'
+import { routeTools } from '../../../lib/tools/external-router'
+import { getMaxTokens, trimHistory, getCachedResponse, setCachedResponse, shouldSkipProvider, trackProviderUsage, truncateIfNeeded } from '../../../lib/core/resourceManager'
 
 export const runtime = 'edge'
 
-function getMaxTokens(msg: string): number {
-  const w = msg.trim().split(/\s+/).length
-  const ml = msg.toLowerCase()
-  if (w <= 3) return 80
-  if (w <= 10 && !ml.match(/explain|why|how|derive|solve/)) return 200
-  if (w > 60 || ml.match(/research|full|detailed|comprehensive/)) return 1200
-  if (ml.match(/derive|solve|code|function|algorithm|explain.*detail/)) return 700
-  return 400
-}
+// getMaxTokens imported from resourceManager
 
 // Generic OpenAI-compatible streaming handler
 async function streamOpenAI(
@@ -87,6 +81,17 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
 
       try {
+        // ── TOOL ROUTING — call relevant APIs first ──────────
+        let toolContext = ''
+        try {
+          const toolResults = await routeTools(message)
+          if (toolResults.length > 0) {
+            toolContext = '\n\n[LIVE DATA from external tools]\n' +
+              toolResults.map(r => r.data).join('\n\n') +
+              '\n[Use this real data in your response. Do not say you cannot access internet.]'
+          }
+        } catch { /* tool routing failed — continue without */ }
+
         const messages = [
           ...history.slice(-8).map((m: any) => ({
             role: m.role === 'ai' ? 'assistant' : 'user',
@@ -95,13 +100,14 @@ export async function POST(req: NextRequest) {
           { role: 'user', content: message }
         ]
 
-        const systemPrompt = memoryPrompt ||
+        const baseSystem = memoryPrompt ||
           `You are JARVIS, a personal AI assistant for ${userName || 'Boss'}. Respond in Hinglish (Hindi+English mix). Be concise and direct.
 RULES:
 - Never pretend to do physical tasks (coffee, phone calls, etc.) — say "Main ye physically nahi kar sakta, lekin [alternative] kar sakta hoon"
 - Address user as "${userName || 'Boss'}" occasionally
 - Keep responses short unless detail is needed
 - For math/science formulas use LaTeX: $formula$ inline, $$formula$$ display`
+        const systemPrompt = baseSystem + toolContext
 
         const maxTok = getMaxTokens(message)
         let replied = false
