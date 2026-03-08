@@ -48,20 +48,21 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
   }
 
   // ââ Close popups on tap outside âââââââââââââââââââââââââ
+  // IMPORTANT: delay listener by 80ms â same-tap touchend would immediately
+  // re-close the popup if we bind instantly after pointerDown opens it
   useEffect(() => {
     if (!showPlus && !showCompress) return
     const close = (e: Event) => {
       const t = e.target as HTMLElement
-      // Don't close if tapping inside a popup or its button
       if (t.closest('[data-popup]') || t.closest('[data-popup-btn]')) return
       setShowPlus(false); setShowComp(false)
     }
-    // Use capture phase so it fires before anything else
-    document.addEventListener('touchend', close, { capture: true, passive: true })
-    document.addEventListener('mouseup', close, { capture: true })
+    const timer = setTimeout(() => {
+      document.addEventListener('pointerdown', close, { capture: true })
+    }, 80)
     return () => {
-      document.removeEventListener('touchend', close, { capture: true })
-      document.removeEventListener('mouseup', close, { capture: true })
+      clearTimeout(timer)
+      document.removeEventListener('pointerdown', close, { capture: true })
     }
   }, [showPlus, showCompress])
 
