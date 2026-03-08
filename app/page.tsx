@@ -85,7 +85,7 @@ function getLiveTime(): { time: string; greeting: string; date: string } {
 
 
 // ââ Themes ââââââââââââââââââââââââââââââââââââââââââââââââ
-export const THEMES = {
+const THEMES = {
   dark: {
     name:'Dark', icon:'ð',
     bg:'#090d18', surface:'rgba(0,229,255,.04)', border:'rgba(0,229,255,.15)',
@@ -115,7 +115,7 @@ export const THEMES = {
     msgUser:'rgba(79,195,247,.12)', msgAI:'rgba(255,255,255,.03)',
   },
 }
-export type ThemeKey = keyof typeof THEMES;
+type ThemeKey = keyof typeof THEMES;
 
 export default function ChatPage() {
   const [msgs, setMsgs]   = useState<any[]>([]);
