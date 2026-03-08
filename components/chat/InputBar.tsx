@@ -129,7 +129,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
     <>
 
 
-      <div style={{ padding:'6px 8px 8px', background:'linear-gradient(180deg,transparent,rgba(5,12,28,.97))', backdropFilter:'blur(12px)' }}>
+      <div style={{ padding:'6px 8px 8px', background:'linear-gradient(180deg,transparent,rgba(5,12,28,.97))', backdropFilter:'blur(12px)', position:'relative', zIndex:100, overflow:'visible' }}>
 
         {/* Attach preview */}
         {attachPreview && (
@@ -163,7 +163,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             {showPlus && (
               <div
                 data-popup="plus"
-                style={{ position:'absolute', bottom:46, left:0, zIndex:201,
+                style={{ position:'fixed', bottom:80, left:8, zIndex:9999,
                   background:'#071828', border:'1px solid rgba(0,229,255,.22)',
                   borderRadius:14, overflow:'hidden', minWidth:176,
                   boxShadow:'0 -8px 32px rgba(0,0,0,.8)' }}>
@@ -237,7 +237,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             {showCompress && (
               <div
                 data-popup="compress"
-                style={{ position:'absolute', bottom:46, right:0, zIndex:201,
+                style={{ position:'fixed', bottom:80, right:8, zIndex:9999,
                   background:'#071828', border:'1px solid rgba(0,229,255,.22)',
                   borderRadius:14, overflow:'hidden', minWidth:168,
                   boxShadow:'0 -8px 32px rgba(0,0,0,.8)' }}>
