@@ -8,6 +8,7 @@ import { buildMemoryPrompt, autoExtractMemory, saveChat, loadChat } from '../lib
 import { initProactiveEngine, detectChainedIntent, requestWakeLock, setupWakeLockPersist } from '../lib/proactive/engine'
 import { getFullLocation, loadPlaces, distanceKm, syncLocationToCloud } from '../lib/location/tracker';
 import { useRouter } from 'next/navigation';
+import PinLock, { isPINEnabled } from '../components/shared/PinLock';
 
 const STARTERS = [
   { icon:'ð¤ï¸', t:'Aaj ka mausam kaisa hai?' },
@@ -134,6 +135,8 @@ export default function ChatPage() {
   const [weatherInfo, setWeatherInfo] = useState<{temp:string;icon:string;city:string}|null>(null);
 
   const router = useRouter();
+  const [pinUnlocked, setPinUnlocked] = useState(false);
+  const [pinEnabled, setPinEnabled] = useState(false);
   const [themeKey, setThemeKey] = useState<ThemeKey>('dark');
   const [showTheme, setShowTheme] = useState(false);
   const theme = THEMES[themeKey as keyof typeof THEMES];
@@ -161,6 +164,9 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    // PIN check
+    setPinEnabled(isPINEnabled());
+
     // Load theme
     const savedTheme = localStorage.getItem('jarvis_theme') as ThemeKey | null;
     if (savedTheme && (savedTheme in THEMES)) setThemeKey(savedTheme);
@@ -392,6 +398,10 @@ export default function ChatPage() {
 
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', flexDirection:'column', background:theme.bg, color:theme.text }}>
+      {/* PIN Lock */}
+      {pinEnabled && !pinUnlocked && (
+        <PinLock onUnlock={() => setPinUnlocked(true)} />
+      )}
       <div className="bg-grid"/>
       <Sidebar onNewChat={newChat} onLoadChat={loadOldChat} currentChatId={chatId.current}/>
 

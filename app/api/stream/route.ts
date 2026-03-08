@@ -1,5 +1,17 @@
 // app/api/stream/route.ts â JARVIS Streaming SSE
-// Chain: Groq â Gemini â Together AI â Pollinations (FREE) â error
+// CASCADE (best â fallback, all free/freemium):
+// 1. Groq          â fastest, llama-3.3-70b (free tier, needs key)
+// 2. Gemini        â Google, 2.0-flash (free tier, needs key)
+// 3. Together AI   â $25 free credits, llama-3-70b
+// 4. Cerebras      â ultra-fast inference (free tier, needs key)
+// 5. Mistral       â mistral-small-latest (free tier, needs key)
+// 6. Cohere        â command-r (free tier, needs key)
+// 7. Fireworks AI  â llama-v3-70b (free tier, needs key)
+// 8. OpenRouter    â free models (no key needed for some)
+// 9. Deepinfra     â meta-llama (free tier, needs key)
+// 10. HuggingFace  â HF Inference API (free, needs key)
+// 11. Pollinations â 100% FREE, no key, no limit
+// 12. Puter AI     â browser-side fallback (client handles)
 import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
@@ -14,12 +26,61 @@ function getMaxTokens(msg: string): number {
   return 400
 }
 
+// Generic OpenAI-compatible streaming handler
+async function streamOpenAI(
+  url: string, key: string, model: string,
+  messages: object[], systemPrompt: string,
+  maxTokens: number, send: (d: object) => void,
+  providerName: string, extraBody: object = {}
+): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model, stream: true, max_tokens: maxTokens,
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        ...extraBody
+      }),
+      signal: AbortSignal.timeout(28000)
+    })
+    if (!res.ok || !res.body) return false
+    send({ type: 'start', provider: providerName })
+    const reader = res.body.getReader()
+    const dec = new TextDecoder()
+    let buf = '', inThink = false
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += dec.decode(value, { stream: true })
+      const lines = buf.split('\n'); buf = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6).trim()
+        if (!raw || raw === '[DONE]') continue
+        try {
+          const text = JSON.parse(raw).choices?.[0]?.delta?.content || ''
+          if (!text) continue
+          if (text.includes('<think>')) inThink = true
+          if (inThink) {
+            send({ type: 'think', text })
+            if (text.includes('</think>')) inThink = false
+          } else {
+            send({ type: 'token', text })
+          }
+        } catch { /* skip malformed */ }
+      }
+    }
+    send({ type: 'done' })
+    return true
+  } catch { return false }
+}
+
 export async function POST(req: NextRequest) {
   const { message, history = [], memoryPrompt, chatMode = 'auto', userName = 'Boss' } = await req.json()
   if (!message?.trim()) return new Response('No message', { status: 400 })
 
   const encoder = new TextEncoder()
-
   const stream = new ReadableStream({
     async start(controller) {
       const send = (data: object) =>
@@ -36,88 +97,45 @@ export async function POST(req: NextRequest) {
 
         const systemPrompt = memoryPrompt ||
           `You are JARVIS, a personal AI assistant for ${userName || 'Boss'}. Respond in Hinglish (Hindi+English mix). Be concise and direct.
+RULES:
+- Never pretend to do physical tasks (coffee, phone calls, etc.) â say "Main ye physically nahi kar sakta, lekin [alternative] kar sakta hoon"
+- Address user as "${userName || 'Boss'}" occasionally
+- Keep responses short unless detail is needed
+- For math/science formulas use LaTeX: $formula$ inline, $$formula$$ display`
 
-IMPORTANT RULES:
-- Never pretend you can do physical tasks (make coffee, order food, call someone, control devices) â if asked, say "Main ye physically nahi kar sakta, lekin [useful alternative] kar sakta hoon"
-- Be honest about limitations
-- Address the user as "${userName || 'Boss'}" occasionally
-- Keep responses short unless detail is needed`
-
+        const maxTok = getMaxTokens(message)
         let replied = false
 
-        // ââ GROQ (fastest, needs key) ââââââââââââââââââââââ
-        if (!replied) {
-          const groqKey = process.env.GROQ_API_KEY
-          if (groqKey) {
-            try {
-              const model = chatMode === 'flash' ? 'llama-3.1-8b-instant'
-                : chatMode === 'think' ? 'deepseek-r1-distill-llama-70b'
-                : 'llama-3.3-70b-versatile'
-
-              const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  model, stream: true, max_tokens: getMaxTokens(message),
-                  messages: [{ role: 'system', content: systemPrompt }, ...messages]
-                }),
-                signal: AbortSignal.timeout(28000)
-              })
-
-              if (groqRes.ok && groqRes.body) {
-                replied = true
-                send({ type: 'start', provider: `Groq ${model}` })
-                const reader = groqRes.body.getReader()
-                const dec = new TextDecoder()
-                let buf = '', inThink = false
-
-                while (true) {
-                  const { done, value } = await reader.read()
-                  if (done) break
-                  buf += dec.decode(value, { stream: true })
-                  const lines = buf.split('\n'); buf = lines.pop() || ''
-                  for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue
-                    const raw = line.slice(6).trim()
-                    if (!raw || raw === '[DONE]') continue
-                    try {
-                      const chunk = JSON.parse(raw)
-                      const text = chunk.choices?.[0]?.delta?.content || ''
-                      if (!text) continue
-                      if (text.includes('<think>')) { inThink = true }
-                      if (inThink) {
-                        send({ type: 'think', text })
-                        if (text.includes('</think>')) inThink = false
-                      } else {
-                        send({ type: 'token', text })
-                      }
-                    } catch { /* skip */ }
-                  }
-                }
-                send({ type: 'done' })
-              }
-            } catch { /* Groq failed, try next */ }
-          }
+        // ââ 1. GROQ â fastest streaming âââââââââââââââââââââ
+        if (!replied && process.env.GROQ_API_KEY) {
+          const model = chatMode === 'flash' ? 'llama-3.1-8b-instant'
+            : chatMode === 'think' ? 'deepseek-r1-distill-llama-70b'
+            : 'llama-3.3-70b-versatile'
+          replied = await streamOpenAI(
+            'https://api.groq.com/openai/v1/chat/completions',
+            process.env.GROQ_API_KEY, model, messages, systemPrompt, maxTok, send,
+            `Groq ${model}`
+          )
         }
 
-        // ââ GEMINI (needs key) âââââââââââââââââââââââââââââ
+        // ââ 2. GEMINI 2.0 Flash â Google, very capable ââââââ
         if (!replied) {
-          const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-          if (geminiKey) {
+          const gemKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY
+          if (gemKey) {
             try {
               const gemMsgs = messages.map((m: any) => ({
                 role: m.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: m.content }]
               }))
               const gemRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${geminiKey}&alt=sse`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${gemKey}&alt=sse`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     system_instruction: { parts: [{ text: systemPrompt }] },
                     contents: gemMsgs,
-                    generationConfig: { maxOutputTokens: getMaxTokens(message) }
+                    generationConfig: { maxOutputTokens: maxTok }
                   }),
                   signal: AbortSignal.timeout(28000)
                 }
@@ -149,72 +167,198 @@ IMPORTANT RULES:
           }
         }
 
-
-        // ââ TOGETHER AI (free $25 credits, fast) ââââââââââ
-        if (!replied) {
-          const togetherKey = process.env.TOGETHER_API_KEY
-          if (togetherKey) {
-            try {
-              const togRes = await fetch('https://api.together.xyz/v1/chat/completions', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${togetherKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  model: 'meta-llama/Llama-3-70b-chat-hf',
-                  stream: true,
-                  max_tokens: getMaxTokens(message),
-                  messages: [{ role: 'system', content: systemPrompt }, ...messages]
-                }),
-                signal: AbortSignal.timeout(28000)
-              })
-              if (togRes.ok && togRes.body) {
-                replied = true
-                send({ type: 'start', provider: 'Together AI Llama-3' })
-                const reader = togRes.body.getReader()
-                const dec = new TextDecoder()
-                let buf = ''
-                while (true) {
-                  const { done, value } = await reader.read()
-                  if (done) break
-                  buf += dec.decode(value, { stream: true })
-                  const lines = buf.split('\n'); buf = lines.pop() || ''
-                  for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue
-                    const raw = line.slice(6).trim()
-                    if (!raw || raw === '[DONE]') continue
-                    try {
-                      const text = JSON.parse(raw).choices?.[0]?.delta?.content || ''
-                      if (text) send({ type: 'token', text })
-                    } catch { /* skip */ }
-                  }
-                }
-                send({ type: 'done' })
-              }
-            } catch { /* Together failed */ }
-          }
+        // ââ 3. TOGETHER AI â $25 free credits âââââââââââââââ
+        if (!replied && process.env.TOGETHER_API_KEY) {
+          replied = await streamOpenAI(
+            'https://api.together.xyz/v1/chat/completions',
+            process.env.TOGETHER_API_KEY,
+            'meta-llama/Llama-3-70b-chat-hf',
+            messages, systemPrompt, maxTok, send, 'Together AI Llama-3-70b'
+          )
         }
 
-        // ââ POLLINATIONS (100% FREE, no key needed) ââââââââ
+        // ââ 4. CEREBRAS â ultra-fast inference ââââââââââââââ
+        if (!replied && process.env.CEREBRAS_API_KEY) {
+          replied = await streamOpenAI(
+            'https://api.cerebras.ai/v1/chat/completions',
+            process.env.CEREBRAS_API_KEY,
+            'llama3.1-70b',
+            messages, systemPrompt, maxTok, send, 'Cerebras Llama-3.1-70b'
+          )
+        }
+
+        // ââ 5. MISTRAL â mistral-small (free tier) ââââââââââ
+        if (!replied && process.env.MISTRAL_API_KEY) {
+          replied = await streamOpenAI(
+            'https://api.mistral.ai/v1/chat/completions',
+            process.env.MISTRAL_API_KEY,
+            'mistral-small-latest',
+            messages, systemPrompt, maxTok, send, 'Mistral Small'
+          )
+        }
+
+        // ââ 6. COHERE â command-r (free tier) âââââââââââââââ
+        if (!replied && process.env.COHERE_API_KEY) {
+          try {
+            const coMsg = messages.map((m: any) => ({
+              role: m.role === 'assistant' ? 'CHATBOT' : 'USER',
+              message: m.content
+            }))
+            const lastUser = messages.filter((m:any)=>m.role==='user').pop()
+            const coRes = await fetch('https://api.cohere.ai/v1/chat', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${process.env.COHERE_API_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'command-r',
+                message: lastUser?.content || message,
+                chat_history: coMsg.slice(0,-1),
+                preamble: systemPrompt,
+                max_tokens: maxTok,
+                stream: true
+              }),
+              signal: AbortSignal.timeout(28000)
+            })
+            if (coRes.ok && coRes.body) {
+              replied = true
+              send({ type: 'start', provider: 'Cohere Command-R' })
+              const reader = coRes.body.getReader()
+              const dec = new TextDecoder()
+              let buf = ''
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                buf += dec.decode(value, { stream: true })
+                const lines = buf.split('\n')
+                for (const line of lines) {
+                  if (!line.trim()) continue
+                  try {
+                    const ev = JSON.parse(line)
+                    if (ev.event_type === 'text-generation' && ev.text) send({ type: 'token', text: ev.text })
+                  } catch { /* skip */ }
+                }
+                buf = ''
+              }
+              send({ type: 'done' })
+            }
+          } catch { /* Cohere failed */ }
+        }
+
+        // ââ 7. FIREWORKS AI â fast, free tier âââââââââââââââ
+        if (!replied && process.env.FIREWORKS_API_KEY) {
+          replied = await streamOpenAI(
+            'https://api.fireworks.ai/inference/v1/chat/completions',
+            process.env.FIREWORKS_API_KEY,
+            'accounts/fireworks/models/llama-v3-70b-instruct',
+            messages, systemPrompt, maxTok, send, 'Fireworks Llama-3-70b'
+          )
+        }
+
+        // ââ 8. OPENROUTER â free models available âââââââââââ
+        if (!replied) {
+          const orKey = process.env.OPENROUTER_API_KEY
+          // Try free model first, then with key
+          const orModel = orKey ? 'meta-llama/llama-3-70b-instruct' : 'meta-llama/llama-3.2-3b-instruct:free'
+          try {
+            const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                ...(orKey ? { Authorization: `Bearer ${orKey}` } : {}),
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://apple-lemon-zeta.vercel.app',
+                'X-Title': 'JARVIS'
+              },
+              body: JSON.stringify({
+                model: orModel,
+                stream: true,
+                max_tokens: maxTok,
+                messages: [{ role: 'system', content: systemPrompt }, ...messages]
+              }),
+              signal: AbortSignal.timeout(30000)
+            })
+            if (orRes.ok && orRes.body) {
+              replied = true
+              send({ type: 'start', provider: `OpenRouter ${orModel.split('/').pop()}` })
+              const reader = orRes.body.getReader()
+              const dec = new TextDecoder()
+              let buf = ''
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                buf += dec.decode(value, { stream: true })
+                const lines = buf.split('\n'); buf = lines.pop() || ''
+                for (const line of lines) {
+                  if (!line.startsWith('data: ')) continue
+                  const raw = line.slice(6).trim()
+                  if (!raw || raw === '[DONE]') continue
+                  try {
+                    const text = JSON.parse(raw).choices?.[0]?.delta?.content || ''
+                    if (text) send({ type: 'token', text })
+                  } catch { /* skip */ }
+                }
+              }
+              send({ type: 'done' })
+            }
+          } catch { /* OpenRouter failed */ }
+        }
+
+        // ââ 9. DEEPINFRA â free tier available ââââââââââââââ
+        if (!replied && process.env.DEEPINFRA_API_KEY) {
+          replied = await streamOpenAI(
+            'https://api.deepinfra.com/v1/openai/chat/completions',
+            process.env.DEEPINFRA_API_KEY,
+            'meta-llama/Meta-Llama-3-70B-Instruct',
+            messages, systemPrompt, maxTok, send, 'Deepinfra Llama-3-70b'
+          )
+        }
+
+        // ââ 10. HUGGINGFACE â Inference API free ââââââââââââ
+        if (!replied && process.env.HUGGINGFACE_API_KEY) {
+          try {
+            const hfRes = await fetch(
+              'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+              {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  inputs: `<s>[INST] ${systemPrompt}\n\nUser: ${message} [/INST]`,
+                  parameters: { max_new_tokens: maxTok, return_full_text: false },
+                  stream: false
+                }),
+                signal: AbortSignal.timeout(25000)
+              }
+            )
+            if (hfRes.ok) {
+              const hfData = await hfRes.json()
+              const text = hfData?.[0]?.generated_text || hfData?.generated_text || ''
+              if (text) {
+                replied = true
+                send({ type: 'start', provider: 'HuggingFace Mistral-7B' })
+                send({ type: 'token', text })
+                send({ type: 'done' })
+              }
+            }
+          } catch { /* HF failed */ }
+        }
+
+        // ââ 11. POLLINATIONS â 100% FREE, no key ever âââââââ
         if (!replied) {
           try {
             send({ type: 'start', provider: 'Pollinations AI (free)' })
-            // Build conversation for Pollinations
-            const polMsgs = [
-              { role: 'system', content: systemPrompt },
-              ...messages
-            ]
             const polRes = await fetch('https://text.pollinations.ai/openai', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: 'openai',
-                messages: polMsgs,
-                max_tokens: getMaxTokens(message),
+                messages: [{ role: 'system', content: systemPrompt }, ...messages],
+                max_tokens: maxTok,
                 stream: true,
                 seed: Math.floor(Math.random() * 9999)
               }),
               signal: AbortSignal.timeout(30000)
             })
-
             if (polRes.ok && polRes.body) {
               replied = true
               const reader = polRes.body.getReader()
@@ -240,39 +384,37 @@ IMPORTANT RULES:
           } catch { /* Pollinations failed */ }
         }
 
-        // ââ POLLINATIONS non-stream fallback âââââââââââââââ
+        // ââ Pollinations non-stream fallback ââââââââââââââââ
         if (!replied) {
           try {
-            send({ type: 'start', provider: 'Pollinations (non-stream)' })
-            const question = encodeURIComponent(message)
-            const system = encodeURIComponent(systemPrompt)
-            const polRes = await fetch(
-              `https://text.pollinations.ai/${question}?model=openai&system=${system}&seed=${Math.floor(Math.random()*9999)}`,
-              { signal: AbortSignal.timeout(20000) }
-            )
-            if (polRes.ok) {
-              replied = true
-              const text = await polRes.text()
-              // Stream word by word for feel
-              const words = text.trim().split(' ')
-              for (const word of words) {
-                send({ type: 'token', text: word + ' ' })
-                await new Promise(r => setTimeout(r, 8))
+            const url = `https://text.pollinations.ai/${encodeURIComponent(message)}?model=openai&seed=${Date.now()}&system=${encodeURIComponent(systemPrompt.slice(0,200))}`
+            const r = await fetch(url, { signal: AbortSignal.timeout(25000) })
+            if (r.ok) {
+              const text = await r.text()
+              if (text) {
+                replied = true
+                send({ type: 'start', provider: 'Pollinations (fallback)' })
+                send({ type: 'token', text })
+                send({ type: 'done' })
               }
-              send({ type: 'done' })
             }
-          } catch { /* Last resort failed too */ }
+          } catch { /* last resort failed */ }
         }
 
+        // ââ 12. CLIENT FALLBACK â tell browser to use Puter ââ
         if (!replied) {
-          send({ type: 'token', text: 'Abhi kuch gadbad ho gayi. Thodi der mein try karo.' })
+          send({ type: 'fallback', message: 'USE_PUTER' })
           send({ type: 'done' })
         }
 
-      } catch (err) {
-        send({ type: 'error', text: 'Stream error â try again' })
+      } catch (err: any) {
+        try {
+          controller.enqueue(encoder.encode(
+            `data: ${JSON.stringify({ type: 'error', message: err?.message || 'Unknown error' })}\n\n`
+          ))
+        } catch { /* stream already closed */ }
       } finally {
-        controller.close()
+        try { controller.close() } catch { /* already closed */ }
       }
     }
   })
@@ -280,7 +422,8 @@ IMPORTANT RULES:
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
       'Connection': 'keep-alive',
     }
   })
