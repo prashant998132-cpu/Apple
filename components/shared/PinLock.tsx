@@ -85,7 +85,7 @@ export default function PinLock({ onUnlock }: PinLockProps) {
 
   const handleKey = (k: string) => {
     if (lockedUntil && Date.now() < lockedUntil) return
-    if (k === 'â«') {
+    if (k === '⌫') {
       setPin(p => p.slice(0, -1))
       setError('')
     } else if (pin.length < 4) {
@@ -107,7 +107,7 @@ export default function PinLock({ onUnlock }: PinLockProps) {
     }}>
       {/* Logo */}
       <div style={{ marginBottom: 32, textAlign: 'center' }}>
-        <div style={{ fontSize: 40, marginBottom: 8 }}>â¬¡</div>
+        <div style={{ fontSize: 40, marginBottom: 8 }}>⬡</div>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#00e5ff', letterSpacing: 6 }}>JARVIS</div>
         <div style={{ fontSize: 12, color: '#1e3a50', marginTop: 4, letterSpacing: 2 }}>LOCKED</div>
       </div>
@@ -130,21 +130,21 @@ export default function PinLock({ onUnlock }: PinLockProps) {
 
       {/* Error / Lock message */}
       <div style={{ height: 20, marginBottom: 20, fontSize: 12, color: isLocked ? '#ffa000' : '#ef5350', textAlign: 'center' }}>
-        {isLocked ? `ð ${Math.floor(timeLeft/60)}:${String(timeLeft%60).padStart(2,'0')} mein unlock hoga` : error}
+        {isLocked ? `🔐 ${Math.floor(timeLeft/60)}:${String(timeLeft%60).padStart(2,'0')} mein unlock hoga` : error}
       </div>
 
       {/* Keypad */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 72px)', gap: 10 }}>
-        {['1','2','3','4','5','6','7','8','9','','0','â«'].map((k, i) => (
+        {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k, i) => (
           k === '' ? <div key={i}/> :
           <button key={i} onClick={() => handleKey(k)}
             disabled={isLocked}
             style={{
               width: 72, height: 72, borderRadius: 18,
-              background: k === 'â«' ? 'rgba(239,83,80,.1)' : 'rgba(0,229,255,.05)',
-              border: `1.5px solid ${k === 'â«' ? 'rgba(239,83,80,.25)' : 'rgba(0,229,255,.15)'}`,
-              color: k === 'â«' ? '#ef5350' : '#e8f4ff',
-              fontSize: k === 'â«' ? 22 : 24, fontWeight: 600,
+              background: k === '⌫' ? 'rgba(239,83,80,.1)' : 'rgba(0,229,255,.05)',
+              border: `1.5px solid ${k === '⌫' ? 'rgba(239,83,80,.25)' : 'rgba(0,229,255,.15)'}`,
+              color: k === '⌫' ? '#ef5350' : '#e8f4ff',
+              fontSize: k === '⌫' ? 22 : 24, fontWeight: 600,
               cursor: isLocked ? 'not-allowed' : 'pointer',
               opacity: isLocked ? 0.4 : 1,
               transition: 'all .15s',
@@ -167,7 +167,7 @@ export default function PinLock({ onUnlock }: PinLockProps) {
   )
 }
 
-// ââ PIN Management (for Settings page) ââââââââââââââââââââ
+// ── PIN Management (for Settings page) ────────────────────
 export async function setPIN(newPin: string): Promise<void> {
   if (!newPin || newPin.length !== 4) throw new Error('PIN must be 4 digits')
   const hash = await sha256(newPin)

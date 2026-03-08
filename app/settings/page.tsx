@@ -1,5 +1,5 @@
 'use client'
-// Settings â Provider Mode (Auto/Select/Smart) + API Keys + Storage
+// Settings — Provider Mode (Auto/Select/Smart) + API Keys + Storage
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '../../components/shared/Sidebar'
@@ -9,7 +9,7 @@ import MemoryTab from '../../components/settings/MemoryTab'
 type MainTab = 'mode' | 'keys' | 'storage' | 'memory' | 'security'
 type KeyTab  = 'llm' | 'tts' | 'image' | 'music' | 'social'
 
-// ââ Provider options â best first âââââââââââââââââââââââââ
+// ── Provider options — best first ─────────────────────────
 const PROVIDERS = {
   llm:   ['auto','gemini','groq','openrouter','aimlapi'],
   tts:   ['auto','google','elevenlabs','azure','playht','openai','fish','huggingface','browser'],
@@ -20,99 +20,99 @@ const PROVIDERS = {
 
 const PROVIDER_INFO: Record<string, { label: string; limit: string; quality: number; note?: string }> = {
   // LLM
-  auto:        { label:'ð¤ Auto (Smart)',         limit:'Best for each query',      quality:5 },
-  gemini:      { label:'Gemini 2.0 Flash ð¥',    limit:'1500 req/day free',        quality:5 },
-  groq:        { label:'Groq Llama 3.3 70B ð¥',  limit:'6K tokens/min free',      quality:4 },
-  openrouter:  { label:'OpenRouter ð¥',           limit:'Free models available',    quality:3 },
+  auto:        { label:'🤖 Auto (Smart)',         limit:'Best for each query',      quality:5 },
+  gemini:      { label:'Gemini 2.0 Flash 🥇',    limit:'1500 req/day free',        quality:5 },
+  groq:        { label:'Groq Llama 3.3 70B 🥈',  limit:'6K tokens/min free',      quality:4 },
+  openrouter:  { label:'OpenRouter 🥉',           limit:'Free models available',    quality:3 },
   aimlapi:     { label:'AIMLAPI',                 limit:'Free credits',             quality:4 },
   // TTS
-  google:      { label:'Google Cloud TTS ð¥',    limit:'1M chars/month',           quality:5, note:'Best Hindi' },
-  elevenlabs:  { label:'ElevenLabs ð¥',           limit:'10K chars/month',          quality:5, note:'Most realistic' },
-  azure:       { label:'Azure Neural ð¥',         limit:'500K chars/month',         quality:4 },
+  google:      { label:'Google Cloud TTS 🥇',    limit:'1M chars/month',           quality:5, note:'Best Hindi' },
+  elevenlabs:  { label:'ElevenLabs 🥈',           limit:'10K chars/month',          quality:5, note:'Most realistic' },
+  azure:       { label:'Azure Neural 🥉',         limit:'500K chars/month',         quality:4 },
   playht:      { label:'Play.ht',                 limit:'12.5K words/month',        quality:4 },
   openai:      { label:'OpenAI TTS',              limit:'Free credits',             quality:4 },
   fish:        { label:'Fish Audio',              limit:'Free credits',             quality:3 },
   huggingface: { label:'HuggingFace MMS',         limit:'Rate limited',             quality:3, note:'Hindi local' },
-  browser:     { label:'Browser Speech â',       limit:'Unlimited, always works',  quality:2 },
+  browser:     { label:'Browser Speech ✅',       limit:'Unlimited, always works',  quality:2 },
   // Image
-  puter:       { label:'Puter.js â ð¥',         limit:'Unlimited, no key',        quality:4 },
-  flux:        { label:'FLUX.1 via HF ð¥',        limit:'Rate limited',             quality:5 },
+  puter:       { label:'Puter.js ✅ 🥇',         limit:'Unlimited, no key',        quality:4 },
+  flux:        { label:'FLUX.1 via HF 🥈',        limit:'Rate limited',             quality:5 },
   deepai:      { label:'DeepAI',                  limit:'Free tier',                quality:3 },
-  pollinations:{ label:'Pollinations â ð¥',      limit:'Unlimited, no key',        quality:3 },
+  pollinations:{ label:'Pollinations ✅ 🥉',      limit:'Unlimited, no key',        quality:3 },
   // Music
-  musicgen:    { label:'MusicGen via HF ð¥',      limit:'Rate limited',             quality:4 },
-  mubert:      { label:'Mubert API ð¥',           limit:'Free tier',                quality:3 },
-  suno_link:   { label:'Suno AI (link) ð¥',       limit:'~50/day free',             quality:5, note:'Best quality' },
+  musicgen:    { label:'MusicGen via HF 🥇',      limit:'Rate limited',             quality:4 },
+  mubert:      { label:'Mubert API 🥈',           limit:'Free tier',                quality:3 },
+  suno_link:   { label:'Suno AI (link) 🥉',       limit:'~50/day free',             quality:5, note:'Best quality' },
   udio_link:   { label:'Udio AI (link)',           limit:'Free tier',                quality:5 },
   // Storage
-  supabase:    { label:'Supabase ð¥',             limit:'500MB free, cross-device', quality:5 },
-  firebase:    { label:'Firebase ð¥',             limit:'1GB free, 50K reads/day',  quality:5 },
-  indexeddb:   { label:'IndexedDB â ð¥',         limit:'Device storage, offline',  quality:4 },
-  localstorage:{ label:'localStorage â',         limit:'5-10MB always works',      quality:2 },
+  supabase:    { label:'Supabase 🥇',             limit:'500MB free, cross-device', quality:5 },
+  firebase:    { label:'Firebase 🥈',             limit:'1GB free, 50K reads/day',  quality:5 },
+  indexeddb:   { label:'IndexedDB ✅ 🥉',         limit:'Device storage, offline',  quality:4 },
+  localstorage:{ label:'localStorage ✅',         limit:'5-10MB always works',      quality:2 },
 }
 
 const KEY_CONFIG: Record<KeyTab, Array<{ id:string; label:string; env:string; link:string; ph?:string; req?:boolean }>> = {
   llm: [
-    { id:'gemini_key',  label:'Gemini API Key ð¥',        env:'GEMINI_API_KEY',     link:'https://aistudio.google.com',      ph:'AIza...',  req:true },
-    { id:'groq',        label:'Groq API Key ð¥',          env:'GROQ_API_KEY',       link:'https://console.groq.com',         ph:'gsk_...',  req:true },
-    { id:'openrouter',  label:'OpenRouter Key ð¥',         env:'OPENROUTER_KEY',     link:'https://openrouter.ai',            ph:'sk-or-...' },
+    { id:'gemini_key',  label:'Gemini API Key 🥇',        env:'GEMINI_API_KEY',     link:'https://aistudio.google.com',      ph:'AIza...',  req:true },
+    { id:'groq',        label:'Groq API Key 🥈',          env:'GROQ_API_KEY',       link:'https://console.groq.com',         ph:'gsk_...',  req:true },
+    { id:'openrouter',  label:'OpenRouter Key 🥉',         env:'OPENROUTER_KEY',     link:'https://openrouter.ai',            ph:'sk-or-...' },
     { id:'aimlapi',     label:'AIMLAPI Key',               env:'AIMLAPI_KEY',        link:'https://aimlapi.com',              ph:'...' },
-    { id:'deepseek',    label:'DeepSeek API Key ð§ ',       env:'DEEPSEEK_API_KEY',   link:'https://platform.deepseek.com',  ph:'sk-...' },
+    { id:'deepseek',    label:'DeepSeek API Key 🧠',       env:'DEEPSEEK_API_KEY',   link:'https://platform.deepseek.com',  ph:'sk-...' },
     { id:'mistral',     label:'Mistral API Key',           env:'MISTRAL_API_KEY',    link:'https://console.mistral.ai',     ph:'...' },
     { id:'grok',        label:'Grok (xAI) Key',           env:'GROK_API_KEY',       link:'https://x.ai/api',              ph:'xai-...' },
     { id:'together',    label:'Together AI Key',           env:'TOGETHER_API_KEY',   link:'https://api.together.xyz',       ph:'...' },
     { id:'cohere',      label:'Cohere API Key',            env:'COHERE_API_KEY',     link:'https://dashboard.cohere.com',   ph:'...' },
   ],
   tts: [
-    { id:'google_tts',  label:'Google Cloud TTS ð¥',      env:'GOOGLE_TTS_KEY',     link:'https://console.cloud.google.com', ph:'AIza...' },
-    { id:'elevenlabs',  label:'ElevenLabs ð¥',             env:'ELEVENLABS',         link:'https://elevenlabs.io',            ph:'...' },
-    { id:'azure',       label:'Azure TTS Key ð¥',          env:'AZURE_TTS_KEY',      link:'https://portal.azure.com',         ph:'...' },
+    { id:'google_tts',  label:'Google Cloud TTS 🥇',      env:'GOOGLE_TTS_KEY',     link:'https://console.cloud.google.com', ph:'AIza...' },
+    { id:'elevenlabs',  label:'ElevenLabs 🥈',             env:'ELEVENLABS',         link:'https://elevenlabs.io',            ph:'...' },
+    { id:'azure',       label:'Azure TTS Key 🥉',          env:'AZURE_TTS_KEY',      link:'https://portal.azure.com',         ph:'...' },
     { id:'playht',      label:'Play.ht Key',               env:'PLAYHT_API_KEY',     link:'https://play.ht',                  ph:'...' },
     { id:'openai',      label:'OpenAI Key',                env:'OPENAI_API_KEY',     link:'https://platform.openai.com',      ph:'sk-...' },
     { id:'huggingface', label:'HuggingFace Token',         env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
   ],
   image: [
-    { id:'hf2',         label:'HuggingFace (FLUX) ð¥',    env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
-    { id:'aimlapi2',    label:'AIMLAPI ð¥',                env:'AIMLAPI_KEY',        link:'https://aimlapi.com',              ph:'...' },
+    { id:'hf2',         label:'HuggingFace (FLUX) 🥈',    env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
+    { id:'aimlapi2',    label:'AIMLAPI 🥉',                env:'AIMLAPI_KEY',        link:'https://aimlapi.com',              ph:'...' },
     { id:'deepai',      label:'DeepAI',                    env:'DEEPAI_KEY',         link:'https://deepai.org/api',           ph:'...' },
   ],
   music: [
-    { id:'hf3',         label:'HuggingFace (MusicGen) ð¥',env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
-    { id:'elevenlabs2', label:'ElevenLabs (Sound) ð¥',    env:'ELEVENLABS',         link:'https://elevenlabs.io',            ph:'...' },
-    { id:'mubert',      label:'Mubert API ð¥',             env:'MUBERT_API_KEY',     link:'https://mubert.com/api',           ph:'...' },
+    { id:'hf3',         label:'HuggingFace (MusicGen) 🥇',env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
+    { id:'elevenlabs2', label:'ElevenLabs (Sound) 🥈',    env:'ELEVENLABS',         link:'https://elevenlabs.io',            ph:'...' },
+    { id:'mubert',      label:'Mubert API 🥉',             env:'MUBERT_API_KEY',     link:'https://mubert.com/api',           ph:'...' },
   ],
   social: [
-    { id:'telegram',    label:'Telegram Bot Token ð¥',    env:'TELEGRAM_BOT',       link:'https://t.me/BotFather',           ph:'123:ABC...' },
-    { id:'meta',        label:'Meta App ID (IG+FB) ð¥',   env:'META_APP_ID',        link:'https://developers.facebook.com',  ph:'...' },
-    { id:'twitter',     label:'Twitter Bearer Token ð¥',  env:'TWITTER_BEARER',     link:'https://developer.twitter.com',    ph:'...' },
+    { id:'telegram',    label:'Telegram Bot Token 🥇',    env:'TELEGRAM_BOT',       link:'https://t.me/BotFather',           ph:'123:ABC...' },
+    { id:'meta',        label:'Meta App ID (IG+FB) 🥈',   env:'META_APP_ID',        link:'https://developers.facebook.com',  ph:'...' },
+    { id:'twitter',     label:'Twitter Bearer Token 🥉',  env:'TWITTER_BEARER',     link:'https://developer.twitter.com',    ph:'...' },
     { id:'google_cal',  label:'Google OAuth Client ID',   env:'GOOGLE_CLIENT_ID',   link:'https://console.cloud.google.com', ph:'...' },
-    { id:'supabase_u',  label:'Supabase URL ð¥',          env:'SUPABASE_URL',       link:'https://supabase.com',             ph:'https://xxx.supabase.co' },
+    { id:'supabase_u',  label:'Supabase URL 🥇',          env:'SUPABASE_URL',       link:'https://supabase.com',             ph:'https://xxx.supabase.co' },
     { id:'supabase_k',  label:'Supabase Anon Key',        env:'SUPABASE_ANON_KEY',  link:'https://supabase.com',             ph:'eyJ...' },
-    { id:'firebase_k',  label:'Firebase API Key ð¥',      env:'FIREBASE_API_KEY',   link:'https://console.firebase.google.com', ph:'AIza...' },
+    { id:'firebase_k',  label:'Firebase API Key 🥈',      env:'FIREBASE_API_KEY',   link:'https://console.firebase.google.com', ph:'AIza...' },
     { id:'firebase_p',  label:'Firebase Project ID',      env:'FIREBASE_PROJECT_ID',link:'https://console.firebase.google.com', ph:'my-project' },
   ],
 }
 
-// ââ Mode descriptions âââââââââââââââââââââââââââââââââââââ
+// ── Mode descriptions ─────────────────────────────────────
 const MODE_INFO = {
   smart: {
-    label: 'â¡ Smart Mode',
-    desc:  'JARVIS khud decide karta hai â simple messages pe Groq (cheap+fast), NEET pe Gemini, images pe direct API. Zero waste.',
+    label: '⚡ Smart Mode',
+    desc:  'JARVIS khud decide karta hai — simple messages pe Groq (cheap+fast), NEET pe Gemini, images pe direct API. Zero waste.',
     color: '#00e5ff',
   },
   auto: {
-    label: 'ð¤ Auto Mode',
+    label: '🤖 Auto Mode',
     desc:  'Har cheez ke liye best available provider use karo. Simple full cascade.',
     color: '#a78bfa',
   },
   select: {
-    label: 'ðï¸ Select Mode',
-    desc:  'Tum khud choose karo â TTS ke liye kaun, Image ke liye kaun, etc. Fallback phir bhi active.',
+    label: '🎛️ Select Mode',
+    desc:  'Tum khud choose karo — TTS ke liye kaun, Image ke liye kaun, etc. Fallback phir bhi active.',
     color: '#00e676',
   },
 }
 
-// ââ Helpers âââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Helpers ───────────────────────────────────────────────
 const lsGet = (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }
 const lsSet = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch {} }
 
@@ -182,8 +182,8 @@ export default function SettingsPage() {
     <div style={s.wrap}>
       <div className="bg-grid"/>
       <header style={s.header}>
-        <button onClick={() => router.back()} style={s.backBtn}>â</button>
-        <span style={{ fontFamily:"'Space Mono',monospace", fontSize:11, color:'#00e5ff', letterSpacing:2 }}>âï¸ SETTINGS</span>
+        <button onClick={() => router.back()} style={s.backBtn}>←</button>
+        <span style={{ fontFamily:"'Space Mono',monospace", fontSize:11, color:'#00e5ff', letterSpacing:2 }}>⚙️ SETTINGS</span>
         <span style={{ fontSize:10, color:'#1e3858', marginLeft:'auto' }}>Keys: localStorage only</span>
       </header>
 
@@ -191,14 +191,14 @@ export default function SettingsPage() {
       <div style={s.mainTabs}>
         {(['mode','keys','storage','memory'] as MainTab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={s.mainTab(tab===t)}>
-            {t === 'mode' ? 'â¡ Mode' : t === 'keys' ? 'ð API Keys' : t === 'storage' ? 'ð¾ Storage' : 'ð§  Memory'}
+            {t === 'mode' ? '⚡ Mode' : t === 'keys' ? '🔑 API Keys' : t === 'storage' ? '💾 Storage' : '🧠 Memory'}
           </button>
         ))}
       </div>
 
       <div style={s.body}>
 
-        {/* âââ MODE TAB ââââââââââââââââââââââââââââââââââââââ */}
+        {/* ═══ MODE TAB ══════════════════════════════════════ */}
         {tab === 'mode' && (
           <div>
             <div style={{ fontSize:10, color:'#1a3050', marginBottom:14, lineHeight:1.7 }}>
@@ -222,17 +222,17 @@ export default function SettingsPage() {
                   <div style={{ fontSize:11, color:'#1e3858', marginTop:5, lineHeight:1.6 }}>{info.desc}</div>
                   {active && m === 'smart' && (
                     <div style={{ marginTop:8, padding:'6px 9px', background:'rgba(0,229,255,.05)', borderRadius:6, fontSize:10, color:'#00e5ff' }}>
-                      â Active â "hello" â Groq | "image banao" â direct API | "cell kya hai" â Gemini
+                      ✅ Active — "hello" → Groq | "image banao" → direct API | "cell kya hai" → Gemini
                     </div>
                   )}
                 </div>
               )
             })}
 
-            {/* Select mode â provider pickers */}
+            {/* Select mode — provider pickers */}
             {mode === 'select' && (
               <div style={{ marginTop:16 }}>
-                <div style={{ fontSize:11, color:'#00e676', marginBottom:10 }}>ðï¸ Har category ke liye choose karo:</div>
+                <div style={{ fontSize:11, color:'#00e676', marginBottom:10 }}>🎛️ Har category ke liye choose karo:</div>
                 {(['llm','tts','image','music'] as const).map(cat => (
                   <div key={cat} style={{ marginBottom:10 }}>
                     <div style={{ fontSize:10, color:'#1e3858', marginBottom:5, textTransform:'uppercase', letterSpacing:1 }}>{cat}</div>
@@ -253,8 +253,8 @@ export default function SettingsPage() {
                     </div>
                     {prefs[cat] && prefs[cat] !== 'auto' && (
                       <div style={{ fontSize:9, color:'#1a3858', marginTop:3 }}>
-                        Selected: {PROVIDER_INFO[prefs[cat]]?.label} â¢ {PROVIDER_INFO[prefs[cat]]?.limit}
-                        {PROVIDER_INFO[prefs[cat]]?.note ? ` â¢ ${PROVIDER_INFO[prefs[cat]].note}` : ''}
+                        Selected: {PROVIDER_INFO[prefs[cat]]?.label} • {PROVIDER_INFO[prefs[cat]]?.limit}
+                        {PROVIDER_INFO[prefs[cat]]?.note ? ` • ${PROVIDER_INFO[prefs[cat]].note}` : ''}
                       </div>
                     )}
                   </div>
@@ -264,7 +264,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* âââ KEYS TAB âââââââââââââââââââââââââââââââââââââââ */}
+        {/* ═══ KEYS TAB ═══════════════════════════════════════ */}
         {tab === 'keys' && (
           <div>
             {/* Key sub-tabs */}
@@ -281,7 +281,7 @@ export default function SettingsPage() {
             </div>
 
             <div style={{ fontSize:9, color:'#1a3050', marginBottom:10 }}>
-              ð¥ Best provider first. â = no key needed. Keys stored locally only.
+              🥇 Best provider first. ✅ = no key needed. Keys stored locally only.
             </div>
 
             {(KEY_CONFIG[keyTab as KeyTab] || []).map((cfg: any, i: number) => (
@@ -293,9 +293,9 @@ export default function SettingsPage() {
                     {cfg.req && <span style={{ fontSize:9, color:'#ff9944', marginLeft:6, padding:'1px 5px', borderRadius:3, border:'1px solid rgba(255,153,68,.3)' }}>REQUIRED</span>}
                   </div>
                   <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                    {keys[cfg.env] && <span style={{ fontSize:9, color:'#00e676', padding:'1px 5px', borderRadius:3, background:'rgba(0,230,118,.08)' }}>â</span>}
+                    {keys[cfg.env] && <span style={{ fontSize:9, color:'#00e676', padding:'1px 5px', borderRadius:3, background:'rgba(0,230,118,.08)' }}>✓</span>}
                     {cfg.link && <a href={cfg.link} target="_blank" rel="noreferrer"
-                      style={{ fontSize:9, color:'#00e5ff', padding:'2px 7px', borderRadius:5, border:'1px solid rgba(0,229,255,.15)', textDecoration:'none' }}>Get â</a>}
+                      style={{ fontSize:9, color:'#00e5ff', padding:'2px 7px', borderRadius:5, border:'1px solid rgba(0,229,255,.15)', textDecoration:'none' }}>Get →</a>}
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:7 }}>
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                       background: saved===cfg.env ? 'rgba(0,230,118,.15)' : 'rgba(0,229,255,.08)',
                       border:`1px solid ${saved===cfg.env?'rgba(0,230,118,.3)':'rgba(0,229,255,.15)'}`,
                       color: saved===cfg.env ? '#00e676' : '#00e5ff' }}>
-                    {saved===cfg.env ? 'â' : 'Save'}
+                    {saved===cfg.env ? '✓' : 'Save'}
                   </button>
                   <button onClick={() => verifyKey(cfg.env, keys[cfg.env]||'')}
                     disabled={!keys[cfg.env]?.trim()}
@@ -317,7 +317,7 @@ export default function SettingsPage() {
                       background: verified[cfg.env]==='ok' ? 'rgba(0,230,118,.15)' : verified[cfg.env]==='fail' ? 'rgba(255,68,68,.1)' : 'rgba(255,255,255,.04)',
                       border:`1px solid ${verified[cfg.env]==='ok'?'rgba(0,230,118,.3)':verified[cfg.env]==='fail'?'rgba(255,68,68,.2)':'rgba(255,255,255,.08)'}`,
                       color: verified[cfg.env]==='ok' ? '#00e676' : verified[cfg.env]==='fail' ? '#ff6666' : '#3a6080' }}>
-                    {verified[cfg.env]==='testing' ? 'â³' : verified[cfg.env]==='ok' ? 'â' : verified[cfg.env]==='fail' ? 'â' : 'Test'}
+                    {verified[cfg.env]==='testing' ? '⏳' : verified[cfg.env]==='ok' ? '✅' : verified[cfg.env]==='fail' ? '❌' : 'Test'}
                   </button>
                 </div>
               </div>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* âââ STORAGE TAB ââââââââââââââââââââââââââââââââââââ */}
+        {/* ═══ STORAGE TAB ════════════════════════════════════ */}
         {tab === 'storage' && (
           <div>
             <div style={{ fontSize:10, color:'#1a3050', marginBottom:12, lineHeight:1.7 }}>
@@ -340,7 +340,7 @@ export default function SettingsPage() {
                     background: (prefs.storageMode||'auto')===m ? 'rgba(0,229,255,.1)' : '#0c1422',
                     border:`1.5px solid ${(prefs.storageMode||'auto')===m?'#00e5ff':'rgba(0,229,255,.08)'}`,
                     color: (prefs.storageMode||'auto')===m ? '#00e5ff' : '#3a6080' }}>
-                  {m === 'auto' ? 'ð¤ Auto (cascade)' : 'ðï¸ Select provider'}
+                  {m === 'auto' ? '🤖 Auto (cascade)' : '🎛️ Select provider'}
                 </button>
               ))}
             </div>
@@ -362,8 +362,8 @@ export default function SettingsPage() {
                       <div style={{ fontSize:10, color:'#1e3858', marginTop:2 }}>{info.limit}</div>
                     </div>
                     <div style={{ textAlign:'right' as const }}>
-                      {'â­'.repeat(info.quality).padEnd(5,'â')}
-                      {sel && selMode && <div style={{ fontSize:9, color:'#00e676', marginTop:2 }}>â Selected</div>}
+                      {'⭐'.repeat(info.quality).padEnd(5,'☆')}
+                      {sel && selMode && <div style={{ fontSize:9, color:'#00e676', marginTop:2 }}>✓ Selected</div>}
                       {!selMode && i===0 && <div style={{ fontSize:9, color:'#00e5ff', marginTop:2 }}>Primary</div>}
                     </div>
                   </div>
@@ -373,21 +373,21 @@ export default function SettingsPage() {
 
             <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(255,153,68,.05)', border:'1px solid rgba(255,153,68,.1)', borderRadius:8 }}>
               <div style={{ fontSize:10, color:'#ff9944', lineHeight:1.7 }}>
-                ð¡ Supabase/Firebase keys = Vercel env variables mein daalte hain (GitHub push se pehle).<br/>
-                IndexedDB + localStorage = koi key nahi chahiye, auto works â
+                💡 Supabase/Firebase keys = Vercel env variables mein daalte hain (GitHub push se pehle).<br/>
+                IndexedDB + localStorage = koi key nahi chahiye, auto works ✅
               </div>
             </div>
           </div>
         )}
 
 
-        {/* âââ MEMORY TAB ââââââââââââââââââââââââââââââââââââ */}
+        {/* ═══ MEMORY TAB ════════════════════════════════════ */}
 
         {tab === 'security' && (
           <div style={{ padding: '12px 0' }}>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, color: '#00e5ff', fontWeight: 700, marginBottom: 4 }}>ð PIN Lock</div>
-              <div style={{ fontSize: 11, color: '#2a5070', marginBottom: 12 }}>SHA-256 hashed â 4 digit PIN. Galat try: 5 baar mein 5 min lock.</div>
+              <div style={{ fontSize: 13, color: '#00e5ff', fontWeight: 700, marginBottom: 4 }}>🔐 PIN Lock</div>
+              <div style={{ fontSize: 11, color: '#2a5070', marginBottom: 12 }}>SHA-256 hashed — 4 digit PIN. Galat try: 5 baar mein 5 min lock.</div>
               <div style={{ padding: 12, background: 'rgba(0,229,255,.04)', borderRadius: 10, border: '1px solid rgba(0,229,255,.1)', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: pinEnabled ? '#00e676' : '#ef5350' }}/>
@@ -397,30 +397,30 @@ export default function SettingsPage() {
                   <>
                     <div style={{ fontSize: 11, color: '#4a7090', marginBottom: 4 }}>New PIN (4 digits)</div>
                     <input type="password" inputMode="numeric" maxLength={4} value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g,''))}
-                      placeholder="â¢â¢â¢â¢" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(0,229,255,.2)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 8 }}/>
+                      placeholder="••••" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(0,229,255,.2)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 8 }}/>
                     <div style={{ fontSize: 11, color: '#4a7090', marginBottom: 4 }}>Confirm PIN</div>
                     <input type="password" inputMode="numeric" maxLength={4} value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g,''))}
-                      placeholder="â¢â¢â¢â¢" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(0,229,255,.2)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 10 }}/>
+                      placeholder="••••" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(0,229,255,.2)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 10 }}/>
                     <button onClick={async () => {
                       if (newPin.length !== 4) { setPinMsg('4 digit PIN chahiye'); setPinMsgType('err'); return; }
                       if (newPin !== confirmPin) { setPinMsg('PIN match nahi kiya'); setPinMsgType('err'); return; }
                       await setPIN(newPin);
                       setPinEnabled(true); setNewPin(''); setConfirmPin('');
-                      setPinMsg('â PIN set ho gaya!'); setPinMsgType('ok');
+                      setPinMsg('✅ PIN set ho gaya!'); setPinMsgType('ok');
                     }} style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(0,229,255,.15)', border: '1px solid rgba(0,229,255,.3)', color: '#00e5ff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                      Set PIN ð
+                      Set PIN 🔐
                     </button>
                   </>
                 ) : (
                   <>
                     <div style={{ fontSize: 11, color: '#4a7090', marginBottom: 4 }}>Current PIN (verify to disable)</div>
                     <input type="password" inputMode="numeric" maxLength={4} value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/\D/g,''))}
-                      placeholder="â¢â¢â¢â¢" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(239,83,80,.3)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 10 }}/>
+                      placeholder="••••" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(239,83,80,.3)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 10 }}/>
                     <button onClick={async () => {
                       const ok = await verifyPIN(currentPin);
                       if (!ok) { setPinMsg('Galat PIN'); setPinMsgType('err'); return; }
                       clearPIN(); setPinEnabled(false); setCurrentPin('');
-                      setPinMsg('â PIN hata diya'); setPinMsgType('ok');
+                      setPinMsg('✅ PIN hata diya'); setPinMsgType('ok');
                     }} style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(239,83,80,.1)', border: '1px solid rgba(239,83,80,.3)', color: '#ef5350', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                       Disable PIN
                     </button>
@@ -431,14 +431,14 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <div style={{ fontSize: 13, color: '#00e5ff', fontWeight: 700, marginBottom: 8 }}>ð§¹ Data Management</div>
+              <div style={{ fontSize: 13, color: '#00e5ff', fontWeight: 700, marginBottom: 8 }}>🧹 Data Management</div>
               <button onClick={() => { if(confirm('Sab chats delete karein?')) { indexedDB.deleteDatabase('jarvis_v10'); localStorage.clear(); window.location.reload(); }}}
                 style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(239,83,80,.06)', border: '1px solid rgba(239,83,80,.2)', color: '#ef5350', fontSize: 12, cursor: 'pointer', marginBottom: 6 }}>
-                ðï¸ Sab Data Delete (Reset)
+                🗑️ Sab Data Delete (Reset)
               </button>
               <button onClick={() => { localStorage.removeItem('jarvis_v10_chats'); location.reload(); }}
                 style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(255,152,0,.06)', border: '1px solid rgba(255,152,0,.2)', color: '#ffa000', fontSize: 12, cursor: 'pointer' }}>
-                ðï¸ Sirf Chats Clear
+                🗂️ Sirf Chats Clear
               </button>
             </div>
           </div>

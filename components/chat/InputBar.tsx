@@ -4,18 +4,18 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 export type ChatMode = 'auto' | 'flash' | 'think' | 'deep'
 
 const MODES = [
-  { id:'auto'  as ChatMode, icon:'ð¤', label:'Auto',  color:'#00e5ff' },
-  { id:'flash' as ChatMode, icon:'â¡', label:'Flash', color:'#ffd600' },
-  { id:'think' as ChatMode, icon:'ð§ ', label:'Think', color:'#a78bfa' },
-  { id:'deep'  as ChatMode, icon:'ð¬', label:'Deep',  color:'#00e676' },
+  { id:'auto'  as ChatMode, icon:'🤖', label:'Auto',  color:'#00e5ff' },
+  { id:'flash' as ChatMode, icon:'⚡', label:'Flash', color:'#ffd600' },
+  { id:'think' as ChatMode, icon:'🧠', label:'Think', color:'#a78bfa' },
+  { id:'deep'  as ChatMode, icon:'🔬', label:'Deep',  color:'#00e676' },
 ]
 
 const COMPRESS_OPTS = [
-  { id:'short',  icon:'âï¸',  label:'Short',  desc:'~30% shorter', color:'#00e676',
+  { id:'short',  icon:'✂️',  label:'Short',  desc:'~30% shorter', color:'#00e676',
     prompt:'Lightly compress. Remove duplicates. Keep most details. Same language.' },
-  { id:'medium', icon:'ð', label:'Medium', desc:'~50% shorter', color:'#00e5ff',
+  { id:'medium', icon:'📝', label:'Medium', desc:'~50% shorter', color:'#00e5ff',
     prompt:'Compress to key points. Remove filler. Same language.' },
-  { id:'tiny',   icon:'â¡', label:'Tiny',   desc:'~70% â 1 line', color:'#a78bfa',
+  { id:'tiny',   icon:'⚡', label:'Tiny',   desc:'~70% — 1 line', color:'#a78bfa',
     prompt:'Summarize in ONE short sentence. Core idea only. Same language.' },
 ]
 
@@ -47,8 +47,8 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
     el.style.height = Math.min(el.scrollHeight, 110) + 'px'
   }
 
-  // ââ Close popups on tap outside âââââââââââââââââââââââââ
-  // IMPORTANT: delay listener by 80ms â same-tap touchend would immediately
+  // ── Close popups on tap outside ─────────────────────────
+  // IMPORTANT: delay listener by 80ms — same-tap touchend would immediately
   // re-close the popup if we bind instantly after pointerDown opens it
   useEffect(() => {
     if (!showPlus && !showCompress) return
@@ -139,14 +139,14 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             <img src={attachPreview} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:'cover' }} />
             <span style={{ fontSize:11, color:'#90caf9', flex:1 }}>{attachFile?.name}</span>
             <button onClick={()=>{setAttach(null);setPreview(null)}}
-              style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>â</button>
+              style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>✕</button>
           </div>
         )}
 
-        {/* Main row: [+] [textarea] [âï¸] [ð¤] [â¤] */}
+        {/* Main row: [+] [textarea] [✂️] [🎤] [➤] */}
         <div style={{ display:'flex', gap:6, alignItems:'flex-end' }}>
 
-          {/* + Button â Mode + Attach */}
+          {/* + Button — Mode + Attach */}
           <div style={{ position:'relative', flexShrink:0, zIndex:200 }}>
             <button
               data-popup-btn="plus"
@@ -157,7 +157,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                 cursor:'pointer', fontSize:18, fontWeight:700, color:'#00e5ff',
                 display:'flex', alignItems:'center', justifyContent:'center',
                 transition:'all .2s' }}>
-              {showPlus ? 'â' : '+'}
+              {showPlus ? '✕' : '+'}
             </button>
 
             {showPlus && (
@@ -175,7 +175,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                     style={{ ...popupBtn(), background: mode===m.id ? `${m.color}18` : 'transparent' }}>
                     <span style={{ fontSize:15 }}>{m.icon}</span>
                     <span style={{ color: mode===m.id ? m.color : '#c8e0f0', fontSize:13, fontWeight: mode===m.id?700:400 }}>{m.label}</span>
-                    {mode===m.id && <span style={{ marginLeft:'auto', color:m.color, fontSize:12 }}>â</span>}
+                    {mode===m.id && <span style={{ marginLeft:'auto', color:m.color, fontSize:12 }}>✓</span>}
                   </button>
                 ))}
                 <div style={{ padding:'6px 14px 3px', fontSize:9, color:'#37474f', letterSpacing:2, fontWeight:700, borderTop:'1px solid rgba(0,229,255,.08)', marginTop:2 }}>ATTACH</div>
@@ -183,14 +183,14 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                   data-popup="plus"
                   onPointerDown={()=>{cameraRef.current?.click();setShowPlus(false)}}
                   style={popupBtn()}>
-                  <span style={{ fontSize:15 }}>ð·</span>
+                  <span style={{ fontSize:15 }}>📷</span>
                   <span style={{ color:'#c8e0f0', fontSize:13 }}>Camera</span>
                 </button>
                 <button
                   data-popup="plus"
                   onPointerDown={()=>{fileInputRef.current?.click();setShowPlus(false)}}
                   style={popupBtn()}>
-                  <span style={{ fontSize:15 }}>ð¼ï¸</span>
+                  <span style={{ fontSize:15 }}>🖼️</span>
                   <span style={{ color:'#c8e0f0', fontSize:13 }}>Image / PDF</span>
                 </button>
               </div>
@@ -217,7 +217,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             />
           </div>
 
-          {/* âï¸ Compress */}
+          {/* ✂️ Compress */}
           <div style={{ position:'relative', flexShrink:0, zIndex:200 }}>
             <button
               data-popup-btn="compress"
@@ -231,7 +231,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                 opacity: input.trim() ? 1 : 0.3,
                 fontSize:16, display:'flex', alignItems:'center', justifyContent:'center',
                 transition:'all .2s', color:'#00e5ff' }}>
-              {isCompressing ? 'â³' : 'âï¸'}
+              {isCompressing ? '⏳' : '✂️'}
             </button>
 
             {showCompress && (
@@ -258,7 +258,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             )}
           </div>
 
-          {/* ð¤ Voice */}
+          {/* 🎤 Voice */}
           <button onClick={toggleRecord}
             style={{ width:40, height:40, borderRadius:11, flexShrink:0,
               border: isRecording ? '1.5px solid #ef5350' : '1.5px solid rgba(255,255,255,.15)',
@@ -266,10 +266,10 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
               cursor:'pointer', fontSize:17,
               display:'flex', alignItems:'center', justifyContent:'center',
               transition:'all .2s' }}>
-            {isRecording ? 'â¹ï¸' : 'ð¤'}
+            {isRecording ? '⏹️' : '🎤'}
           </button>
 
-          {/* â¤ Send */}
+          {/* ➤ Send */}
           <button onClick={handleSend}
             disabled={isLoading || (!input.trim() && !attachFile)}
             style={{ width:40, height:40, borderRadius:11, flexShrink:0,
@@ -282,7 +282,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
               fontSize:17, display:'flex', alignItems:'center', justifyContent:'center',
               transition:'all .2s',
               boxShadow: (!isLoading&&(input.trim()||attachFile)) ? '0 4px 14px rgba(0,180,216,.45)' : 'none' }}>
-            {isLoading ? 'â³' : 'â¤'}
+            {isLoading ? '⏳' : '➤'}
           </button>
         </div>
 

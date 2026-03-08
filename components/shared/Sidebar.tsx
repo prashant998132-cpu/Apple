@@ -10,16 +10,16 @@ interface ChatEntry {
 }
 
 const NAV = [
-  { id:'chat',     href:'/',         icon:'ð¬', label:'Chat' },
-  { id:'study',    href:'/study',    icon:'ð', label:'Study' },
-  { id:'tools',    href:'/tools',    icon:'ð§', label:'Tools' },
-  { id:'target',   href:'/target',   icon:'ð¯', label:'Target' },
-  { id:'voice',    href:'/voice',    icon:'ð¤', label:'Voice' },
-  { id:'india',    href:'/india',    icon:'ð®ð³', label:'India' },
-  { id:'settings', href:'/settings', icon:'âï¸', label:'Settings' },
+  { id:'chat',     href:'/',         icon:'💬', label:'Chat' },
+  { id:'study',    href:'/study',    icon:'📚', label:'Study' },
+  { id:'tools',    href:'/tools',    icon:'🔧', label:'Tools' },
+  { id:'target',   href:'/target',   icon:'🎯', label:'Target' },
+  { id:'voice',    href:'/voice',    icon:'🎤', label:'Voice' },
+  { id:'india',    href:'/india',    icon:'🇮🇳', label:'India' },
+  { id:'settings', href:'/settings', icon:'⚙️', label:'Settings' },
 ]
 
-// Load chats â records stored as {id, data, updatedAt}
+// Load chats — records stored as {id, data, updatedAt}
 async function loadChatsFromIDB(): Promise<ChatEntry[]> {
   return new Promise((resolve) => {
     try {
@@ -142,11 +142,11 @@ export default function Sidebar({
         <div style={{ padding:'14px 16px 10px', borderBottom:'1px solid rgba(0,229,255,.08)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div>
             <div style={{ fontSize:15, fontWeight:800, color:'#00e5ff', letterSpacing:3 }}>JARVIS</div>
-            <div style={{ fontSize:10, color:'#2a5070', marginTop:1 }}>v10.3{userName ? ` Â· ${userName}` : ''}</div>
+            <div style={{ fontSize:10, color:'#2a5070', marginTop:1 }}>v10.3{userName ? ` · ${userName}` : ''}</div>
           </div>
           <button onClick={() => setOpen(false)}
             style={{ width:28, height:28, borderRadius:7, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', color:'#546e7a', fontSize:14 }}>
-            â
+            ✕
           </button>
         </div>
 
@@ -161,7 +161,7 @@ export default function Sidebar({
               display:'flex', alignItems:'center', gap:8, textAlign:'left' as const,
             }}
           >
-            <span>âï¸</span> Naya Chat
+            <span>✏️</span> Naya Chat
           </button>
         </div>
 
@@ -190,7 +190,7 @@ export default function Sidebar({
           <div style={{ fontSize:9, color:'#1e3a50', letterSpacing:2, fontWeight:700, marginBottom:6, paddingLeft:4 }}>CHAT HISTORY</div>
           {loading ? (
             <div style={{ color:'#2a5070', fontSize:11, padding:'8px 4px', display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ animation:'spin 1s linear infinite', display:'inline-block' }}>â³</span> Loading...
+              <span style={{ animation:'spin 1s linear infinite', display:'inline-block' }}>⟳</span> Loading...
             </div>
           ) : chats.length === 0 ? (
             <div style={{ color:'#1a3040', fontSize:11, padding:'8px 4px' }}>Koi purani chat nahi mili</div>
@@ -208,7 +208,7 @@ export default function Sidebar({
                   {c.preview}
                 </div>
                 <div style={{ fontSize:10, color:'#2a4060' }}>
-                  {c.msgCount} msgs Â· {timeAgo(c.ts)}
+                  {c.msgCount} msgs · {timeAgo(c.ts)}
                 </div>
               </button>
             ))
@@ -217,7 +217,7 @@ export default function Sidebar({
 
         {/* Footer */}
         <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(0,229,255,.06)', fontSize:10, color:'#1a3040', textAlign:'center' as const }}>
-          JARVIS Â· â¹0 Forever ð
+          JARVIS · ₹0 Forever 🔒
         </div>
       </div>
     </>

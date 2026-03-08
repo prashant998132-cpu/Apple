@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'JARVIS â Personal AI',
+  title: 'JARVIS — Personal AI',
   description: 'Autonomous Hindi-first personal AI assistant. Free forever.',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'JARVIS' },
