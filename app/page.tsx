@@ -230,10 +230,16 @@ export default function ChatPage() {
     setMsgs([]);
   };
 
+  const loadOldChat = async (id: string) => {
+    chatId.current = id;
+    const msgs = await loadChat(id);
+    setMsgs(msgs);
+  };
+
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', flexDirection:'column', background:'#090d18' }}>
       <div className="bg-grid"/>
-      <Sidebar onNewChat={newChat}/>
+      <Sidebar onNewChat={newChat} onLoadChat={loadOldChat} currentChatId={chatId.current}/>
 
       {/* Header */}
       <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 9px 58px', borderBottom:'1px solid rgba(255,255,255,.05)', flexShrink:0, background:'rgba(9,13,24,.96)', backdropFilter:'blur(10px)', zIndex:10 }}>
