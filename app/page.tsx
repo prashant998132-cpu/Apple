@@ -444,7 +444,7 @@ export default function ChatPage() {
         <div ref={bot} style={{ height:1 }}/>
       </main>
 
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)}/>}
+      {toast && <Toast message={toast.msg} type={toast.type}/>}
 
       <InputBar onSend={send} isLoading={loading} mode={mode} onModeChange={setMode}/>
     </div>
