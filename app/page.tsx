@@ -9,21 +9,21 @@ import { initProactiveEngine, detectChainedIntent, requestWakeLock, setupWakeLoc
 import { getFullLocation, loadPlaces, distanceKm, syncLocationToCloud } from '../lib/location/tracker';
 
 const STARTERS = [
-  { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
-  { icon:'📚', t:'Mujhe aaj ke liye study plan bana do' },
-  { icon:'🖼️', t:'Ek realistic jungle image banao' },
-  { icon:'🚂', t:'Nearest station se Delhi train kab hai?' },
-  { icon:'🧠', t:'Ek concept samjhao — simple language mein' },
-  { icon:'🎯', t:'Mera weekly goal set karo aur track karo' },
+  { icon:'ð¤ï¸', t:'Aaj ka mausam kaisa hai?' },
+  { icon:'ð', t:'Mujhe aaj ke liye study plan bana do' },
+  { icon:'ð¼ï¸', t:'Ek realistic jungle image banao' },
+  { icon:'ð', t:'Nearest station se Delhi train kab hai?' },
+  { icon:'ð§ ', t:'Ek concept samjhao â simple language mein' },
+  { icon:'ð¯', t:'Mera weekly goal set karo aur track karo' },
 ];
 
 const STUDY_PROMPTS = [
-  { icon:'📖', t:'Aaj ka topic kya padhna chahiye?' },
-  { icon:'❓', t:'MCQ banao is topic pe: ' },
-  { icon:'🗂️', t:'Flashcards banao: ' },
-  { icon:'📝', t:'Short notes banao: ' },
-  { icon:'🔄', t:'Revision plan banao — exam 7 din mein' },
-  { icon:'💡', t:'Ye concept simple language mein samjhao: ' },
+  { icon:'ð', t:'Aaj ka topic kya padhna chahiye?' },
+  { icon:'â', t:'MCQ banao is topic pe: ' },
+  { icon:'ðï¸', t:'Flashcards banao: ' },
+  { icon:'ð', t:'Short notes banao: ' },
+  { icon:'ð', t:'Revision plan banao â exam 7 din mein' },
+  { icon:'ð¡', t:'Ye concept simple language mein samjhao: ' },
 ];
 
 async function save(id:string, m:any[]) { await saveChat(id, m) }
@@ -53,21 +53,21 @@ function getFollowUpChips(reply: string): string[] {
   return chips.slice(0, 3)
 }
 
-// ── Indian Festivals ───────────────────────────────────────
+// ââ Indian Festivals âââââââââââââââââââââââââââââââââââââââ
 function getTodayFestival(): string | null {
   const now = new Date();
   const md = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const f: Record<string,string> = {
-    '01-01':'🎆 Naya Saal Mubarak!', '01-14':'🪁 Makar Sankranti aaj hai!',
-    '01-26':'🇮🇳 Aaj Republic Day hai!', '02-14':'❤️ Valentine\'s Day aaj hai!',
-    '03-08':'🌸 Aaj Holi hai — Rang barse!', '03-25':'🎂 Gudi Padwa aaj hai!',
-    '03-31':'☪️ Aaj Eid ul-Fitr hai!', '04-14':'🌟 Aaj Baisakhi hai!',
-    '04-18':'✝️ Aaj Good Friday hai!', '05-12':'💐 Aaj Mother\'s Day hai!',
-    '06-16':'👔 Aaj Father\'s Day hai!', '08-15':'🇮🇳 Aaj Independence Day hai!',
-    '08-26':'🐘 Aaj Ganesh Chaturthi hai!', '10-02':'🕊️ Gandhi Jayanti aaj hai!',
-    '10-13':'💥 Aaj Dussehra hai!', '10-24':'🪔 Aaj Diwali hai!',
-    '11-05':'🪔 Aaj Bhai Dooj hai!', '11-15':'💡 Aaj Guru Nanak Jayanti hai!',
-    '12-25':'🎄 Merry Christmas!', '12-31':'🎉 Aaj saal ka aakhri din hai!',
+    '01-01':'ð Naya Saal Mubarak!', '01-14':'ðª Makar Sankranti aaj hai!',
+    '01-26':'ð®ð³ Aaj Republic Day hai!', '02-14':'â¤ï¸ Valentine\'s Day aaj hai!',
+    '03-08':'ð¸ Aaj Holi hai â Rang barse!', '03-25':'ð Gudi Padwa aaj hai!',
+    '03-31':'âªï¸ Aaj Eid ul-Fitr hai!', '04-14':'ð Aaj Baisakhi hai!',
+    '04-18':'âï¸ Aaj Good Friday hai!', '05-12':'ð Aaj Mother\'s Day hai!',
+    '06-16':'ð Aaj Father\'s Day hai!', '08-15':'ð®ð³ Aaj Independence Day hai!',
+    '08-26':'ð Aaj Ganesh Chaturthi hai!', '10-02':'ðï¸ Gandhi Jayanti aaj hai!',
+    '10-13':'ð¥ Aaj Dussehra hai!', '10-24':'ðª Aaj Diwali hai!',
+    '11-05':'ðª Aaj Bhai Dooj hai!', '11-15':'ð¡ Aaj Guru Nanak Jayanti hai!',
+    '12-25':'ð Merry Christmas!', '12-31':'ð Aaj saal ka aakhri din hai!',
   };
   return f[md] || null;
 }
@@ -75,11 +75,45 @@ function getTodayFestival(): string | null {
 function getLiveTime(): { time: string; greeting: string; date: string } {
   const now = new Date();
   const h = now.getHours();
-  const greeting = h < 5 ? 'Shubb Ratri 🌙' : h < 12 ? 'Subah ki Salaam ☀️' : h < 17 ? 'Dopahar ki Salaam 🌞' : h < 20 ? 'Shaam ki Salaam 🌆' : 'Raat ki Salaam 🌙';
+  const greeting = h < 5 ? 'Shubb Ratri ð' : h < 12 ? 'Subah ki Salaam âï¸' : h < 17 ? 'Dopahar ki Salaam ð' : h < 20 ? 'Shaam ki Salaam ð' : 'Raat ki Salaam ð';
   const time = now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   const date = now.toLocaleDateString('hi-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   return { time, greeting, date };
 }
+
+
+// ââ Themes ââââââââââââââââââââââââââââââââââââââââââââââââ
+export const THEMES = {
+  dark: {
+    name:'Dark', icon:'ð',
+    bg:'#090d18', surface:'rgba(0,229,255,.04)', border:'rgba(0,229,255,.15)',
+    text:'#e8f4ff', subtext:'#4a90b8', muted:'#1e3a50', accent:'#00e5ff',
+    inputBg:'rgba(255,255,255,.07)', headerBg:'rgba(9,13,24,.96)',
+    msgUser:'rgba(0,180,216,.12)', msgAI:'rgba(255,255,255,.03)',
+  },
+  black: {
+    name:'Black', icon:'â«',
+    bg:'#000000', surface:'rgba(255,255,255,.03)', border:'rgba(255,255,255,.08)',
+    text:'#ffffff', subtext:'#4a6070', muted:'#1a1a1a', accent:'#00e5ff',
+    inputBg:'rgba(255,255,255,.05)', headerBg:'rgba(0,0,0,.98)',
+    msgUser:'rgba(0,180,216,.1)', msgAI:'rgba(255,255,255,.02)',
+  },
+  white: {
+    name:'White', icon:'âï¸',
+    bg:'#f0f4f8', surface:'rgba(0,0,0,.04)', border:'rgba(0,0,0,.1)',
+    text:'#0d1b2a', subtext:'#2a5070', muted:'#90a4ae', accent:'#0077b6',
+    inputBg:'rgba(255,255,255,.9)', headerBg:'rgba(240,244,248,.97)',
+    msgUser:'rgba(0,119,182,.1)', msgAI:'rgba(255,255,255,.8)',
+  },
+  navy: {
+    name:'Navy', icon:'ðµ',
+    bg:'#0a1628', surface:'rgba(30,80,140,.12)', border:'rgba(30,80,140,.3)',
+    text:'#cce0ff', subtext:'#5a8aaa', muted:'#0f2040', accent:'#4fc3f7',
+    inputBg:'rgba(30,80,140,.15)', headerBg:'rgba(10,22,40,.97)',
+    msgUser:'rgba(79,195,247,.12)', msgAI:'rgba(255,255,255,.03)',
+  },
+}
+export type ThemeKey = keyof typeof THEMES;
 
 export default function ChatPage() {
   const [msgs, setMsgs]   = useState<any[]>([]);
@@ -98,6 +132,10 @@ export default function ChatPage() {
   const [liveTime, setLiveTime]   = useState(getLiveTime());
   const [weatherInfo, setWeatherInfo] = useState<{temp:string;icon:string;city:string}|null>(null);
 
+  const [themeKey, setThemeKey] = useState<ThemeKey>('dark');
+  const [showTheme, setShowTheme] = useState(false);
+  const theme = THEMES[themeKey as keyof typeof THEMES];
+
   const chatId = useRef('chat_'+new Date().toDateString().replace(/ /g,'_'));
   const bot    = useRef<HTMLDivElement>(null);
 
@@ -110,15 +148,19 @@ export default function ChatPage() {
       const home   = places.find((p:any) => p.id === 'home');
       if (home) {
         const d = distanceKm(loc.lat, loc.lon, home.lat, home.lon);
-        setLoc(d < 0.2 ? '🏠 Ghar' : `📍 ${loc.city||loc.area||'?'} · ${d.toFixed(1)}km`);
+        setLoc(d < 0.2 ? 'ð  Ghar' : `ð ${loc.city||loc.area||'?'} Â· ${d.toFixed(1)}km`);
       } else {
-        setLoc(`📍 ${loc.city||loc.area||`${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}`}`);
+        setLoc(`ð ${loc.city||loc.area||`${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}`}`);
       }
-    } catch { setLoc('📍 off'); }
+    } catch { setLoc('ð off'); }
   }, []);
 
   useEffect(() => {
-    // Load saved name — show onboarding if first visit
+    // Load theme
+    const savedTheme = localStorage.getItem('jarvis_theme') as ThemeKey | null;
+    if (savedTheme && (savedTheme in THEMES)) setThemeKey(savedTheme);
+
+    // Load saved name â show onboarding if first visit
     const saved = localStorage.getItem('jarvis_profile_name') || '';
     if (saved) setUserName(saved);
     else setOnboard(true);
@@ -136,7 +178,7 @@ export default function ChatPage() {
     refreshLoc();
     const t = setInterval(refreshLoc, 3*60*1000);
 
-    // Live clock — update every 30s
+    // Live clock â update every 30s
     const clockT = setInterval(() => setLiveTime(getLiveTime()), 30000);
 
     // Silent background weather fetch
@@ -146,10 +188,10 @@ export default function ChatPage() {
       body: JSON.stringify({ message: 'current weather brief 1 line', history: [], userId: 'welcome', chatId: 'welcome_wx', chatMode: 'flash' })
     }).then(r => r.json()).then(d => {
       const reply = d.reply || d.text || '';
-      const tempMatch = reply.match(/(\d+)\s*[°℃C]/);
-      const iconMatch = reply.match(/[☀️🌤️⛅🌧️🌩️❄️🌫️🌦️🌨️]/u);
+      const tempMatch = reply.match(/(\d+)\s*[Â°âC]/);
+      const iconMatch = reply.match(/[âï¸ð¤ï¸âð§ï¸ð©ï¸âï¸ð«ï¸ð¦ï¸ð¨ï¸]/u);
       if (tempMatch) {
-        setWeatherInfo({ temp: tempMatch[0], icon: iconMatch?.[0] || '🌤️', city: 'Rewa' });
+        setWeatherInfo({ temp: tempMatch[0], icon: iconMatch?.[0] || 'ð¤ï¸', city: 'Rewa' });
       }
     }).catch(() => {});
 
@@ -204,8 +246,8 @@ export default function ChatPage() {
             if (!line.startsWith('data:')) continue
             try {
               const ev = JSON.parse(line.slice(5))
-              if (ev.type === 'tool_start') setToolProgress(p => [...p, `🔧 ${ev.tool}...`])
-              if (ev.type === 'tool_end')   setToolProgress(p => [...p, `✅ ${ev.tool}`])
+              if (ev.type === 'tool_start') setToolProgress(p => [...p, `ð§ ${ev.tool}...`])
+              if (ev.type === 'tool_end')   setToolProgress(p => [...p, `â ${ev.tool}`])
               if (ev.type === 'chunk') { finalReply += ev.text; setMsgs(p => p.map(m => m.id===streamId ? {...m, content:finalReply} : m)) }
               if (ev.type === 'reply') {
                 finalReply = ev.reply || finalReply
@@ -271,7 +313,7 @@ export default function ChatPage() {
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
     } catch(e) {
-      const errMsg = { id: Date.now().toString()+'_e', role:'assistant' as const, content: '❌ Kuch error aaya. Dobara try karo.', timestamp: Date.now() }
+      const errMsg = { id: Date.now().toString()+'_e', role:'assistant' as const, content: 'â Kuch error aaya. Dobara try karo.', timestamp: Date.now() }
       setMsgs(fin => { const f=[...fin,errMsg]; void save(chatId.current,f); return f; })
     }
     setLoad(false);
@@ -289,19 +331,19 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ position:'fixed', inset:0, display:'flex', flexDirection:'column', background:'#090d18' }}>
+    <div style={{ position:'fixed', inset:0, display:'flex', flexDirection:'column', background:theme.bg, color:theme.text }}>
       <div className="bg-grid"/>
       <Sidebar onNewChat={newChat} onLoadChat={loadOldChat} currentChatId={chatId.current}/>
 
-      {/* ── ONBOARDING (first visit) ───────────── */}
+      {/* ââ ONBOARDING (first visit) âââââââââââââ */}
       {showOnboard && (
         <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(5,10,20,.97)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24 }}>
           <div style={{ maxWidth:340, width:'100%', textAlign:'center' }}>
-            <div style={{ fontSize:54, marginBottom:10 }}>🤖</div>
+            <div style={{ fontSize:54, marginBottom:10 }}>ð¤</div>
             <div style={{ fontSize:24, fontWeight:800, color:'#e8f4ff', letterSpacing:4, marginBottom:6 }}>JARVIS</div>
             <div style={{ fontSize:13, color:'#4a7090', marginBottom:28, lineHeight:1.7 }}>
               Tumhara personal AI assistant.<br/>
-              Pehle bata do — tumhara naam kya hai?
+              Pehle bata do â tumhara naam kya hai?
             </div>
             <input
               autoFocus
@@ -325,7 +367,7 @@ export default function ChatPage() {
               }}
               style={{ width:'100%', padding:'13px', borderRadius:12, background: nameInput.trim() ? 'linear-gradient(135deg,#00b4d8,#0077b6)' : 'rgba(0,229,255,.08)', border:'none', color: nameInput.trim() ? '#fff' : '#37474f', fontSize:15, fontWeight:700, cursor:'pointer' }}
             >
-              {nameInput.trim() ? `Namaste, ${nameInput.trim()}! 👋` : 'Shuru karo →'}
+              {nameInput.trim() ? `Namaste, ${nameInput.trim()}! ð` : 'Shuru karo â'}
             </button>
             <div style={{ marginTop:12, fontSize:10, color:'#1a3040' }}>Naam sirf tumhare device pe store hoga</div>
           </div>
@@ -337,13 +379,34 @@ export default function ChatPage() {
         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
           <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.18),rgba(109,40,217,.12))', border:'1px solid rgba(0,229,255,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#00e5ff' }}>J</div>
           <div style={{ fontSize:11, fontWeight:700, color:'#e8f4ff', letterSpacing:3 }}>JARVIS</div>
-          {userName && <div style={{ fontSize:10, color:'#2a5070' }}>· {userName}</div>}
+          {userName && <div style={{ fontSize:10, color:'#2a5070' }}>Â· {userName}</div>}
           {locLbl && <div style={{ fontSize:9, color:'#1a3050', marginLeft:4 }}>{locLbl}</div>}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
+          {/* Theme picker */}
+          <div style={{ position:'relative' }}>
+            <button onClick={() => setShowTheme(p=>!p)}
+              style={{ width:26, height:26, borderRadius:7, background:'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {THEMES[themeKey].icon}
+            </button>
+            {showTheme && (
+              <>
+                <div onClick={() => setShowTheme(false)} style={{ position:'fixed', inset:0, zIndex:299 }}/>
+                <div style={{ position:'absolute', top:30, right:0, zIndex:300, background:'#071828', border:'1px solid rgba(0,229,255,.2)', borderRadius:12, padding:6, minWidth:130, boxShadow:'0 8px 32px rgba(0,0,0,.8)' }}>
+                  {(Object.keys(THEMES) as ThemeKey[]).map(k => (
+                    <button key={k} onClick={() => { setThemeKey(k); localStorage.setItem('jarvis_theme',k); setShowTheme(false); }}
+                      style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'7px 10px', borderRadius:8, background: themeKey===k ? 'rgba(0,229,255,.1)' : 'transparent', border:'none', cursor:'pointer', color: themeKey===k ? '#00e5ff' : '#90b4c8', fontSize:12 }}>
+                      <span>{THEMES[k].icon}</span><span>{THEMES[k].name}</span>
+                      {themeKey===k && <span style={{ marginLeft:'auto' }}>â</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {msgs.length > 0 && (
-            <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
+            <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>â</button>
           )}
         </div>
       </header>
@@ -358,7 +421,7 @@ export default function ChatPage() {
               <div style={{ textAlign:'center', marginBottom:12 }}>
                 <div style={{ fontSize:11, color:'#4a90b8', marginBottom:2 }}>{liveTime.greeting}</div>
                 <div style={{ fontSize:20, fontWeight:800, color:'#e8f4ff' }}>
-                  {userName ? `${userName} 👋` : 'Boss 👋'}
+                  {userName ? `${userName} ð` : 'Boss ð'}
                 </div>
               </div>
               <div style={{ display:'flex', gap:8, marginBottom:10 }}>
@@ -370,11 +433,11 @@ export default function ChatPage() {
                   {weatherInfo ? (
                     <>
                       <div style={{ fontSize:16, fontWeight:700, color:'#e8f4ff', lineHeight:1 }}>{weatherInfo.icon} {weatherInfo.temp}</div>
-                      <div style={{ fontSize:9, color:'#3a6080', marginTop:3 }}>{weatherInfo.city} · Abhi</div>
+                      <div style={{ fontSize:9, color:'#3a6080', marginTop:3 }}>{weatherInfo.city} Â· Abhi</div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize:16, color:'#1e3a50', lineHeight:1 }}>🌤️ —</div>
+                      <div style={{ fontSize:16, color:'#1e3a50', lineHeight:1 }}>ð¤ï¸ â</div>
                       <div style={{ fontSize:9, color:'#1e3040', marginTop:3 }}>Loading...</div>
                     </>
                   )}
@@ -389,8 +452,8 @@ export default function ChatPage() {
 
             {/* Mode tabs */}
             <div style={{ display:'flex', gap:6, marginBottom:10, width:'100%', maxWidth:440 }}>
-              <button onClick={() => setStudyMode(false)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: !studyMode ? 'rgba(0,229,255,.1)' : 'transparent', border:`1px solid ${!studyMode?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)'}`, color: !studyMode?'#00e5ff':'#2a4060' }}>💬 General</button>
-              <button onClick={() => setStudyMode(true)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: studyMode ? 'rgba(167,139,250,.1)' : 'transparent', border:`1px solid ${studyMode?'rgba(167,139,250,.3)':'rgba(255,255,255,.06)'}`, color: studyMode?'#a78bfa':'#2a4060' }}>📚 Study Mode</button>
+              <button onClick={() => setStudyMode(false)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: !studyMode ? 'rgba(0,229,255,.1)' : 'transparent', border:`1px solid ${!studyMode?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)'}`, color: !studyMode?'#00e5ff':'#2a4060' }}>ð¬ General</button>
+              <button onClick={() => setStudyMode(true)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: studyMode ? 'rgba(167,139,250,.1)' : 'transparent', border:`1px solid ${studyMode?'rgba(167,139,250,.3)':'rgba(255,255,255,.06)'}`, color: studyMode?'#a78bfa':'#2a4060' }}>ð Study Mode</button>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, width:'100%', maxWidth:440 }}>
               {(studyMode ? STUDY_PROMPTS : STARTERS).map(s => (

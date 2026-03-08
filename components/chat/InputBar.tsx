@@ -4,18 +4,18 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 export type ChatMode = 'auto' | 'flash' | 'think' | 'deep'
 
 const MODES = [
-  { id:'auto'  as ChatMode, icon:'🤖', label:'Auto',  color:'#00e5ff' },
-  { id:'flash' as ChatMode, icon:'⚡', label:'Flash', color:'#ffd600' },
-  { id:'think' as ChatMode, icon:'🧠', label:'Think', color:'#a78bfa' },
-  { id:'deep'  as ChatMode, icon:'🔬', label:'Deep',  color:'#00e676' },
+  { id:'auto'  as ChatMode, icon:'ð¤', label:'Auto',  color:'#00e5ff' },
+  { id:'flash' as ChatMode, icon:'â¡', label:'Flash', color:'#ffd600' },
+  { id:'think' as ChatMode, icon:'ð§ ', label:'Think', color:'#a78bfa' },
+  { id:'deep'  as ChatMode, icon:'ð¬', label:'Deep',  color:'#00e676' },
 ]
 
 const COMPRESS_OPTS = [
-  { id:'short',  icon:'✂️',  label:'Short',  desc:'~30% shorter', color:'#00e676',
+  { id:'short',  icon:'âï¸',  label:'Short',  desc:'~30% shorter', color:'#00e676',
     prompt:'Lightly compress. Remove duplicates. Keep most details. Same language.' },
-  { id:'medium', icon:'📝', label:'Medium', desc:'~50% shorter', color:'#00e5ff',
+  { id:'medium', icon:'ð', label:'Medium', desc:'~50% shorter', color:'#00e5ff',
     prompt:'Compress to key points. Remove filler. Same language.' },
-  { id:'tiny',   icon:'⚡', label:'Tiny',   desc:'~70% — 1 line', color:'#a78bfa',
+  { id:'tiny',   icon:'â¡', label:'Tiny',   desc:'~70% â 1 line', color:'#a78bfa',
     prompt:'Summarize in ONE short sentence. Core idea only. Same language.' },
 ]
 
@@ -47,17 +47,23 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
     el.style.height = Math.min(el.scrollHeight, 110) + 'px'
   }
 
-  // ── Close popups on tap/click outside ──────────────────
-  // FIXED: use both mousedown + touchstart for mobile
+  // ââ Close popups on tap outside âââââââââââââââââââââââââ
   useEffect(() => {
-    const close = () => { setShowPlus(false); setShowComp(false) }
-    document.addEventListener('mousedown', close)
-    document.addEventListener('touchstart', close, { passive: true })
-    return () => {
-      document.removeEventListener('mousedown', close)
-      document.removeEventListener('touchstart', close)
+    if (!showPlus && !showCompress) return
+    const close = (e: Event) => {
+      const t = e.target as HTMLElement
+      // Don't close if tapping inside a popup or its button
+      if (t.closest('[data-popup]') || t.closest('[data-popup-btn]')) return
+      setShowPlus(false); setShowComp(false)
     }
-  }, [])
+    // Use capture phase so it fires before anything else
+    document.addEventListener('touchend', close, { capture: true, passive: true })
+    document.addEventListener('mouseup', close, { capture: true })
+    return () => {
+      document.removeEventListener('touchend', close, { capture: true })
+      document.removeEventListener('mouseup', close, { capture: true })
+    }
+  }, [showPlus, showCompress])
 
   const handleSend = useCallback(() => {
     if ((!input.trim() && !attachFile) || isLoading) return
@@ -120,14 +126,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
 
   return (
     <>
-      {/* ── Full-screen tap-to-close backdrop ── */}
-      {(showPlus || showCompress) && (
-        <div
-          onMouseDown={()=>{setShowPlus(false);setShowComp(false)}}
-          onTouchStart={()=>{setShowPlus(false);setShowComp(false)}}
-          style={{ position:'fixed', inset:0, zIndex:190, background:'transparent' }}
-        />
-      )}
+
 
       <div style={{ padding:'6px 8px 8px', background:'linear-gradient(180deg,transparent,rgba(5,12,28,.97))', backdropFilter:'blur(12px)' }}>
 
@@ -139,31 +138,30 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             <img src={attachPreview} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:'cover' }} />
             <span style={{ fontSize:11, color:'#90caf9', flex:1 }}>{attachFile?.name}</span>
             <button onClick={()=>{setAttach(null);setPreview(null)}}
-              style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>✕</button>
+              style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>â</button>
           </div>
         )}
 
-        {/* Main row: [+] [textarea] [✂️] [🎤] [➤] */}
+        {/* Main row: [+] [textarea] [âï¸] [ð¤] [â¤] */}
         <div style={{ display:'flex', gap:6, alignItems:'flex-end' }}>
 
-          {/* + Button — Mode + Attach */}
+          {/* + Button â Mode + Attach */}
           <div style={{ position:'relative', flexShrink:0, zIndex:200 }}>
             <button
-              onMouseDown={e=>{e.stopPropagation();setShowPlus(p=>!p);setShowComp(false)}}
-              onTouchStart={e=>{e.stopPropagation();setShowPlus(p=>!p);setShowComp(false)}}
+              data-popup-btn="plus"
+              onPointerDown={e=>{e.stopPropagation();setShowPlus(p=>!p);setShowComp(false)}}
               style={{ width:40, height:40, borderRadius:11,
                 border:`1.5px solid ${showPlus ? curMode.color : 'rgba(0,229,255,.25)'}`,
                 background: showPlus ? `${curMode.color}20` : 'rgba(0,229,255,.07)',
                 cursor:'pointer', fontSize:18, fontWeight:700, color:'#00e5ff',
                 display:'flex', alignItems:'center', justifyContent:'center',
                 transition:'all .2s' }}>
-              {showPlus ? '✕' : '+'}
+              {showPlus ? 'â' : '+'}
             </button>
 
             {showPlus && (
               <div
-                onMouseDown={e=>e.stopPropagation()}
-                onTouchStart={e=>e.stopPropagation()}
+                data-popup="plus"
                 style={{ position:'absolute', bottom:46, left:0, zIndex:201,
                   background:'#071828', border:'1px solid rgba(0,229,255,.22)',
                   borderRadius:14, overflow:'hidden', minWidth:176,
@@ -171,27 +169,27 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                 <div style={{ padding:'6px 14px 3px', fontSize:9, color:'#37474f', letterSpacing:2, fontWeight:700 }}>MODE</div>
                 {MODES.map(m => (
                   <button key={m.id}
-                    onMouseDown={()=>{onModeChange(m.id);setShowPlus(false)}}
-                    onTouchStart={()=>{onModeChange(m.id);setShowPlus(false)}}
+                    data-popup="plus"
+                    onPointerDown={()=>{onModeChange(m.id);setShowPlus(false)}}
                     style={{ ...popupBtn(), background: mode===m.id ? `${m.color}18` : 'transparent' }}>
                     <span style={{ fontSize:15 }}>{m.icon}</span>
                     <span style={{ color: mode===m.id ? m.color : '#c8e0f0', fontSize:13, fontWeight: mode===m.id?700:400 }}>{m.label}</span>
-                    {mode===m.id && <span style={{ marginLeft:'auto', color:m.color, fontSize:12 }}>✓</span>}
+                    {mode===m.id && <span style={{ marginLeft:'auto', color:m.color, fontSize:12 }}>â</span>}
                   </button>
                 ))}
                 <div style={{ padding:'6px 14px 3px', fontSize:9, color:'#37474f', letterSpacing:2, fontWeight:700, borderTop:'1px solid rgba(0,229,255,.08)', marginTop:2 }}>ATTACH</div>
                 <button
-                  onMouseDown={()=>{cameraRef.current?.click();setShowPlus(false)}}
-                  onTouchStart={()=>{cameraRef.current?.click();setShowPlus(false)}}
+                  data-popup="plus"
+                  onPointerDown={()=>{cameraRef.current?.click();setShowPlus(false)}}
                   style={popupBtn()}>
-                  <span style={{ fontSize:15 }}>📷</span>
+                  <span style={{ fontSize:15 }}>ð·</span>
                   <span style={{ color:'#c8e0f0', fontSize:13 }}>Camera</span>
                 </button>
                 <button
-                  onMouseDown={()=>{fileInputRef.current?.click();setShowPlus(false)}}
-                  onTouchStart={()=>{fileInputRef.current?.click();setShowPlus(false)}}
+                  data-popup="plus"
+                  onPointerDown={()=>{fileInputRef.current?.click();setShowPlus(false)}}
                   style={popupBtn()}>
-                  <span style={{ fontSize:15 }}>🖼️</span>
+                  <span style={{ fontSize:15 }}>ð¼ï¸</span>
                   <span style={{ color:'#c8e0f0', fontSize:13 }}>Image / PDF</span>
                 </button>
               </div>
@@ -218,11 +216,11 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             />
           </div>
 
-          {/* ✂️ Compress */}
+          {/* âï¸ Compress */}
           <div style={{ position:'relative', flexShrink:0, zIndex:200 }}>
             <button
-              onMouseDown={e=>{e.stopPropagation();if(!input.trim())return;setShowComp(p=>!p);setShowPlus(false)}}
-              onTouchStart={e=>{e.stopPropagation();if(!input.trim())return;setShowComp(p=>!p);setShowPlus(false)}}
+              data-popup-btn="compress"
+              onPointerDown={e=>{e.stopPropagation();if(!input.trim())return;setShowComp(p=>!p);setShowPlus(false)}}
               disabled={isCompressing || !input.trim()}
               title="Compress text"
               style={{ width:40, height:40, borderRadius:11,
@@ -232,13 +230,12 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                 opacity: input.trim() ? 1 : 0.3,
                 fontSize:16, display:'flex', alignItems:'center', justifyContent:'center',
                 transition:'all .2s', color:'#00e5ff' }}>
-              {isCompressing ? '⏳' : '✂️'}
+              {isCompressing ? 'â³' : 'âï¸'}
             </button>
 
             {showCompress && (
               <div
-                onMouseDown={e=>e.stopPropagation()}
-                onTouchStart={e=>e.stopPropagation()}
+                data-popup="compress"
                 style={{ position:'absolute', bottom:46, right:0, zIndex:201,
                   background:'#071828', border:'1px solid rgba(0,229,255,.22)',
                   borderRadius:14, overflow:'hidden', minWidth:168,
@@ -246,8 +243,8 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                 <div style={{ padding:'6px 14px 3px', fontSize:9, color:'#37474f', letterSpacing:2, fontWeight:700 }}>COMPRESS</div>
                 {COMPRESS_OPTS.map(opt => (
                   <button key={opt.id}
-                    onMouseDown={()=>handleCompress(opt.prompt)}
-                    onTouchStart={()=>handleCompress(opt.prompt)}
+                    data-popup="compress"
+                    onPointerDown={()=>handleCompress(opt.prompt)}
                     style={{ ...popupBtn() }}>
                     <span style={{ fontSize:15 }}>{opt.icon}</span>
                     <div>
@@ -260,7 +257,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             )}
           </div>
 
-          {/* 🎤 Voice */}
+          {/* ð¤ Voice */}
           <button onClick={toggleRecord}
             style={{ width:40, height:40, borderRadius:11, flexShrink:0,
               border: isRecording ? '1.5px solid #ef5350' : '1.5px solid rgba(255,255,255,.15)',
@@ -268,10 +265,10 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
               cursor:'pointer', fontSize:17,
               display:'flex', alignItems:'center', justifyContent:'center',
               transition:'all .2s' }}>
-            {isRecording ? '⏹️' : '🎤'}
+            {isRecording ? 'â¹ï¸' : 'ð¤'}
           </button>
 
-          {/* ➤ Send */}
+          {/* â¤ Send */}
           <button onClick={handleSend}
             disabled={isLoading || (!input.trim() && !attachFile)}
             style={{ width:40, height:40, borderRadius:11, flexShrink:0,
@@ -284,7 +281,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
               fontSize:17, display:'flex', alignItems:'center', justifyContent:'center',
               transition:'all .2s',
               boxShadow: (!isLoading&&(input.trim()||attachFile)) ? '0 4px 14px rgba(0,180,216,.45)' : 'none' }}>
-            {isLoading ? '⏳' : '➤'}
+            {isLoading ? 'â³' : 'â¤'}
           </button>
         </div>
 
