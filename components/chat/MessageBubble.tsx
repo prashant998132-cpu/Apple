@@ -1,50 +1,65 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { JarvisMessage } from '../../types/jarvis.types';
 
 const TOOL_LABELS: Record<string, string> = {
-  get_weather:'🌤️ मौसम', get_datetime:'🕐 समय', search_wikipedia:'📖 Wiki',
-  get_india_news:'📰 खबर', search_youtube:'▶️ YouTube', generate_image_fast:'🎨 Image',
-  generate_image_quality:'🎨 HD', search_movies:'🎬 Film', get_crypto_price:'💰 Crypto',
-  get_nasa_content:'🚀 NASA', get_photos:'📸 Photo', get_exchange_rate:'💱 Rate',
-  get_recipe:'🍛 Recipe', get_air_quality:'🌫️ AQI', get_joke:'😄 Joke',
-  translate_text:'🌐 Translate', calculate:'🔢 Math', save_memory:'🧠 Memory',
-  get_rewa_info:'📍 Rewa', lookup_pincode:'📮 Pin', get_hackernews:'💻 Tech',
-  search_books:'📚 Books', get_sunrise_sunset:'🌅 Sun', get_cricket_scores:'🏏 Cricket',
-  get_trivia_question:'🧠 Quiz', get_meme:'😂 Meme', get_stock_market:'📈 NSE',
-  generate_qr_code:'📲 QR', get_country_info:'🌍 Country', convert_units:'🔄 Convert',
+  get_weather:'ð¤ï¸ à¤®à¥à¤¸à¤®', get_datetime:'ð à¤¸à¤®à¤¯', search_wikipedia:'ð Wiki',
+  get_india_news:'ð° à¤à¤¬à¤°', search_youtube:'â¶ï¸ YouTube', generate_image_fast:'ð¨ Image',
+  generate_image_quality:'ð¨ HD', search_movies:'ð¬ Film', get_crypto_price:'ð° Crypto',
+  get_nasa_content:'ð NASA', get_photos:'ð¸ Photo', get_exchange_rate:'ð± Rate',
+  get_recipe:'ð Recipe', get_air_quality:'ð«ï¸ AQI', get_joke:'ð Joke',
+  translate_text:'ð Translate', calculate:'ð¢ Math', save_memory:'ð§  Memory',
+  get_rewa_info:'ð Rewa', lookup_pincode:'ð® Pin', get_hackernews:'ð» Tech',
+  search_books:'ð Books', get_sunrise_sunset:'ð Sun', get_cricket_scores:'ð Cricket',
+  get_trivia_question:'ð§  Quiz', get_meme:'ð Meme', get_stock_market:'ð NSE',
+  generate_qr_code:'ð² QR', get_country_info:'ð Country', convert_units:'ð Convert',
 };
 
-function renderMarkdown(text: string) {
-  return text
+function renderMarkdown(text: string): string {
+  // Protect KaTeX blocks from markdown processing
+  const mathBlocks: string[] = [];
+  let protected_text = text
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_,m) => { mathBlocks.push(`$$${m}$$`); return `%%MATH${mathBlocks.length-1}%%`; })
+    .replace(/\$([^\n$]+?)\$/g, (_,m) => { mathBlocks.push(`$${m}$`); return `%%MATH${mathBlocks.length-1}%%`; })
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_,m) => { mathBlocks.push(`\\[${m}\\]`); return `%%MATH${mathBlocks.length-1}%%`; })
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_,m) => { mathBlocks.push(`\\(${m}\\)`); return `%%MATH${mathBlocks.length-1}%%`; });
+
+  let html = protected_text
     .replace(/\[LEARN:[^\]]*\]/g, '')
-    .replace(/```([\w]*)\n?([\\s\\S]*?)```/g, (_,__,c) =>
-      `<pre style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.12);border-radius:7px;padding:6px 9px;margin:3px 0;overflow-x:auto;font-size:11px;color:#a8ffec;font-family:monospace;line-height:1.45">${c.replace(/</g,'&lt;')}</pre>`)
-    .replace(/`(.+?)`/g, '<code style="background:rgba(0,229,255,.1);color:#a8ffec;padding:1px 5px;border-radius:4px;font-size:11px">$1</code>')
+    .replace(/```([\w]*)\n?([\s\S]*?)```/g, (_,lang,c) =>
+      `<pre style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.12);border-radius:7px;padding:6px 9px;margin:4px 0;overflow-x:auto;font-size:11px;color:#a8ffec;font-family:monospace;line-height:1.5">${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`)
+    .replace(/`([^`]+?)`/g, '<code style="background:rgba(0,229,255,.1);color:#a8ffec;padding:1px 5px;border-radius:4px;font-size:11px">$1</code>')
     .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#e8f4ff">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em style="color:#c8e6f5">$1</em>')
-    .replace(/^### (.+)$/gm, '<div style="color:#00e5ff;font-weight:700;font-size:12px;margin:5px 0 2px">$1</div>')
-    .replace(/^## (.+)$/gm, '<div style="color:#00e5ff;font-weight:700;font-size:13px;margin:5px 0 2px">$1</div>')
-    .replace(/^# (.+)$/gm, '<div style="color:#00e5ff;font-weight:800;font-size:14px;margin:6px 0 2px">$1</div>')
-    .replace(/^- (.+)$/gm, '<div style="padding-left:9px;color:#c8dff0;margin:1px 0">• $1</div>')
+    .replace(/^### (.+)$/gm, '<div style="color:#00e5ff;font-weight:700;font-size:12px;margin:6px 0 2px;letter-spacing:.3px">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="color:#00e5ff;font-weight:700;font-size:13px;margin:7px 0 2px">$1</div>')
+    .replace(/^# (.+)$/gm, '<div style="color:#00e5ff;font-weight:800;font-size:14px;margin:8px 0 3px">$1</div>')
+    .replace(/^(?:[-*]) (.+)$/gm, '<div style="padding-left:12px;color:#c8dff0;margin:2px 0;display:flex;gap:5px"><span style="color:#00e5ff;margin-top:1px">â¢</span><span>$1</span></div>')
+    .replace(/^(\d+)\.\s(.+)$/gm, '<div style="padding-left:12px;color:#c8dff0;margin:2px 0">$1. $2</div>')
     .replace(/\n/g, '<br/>');
+
+  // Restore math blocks â KaTeX auto-render will handle them client-side
+  mathBlocks.forEach((m, i) => {
+    html = html.replace(`%%MATH${i}%%`, `<span class="math-inline">${m.replace(/</g,'&lt;')}</span>`);
+  });
+  return html;
 }
 
-// ─── Rich Cards ──────────────────────────────────────────
+// âââ Rich Cards ââââââââââââââââââââââââââââââââââââââââââ
 function WeatherCard({ data }: { data: any }) {
   if (!data?.current) return null;
   const c = data.current;
   return (
     <div style={{ marginTop:6, padding:'8px 10px', borderRadius:10, background:'rgba(0,15,35,.6)', border:'1px solid rgba(0,229,255,.12)' }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-        <span style={{ fontSize:28 }}>{c.icon||'🌡️'}</span>
+        <span style={{ fontSize:28 }}>{c.icon||'ð¡ï¸'}</span>
         <div>
           <div style={{ color:'#00e5ff', fontSize:20, fontWeight:700, lineHeight:1 }}>{c.temperature}</div>
           <div style={{ color:'#90caf9', fontSize:11 }}>{c.condition_hindi}</div>
           <div style={{ color:'#546e7a', fontSize:10 }}>{data.location}</div>
         </div>
         <div style={{ marginLeft:'auto', textAlign:'right', fontSize:10, color:'#90caf9' }}>
-          <div>💧 {c.humidity}</div><div>💨 {c.wind}</div>
+          <div>ð§ {c.humidity}</div><div>ð¨ {c.wind}</div>
         </div>
       </div>
       {data.forecast && (
@@ -82,7 +97,7 @@ function NewsCard({ data }: { data: any }) {
       {data.articles.slice(0,4).map((a:any,i:number)=>(
         <a key={i} href={a.url} target="_blank" rel="noreferrer" style={{ display:'block', padding:'5px 0', borderBottom:i<3?'1px solid rgba(0,229,255,.07)':'none', textDecoration:'none' }}>
           <div style={{ color:'#d0e8f8', fontSize:11, lineHeight:1.4 }}>{a.title}</div>
-          <div style={{ color:'#37474f', fontSize:10, marginTop:1 }}>{a.source} • {a.published?.split(' ')[0]}</div>
+          <div style={{ color:'#37474f', fontSize:10, marginTop:1 }}>{a.source} â¢ {a.published?.split(' ')[0]}</div>
         </a>
       ))}
     </div>
@@ -117,7 +132,7 @@ function RichContent({ richData }: { richData: any }) {
   return null;
 }
 
-// ─── Action Bar ──────────────────────────────────────────
+// âââ Action Bar ââââââââââââââââââââââââââââââââââââââââââ
 function ActionBar({ msg, isUser }: { msg: any; isUser: boolean }) {
   const [liked, setLiked]   = useState<'up'|'down'|null>(null);
   const [copied, setCopied] = useState(false);
@@ -144,20 +159,20 @@ function ActionBar({ msg, isUser }: { msg: any; isUser: boolean }) {
       {!isUser && (
         <>
           <button style={{ ...btn, color: liked==='up' ? '#00e676' : '#2e4a60' }}
-            onClick={()=>setLiked(liked==='up'?null:'up')}>👍</button>
+            onClick={()=>setLiked(liked==='up'?null:'up')}>ð</button>
           <button style={{ ...btn, color: liked==='down' ? '#ff5252' : '#2e4a60' }}
-            onClick={()=>setLiked(liked==='down'?null:'down')}>👎</button>
+            onClick={()=>setLiked(liked==='down'?null:'down')}>ð</button>
         </>
       )}
       <button style={{ ...btn, color: copied ? '#00e676' : '#2e4a60' }} onClick={copy}>
-        {copied ? '✓' : '📋'}
+        {copied ? 'â' : 'ð'}
       </button>
-      <button style={btn} onClick={share}>↗️</button>
+      <button style={btn} onClick={share}>âï¸</button>
     </div>
   );
 }
 
-// ─── Main Bubble ─────────────────────────────────────────
+// âââ Main Bubble âââââââââââââââââââââââââââââââââââââââââ
 export default function MessageBubble({ msg }: { msg: JarvisMessage }) {
   const isUser     = msg.role === 'user';
   const isStreaming = (msg as any).streaming;
@@ -173,7 +188,7 @@ export default function MessageBubble({ msg }: { msg: JarvisMessage }) {
       }}
       onClick={()=>setShowActions(p=>!p)}
     >
-      {/* JV avatar — small, only AI */}
+      {/* JV avatar â small, only AI */}
       {!isUser && (
         <div style={{
           width:20, height:20, borderRadius:5, flexShrink:0, marginTop:2,
@@ -186,7 +201,7 @@ export default function MessageBubble({ msg }: { msg: JarvisMessage }) {
 
       <div style={{ maxWidth:'80%', minWidth:36 }}>
 
-        {/* Tool tags — tap to reveal */}
+        {/* Tool tags â tap to reveal */}
         {!isUser && msg.toolsUsed && msg.toolsUsed.length > 0 && showActions && (
           <div style={{ display:'flex', flexWrap:'wrap', gap:3, marginBottom:3 }}>
             {msg.toolsUsed.map(t=>(
@@ -213,34 +228,34 @@ export default function MessageBubble({ msg }: { msg: JarvisMessage }) {
         }}
           className="chat-content"
           dangerouslySetInnerHTML={{ __html: isStreaming && !(msg as any).content
-            ? '<span style="color:#00e5ff;opacity:.5">⏳</span>'
+            ? '<span style="color:#00e5ff;opacity:.5">â³</span>'
             : renderMarkdown((msg as any).content||'') }}
         />
 
         <RichContent richData={(msg as any).richData} />
 
-        {/* Timestamp — tiny, very subtle */}
+        {/* Timestamp â tiny, very subtle */}
         <div style={{ display:'flex', alignItems:'center',
           justifyContent: isUser ? 'flex-end' : 'flex-start', marginTop:1 }}>
           <span style={{ fontSize:9, color:'#1e3040', fontFamily:'monospace' }}>
-            {isStreaming ? '⟳' : time}
+            {isStreaming ? 'â³' : time}
           </span>
         </div>
 
-        {/* Action bar — tap to show */}
+        {/* Action bar â tap to show */}
         {showActions && !isStreaming && (
           <ActionBar msg={msg} isUser={isUser} />
         )}
       </div>
 
-      {/* आप avatar — small */}
+      {/* à¤à¤ª avatar â small */}
       {isUser && (
         <div style={{
           width:20, height:20, borderRadius:5, flexShrink:0, marginTop:2,
           background:'rgba(21,101,192,.18)', border:'1px solid rgba(100,181,246,.22)',
           color:'#64b5f6', fontSize:8,
           display:'flex', alignItems:'center', justifyContent:'center'
-        }}>आप</div>
+        }}>à¤à¤ª</div>
       )}
     </div>
   );

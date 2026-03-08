@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'JARVIS — Personal AI',
+  title: 'JARVIS â Personal AI',
   description: 'Autonomous Hindi-first personal AI assistant. Free forever.',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'JARVIS' },
@@ -28,6 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&family=Noto+Sans+Devanagari:wght@400;500;600&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet" />
+        {/* KaTeX for NEET/JEE math rendering */}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossOrigin="anonymous"/>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossOrigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossOrigin="anonymous"
+          onLoad="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}]})"></script>
       </head>
       <body style={{ margin: 0, background: '#020917', overscrollBehavior: 'none' }}>
         {children}

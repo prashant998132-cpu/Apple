@@ -7,6 +7,7 @@ import Toast from '../components/shared/Toast';
 import { buildMemoryPrompt, autoExtractMemory, saveChat, loadChat } from '../lib/storage'
 import { initProactiveEngine, detectChainedIntent, requestWakeLock, setupWakeLockPersist } from '../lib/proactive/engine'
 import { getFullLocation, loadPlaces, distanceKm, syncLocationToCloud } from '../lib/location/tracker';
+import { useRouter } from 'next/navigation';
 
 const STARTERS = [
   { icon:'ð¤ï¸', t:'Aaj ka mausam kaisa hai?' },
@@ -132,9 +133,13 @@ export default function ChatPage() {
   const [liveTime, setLiveTime]   = useState(getLiveTime());
   const [weatherInfo, setWeatherInfo] = useState<{temp:string;icon:string;city:string}|null>(null);
 
+  const router = useRouter();
   const [themeKey, setThemeKey] = useState<ThemeKey>('dark');
   const [showTheme, setShowTheme] = useState(false);
   const theme = THEMES[themeKey as keyof typeof THEMES];
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{id:string,preview:string,chatId:string}[]>([]);
 
   const chatId = useRef('chat_'+new Date().toDateString().replace(/ /g,'_'));
   const bot    = useRef<HTMLDivElement>(null);
@@ -195,7 +200,62 @@ export default function ChatPage() {
       }
     }).catch(() => {});
 
-    return () => { clearInterval(t); clearInterval(clockT); };
+  
+  // ââ Auto Session Title (rule-based instant) ââââââââââââââ
+  const getAutoTitle = (text: string): string => {
+    const t = text.trim().toLowerCase();
+    if (t.match(/weather|mausam|baarish/)) return 'ð¤ï¸ Weather Chat';
+    if (t.match(/image|photo|picture|banao/)) return 'ð¨ Image Generation';
+    if (t.match(/news|khabar|today/)) return 'ð° News Discussion';
+    if (t.match(/code|function|program|script/)) return 'ð» Coding Help';
+    if (t.match(/study|neet|jee|formula|physics|chemistry|bio/)) return 'ð Study Session';
+    if (t.match(/recipe|food|khana|cook/)) return 'ð Recipe Chat';
+    if (t.match(/cricket|ipl|score|match/)) return 'ð Cricket';
+    if (t.match(/math|calculate|solve|equation/)) return 'ð¢ Math Help';
+    if (t.match(/song|music|gana/)) return 'ðµ Music';
+    if (t.match(/joke|funny|meme/)) return 'ð Fun Chat';
+    // Fallback: first 30 chars
+    const clean = text.replace(/[^a-zA-Z0-9 à¤-à¥¿]/g, '').trim();
+    return clean.slice(0, 30) || 'Chat Session';
+  };
+
+  // ââ Chat Search âââââââââââââââââââââââââââââââââââââââââââ
+  const searchChats = async (q: string) => {
+    if (!q.trim()) { setSearchResults([]); return; }
+    const query = q.toLowerCase();
+    // Search current session
+    const curResults = msgs
+      .filter(m => (m.content||'').toLowerCase().includes(query))
+      .slice(0,3)
+      .map((m: any,i: number) => ({ id: `cur_${i}`, preview: (m.content||'').slice(0,60), chatId: 'current' }));
+    // Search IndexedDB
+    const idbResults: {id:string,preview:string,chatId:string}[] = await new Promise(resolve => {
+      try {
+        const req = indexedDB.open('jarvis_v10', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('chats')) { resolve([]); return; }
+          const all = db.transaction('chats','readonly').objectStore('chats').getAll();
+          all.onsuccess = () => {
+            const results: {id:string,preview:string,chatId:string}[] = [];
+            (all.result||[]).forEach((r: any) => {
+              if (!r.id?.startsWith('chat_')) return;
+              (r.data||[]).forEach((m: any, i: number) => {
+                if ((m.content||'').toLowerCase().includes(query) && results.length < 5)
+                  results.push({ id: `${r.id}_${i}`, preview: m.content.slice(0,60), chatId: r.id });
+              });
+            });
+            resolve(results);
+          };
+          all.onerror = () => resolve([]);
+        };
+        req.onerror = () => resolve([]);
+      } catch { resolve([]); }
+    });
+    setSearchResults([...curResults, ...idbResults].slice(0,8));
+  };
+
+  return () => { clearInterval(t); clearInterval(clockT); };
   }, [refreshLoc]);
 
   useEffect(() => {
@@ -384,11 +444,23 @@ export default function ChatPage() {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
+          {/* Search button */}
+          <button onClick={() => { setShowSearch(p => !p); setSearchQuery(''); setSearchResults([]); }}
+            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:'#4a7090' }}>
+            ð
+          </button>
+
+          {/* Tools link */}
+          <button onClick={() => router.push('/tools')}
+            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:'#4a7090' }}>
+            ð§
+          </button>
+
           {/* Theme picker */}
           <div style={{ position:'relative' }}>
             <button onClick={() => setShowTheme(p=>!p)}
               style={{ width:26, height:26, borderRadius:7, background:'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {THEMES[themeKey].icon}
+              {THEMES[themeKey as ThemeKey].icon}
             </button>
             {showTheme && (
               <>

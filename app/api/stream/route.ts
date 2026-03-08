@@ -1,5 +1,5 @@
-// app/api/stream/route.ts — JARVIS Streaming SSE
-// Chain: Groq → Gemini → Pollinations (FREE, no key) → error
+// app/api/stream/route.ts â JARVIS Streaming SSE
+// Chain: Groq â Gemini â Together AI â Pollinations (FREE) â error
 import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
@@ -38,14 +38,14 @@ export async function POST(req: NextRequest) {
           `You are JARVIS, a personal AI assistant for ${userName || 'Boss'}. Respond in Hinglish (Hindi+English mix). Be concise and direct.
 
 IMPORTANT RULES:
-- Never pretend you can do physical tasks (make coffee, order food, call someone, control devices) — if asked, say "Main ye physically nahi kar sakta, lekin [useful alternative] kar sakta hoon"
+- Never pretend you can do physical tasks (make coffee, order food, call someone, control devices) â if asked, say "Main ye physically nahi kar sakta, lekin [useful alternative] kar sakta hoon"
 - Be honest about limitations
 - Address the user as "${userName || 'Boss'}" occasionally
 - Keep responses short unless detail is needed`
 
         let replied = false
 
-        // ── GROQ (fastest, needs key) ──────────────────────
+        // ââ GROQ (fastest, needs key) ââââââââââââââââââââââ
         if (!replied) {
           const groqKey = process.env.GROQ_API_KEY
           if (groqKey) {
@@ -100,7 +100,7 @@ IMPORTANT RULES:
           }
         }
 
-        // ── GEMINI (needs key) ─────────────────────────────
+        // ââ GEMINI (needs key) âââââââââââââââââââââââââââââ
         if (!replied) {
           const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
           if (geminiKey) {
@@ -149,7 +149,51 @@ IMPORTANT RULES:
           }
         }
 
-        // ── POLLINATIONS (100% FREE, no key needed) ────────
+
+        // ââ TOGETHER AI (free $25 credits, fast) ââââââââââ
+        if (!replied) {
+          const togetherKey = process.env.TOGETHER_API_KEY
+          if (togetherKey) {
+            try {
+              const togRes = await fetch('https://api.together.xyz/v1/chat/completions', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${togetherKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  model: 'meta-llama/Llama-3-70b-chat-hf',
+                  stream: true,
+                  max_tokens: getMaxTokens(message),
+                  messages: [{ role: 'system', content: systemPrompt }, ...messages]
+                }),
+                signal: AbortSignal.timeout(28000)
+              })
+              if (togRes.ok && togRes.body) {
+                replied = true
+                send({ type: 'start', provider: 'Together AI Llama-3' })
+                const reader = togRes.body.getReader()
+                const dec = new TextDecoder()
+                let buf = ''
+                while (true) {
+                  const { done, value } = await reader.read()
+                  if (done) break
+                  buf += dec.decode(value, { stream: true })
+                  const lines = buf.split('\n'); buf = lines.pop() || ''
+                  for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue
+                    const raw = line.slice(6).trim()
+                    if (!raw || raw === '[DONE]') continue
+                    try {
+                      const text = JSON.parse(raw).choices?.[0]?.delta?.content || ''
+                      if (text) send({ type: 'token', text })
+                    } catch { /* skip */ }
+                  }
+                }
+                send({ type: 'done' })
+              }
+            } catch { /* Together failed */ }
+          }
+        }
+
+        // ââ POLLINATIONS (100% FREE, no key needed) ââââââââ
         if (!replied) {
           try {
             send({ type: 'start', provider: 'Pollinations AI (free)' })
@@ -196,7 +240,7 @@ IMPORTANT RULES:
           } catch { /* Pollinations failed */ }
         }
 
-        // ── POLLINATIONS non-stream fallback ───────────────
+        // ââ POLLINATIONS non-stream fallback âââââââââââââââ
         if (!replied) {
           try {
             send({ type: 'start', provider: 'Pollinations (non-stream)' })
@@ -226,7 +270,7 @@ IMPORTANT RULES:
         }
 
       } catch (err) {
-        send({ type: 'error', text: 'Stream error — try again' })
+        send({ type: 'error', text: 'Stream error â try again' })
       } finally {
         controller.close()
       }

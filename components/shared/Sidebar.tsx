@@ -12,6 +12,7 @@ interface ChatEntry {
 const NAV = [
   { id:'chat',     href:'/',         icon:'ð¬', label:'Chat' },
   { id:'study',    href:'/study',    icon:'ð', label:'Study' },
+  { id:'tools',    href:'/tools',    icon:'ð§', label:'Tools' },
   { id:'target',   href:'/target',   icon:'ð¯', label:'Target' },
   { id:'voice',    href:'/voice',    icon:'ð¤', label:'Voice' },
   { id:'india',    href:'/india',    icon:'ð®ð³', label:'India' },
