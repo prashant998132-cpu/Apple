@@ -15,7 +15,7 @@ function getMaxTokens(msg: string): number {
 }
 
 export async function POST(req: NextRequest) {
-  const { message, history = [], memoryPrompt, chatMode = 'auto' } = await req.json()
+  const { message, history = [], memoryPrompt, chatMode = 'auto', userName = 'Boss' } = await req.json()
   if (!message?.trim()) return new Response('No message', { status: 400 })
 
   const encoder = new TextEncoder()
@@ -35,7 +35,13 @@ export async function POST(req: NextRequest) {
         ]
 
         const systemPrompt = memoryPrompt ||
-          'You are JARVIS, a helpful personal AI assistant. Respond naturally in Hinglish (Hindi+English mix). Be concise and helpful.'
+          `You are JARVIS, a personal AI assistant for ${userName || 'Boss'}. Respond in Hinglish (Hindi+English mix). Be concise and direct.
+
+IMPORTANT RULES:
+- Never pretend you can do physical tasks (make coffee, order food, call someone, control devices) — if asked, say "Main ye physically nahi kar sakta, lekin [useful alternative] kar sakta hoon"
+- Be honest about limitations
+- Address the user as "${userName || 'Boss'}" occasionally
+- Keep responses short unless detail is needed`
 
         let replied = false
 

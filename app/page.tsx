@@ -17,7 +17,6 @@ const STARTERS = [
   { icon:'🎯', t:'Mera weekly goal set karo aur track karo' },
 ];
 
-// Study mode quick prompts — shown when mode is study
 const STUDY_PROMPTS = [
   { icon:'📖', t:'Aaj ka topic kya padhna chahiye?' },
   { icon:'❓', t:'MCQ banao is topic pe: ' },
@@ -30,22 +29,16 @@ const STUDY_PROMPTS = [
 async function save(id:string, m:any[]) { await saveChat(id, m) }
 async function load(id:string): Promise<any[]> { return loadChat(id) }
 
-// URL detector
 function extractURL(text: string): string | null {
   const m = text.match(/https?:\/\/[^\s]+/)
   return m ? m[0] : null
 }
 
-// Follow-up chips per mode
-const FOLLOWUP_CHIPS: Record<string, string[]> = {
-  default:  ['Aur detail mein', 'Example do', 'Hindi mein samjhao'],
-  weather:  ['Kal kaisa hoga?', 'Weekly forecast', 'Humidity kitni hai?'],
-  image:    ['Alag style mein banao', 'Dark version banao', 'Save karo'],
-  study:    ['MCQ banao isse', 'Notes banao', 'Aur explain karo'],
-  code:     ['Explain karo', 'Optimize karo', 'Test likhao'],
-  search:   ['Source link do', 'Aur detail mein', 'Summary do'],
+const FOLLOWUP_CHIPS = {
+  weather: ['Kal ka forecast?', 'Humidity kitni hai?', 'Aaj bahar jaana chahiye?'],
+  image:   ['Aur ek banao', 'Different style mein banao', 'Portrait mein banao'],
+  default: ['Aur detail mein?', 'Ek example do', 'Translate karo'],
 }
-
 
 function getFollowUpChips(reply: string): string[] {
   const r = reply.toLowerCase()
@@ -60,6 +53,34 @@ function getFollowUpChips(reply: string): string[] {
   return chips.slice(0, 3)
 }
 
+// ── Indian Festivals ───────────────────────────────────────
+function getTodayFestival(): string | null {
+  const now = new Date();
+  const md = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const f: Record<string,string> = {
+    '01-01':'🎆 Naya Saal Mubarak!', '01-14':'🪁 Makar Sankranti aaj hai!',
+    '01-26':'🇮🇳 Aaj Republic Day hai!', '02-14':'❤️ Valentine\'s Day aaj hai!',
+    '03-08':'🌸 Aaj Holi hai — Rang barse!', '03-25':'🎂 Gudi Padwa aaj hai!',
+    '03-31':'☪️ Aaj Eid ul-Fitr hai!', '04-14':'🌟 Aaj Baisakhi hai!',
+    '04-18':'✝️ Aaj Good Friday hai!', '05-12':'💐 Aaj Mother\'s Day hai!',
+    '06-16':'👔 Aaj Father\'s Day hai!', '08-15':'🇮🇳 Aaj Independence Day hai!',
+    '08-26':'🐘 Aaj Ganesh Chaturthi hai!', '10-02':'🕊️ Gandhi Jayanti aaj hai!',
+    '10-13':'💥 Aaj Dussehra hai!', '10-24':'🪔 Aaj Diwali hai!',
+    '11-05':'🪔 Aaj Bhai Dooj hai!', '11-15':'💡 Aaj Guru Nanak Jayanti hai!',
+    '12-25':'🎄 Merry Christmas!', '12-31':'🎉 Aaj saal ka aakhri din hai!',
+  };
+  return f[md] || null;
+}
+
+function getLiveTime(): { time: string; greeting: string; date: string } {
+  const now = new Date();
+  const h = now.getHours();
+  const greeting = h < 5 ? 'Shubb Ratri 🌙' : h < 12 ? 'Subah ki Salaam ☀️' : h < 17 ? 'Dopahar ki Salaam 🌞' : h < 20 ? 'Shaam ki Salaam 🌆' : 'Raat ki Salaam 🌙';
+  const time = now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const date = now.toLocaleDateString('hi-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  return { time, greeting, date };
+}
+
 export default function ChatPage() {
   const [msgs, setMsgs]   = useState<any[]>([]);
   const [loading, setLoad] = useState(false);
@@ -70,6 +91,13 @@ export default function ChatPage() {
   const [studyMode, setStudyMode] = useState(false);
   const [toolProgress, setToolProgress] = useState<string[]>([])
   const [followupChips, setFollowupChips] = useState<string[]>([])
+  // Personalization
+  const [userName, setUserName]   = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [showOnboard, setOnboard] = useState(false);
+  const [liveTime, setLiveTime]   = useState(getLiveTime());
+  const [weatherInfo, setWeatherInfo] = useState<{temp:string;icon:string;city:string}|null>(null);
+
   const chatId = useRef('chat_'+new Date().toDateString().replace(/ /g,'_'));
   const bot    = useRef<HTMLDivElement>(null);
 
@@ -90,12 +118,15 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    // Load saved name — show onboarding if first visit
+    const saved = localStorage.getItem('jarvis_profile_name') || '';
+    if (saved) setUserName(saved);
+    else setOnboard(true);
+
     load(chatId.current).then(msgs => { if(msgs.length) setMsgs(msgs) });
-    // Proactive engine
     const cleanup = initProactiveEngine('', chatId.current)
     setupWakeLockPersist()
     requestWakeLock()
-    // In-app alert listener (when notification denied)
     const onAlert = (e: any) => setToast({ msg: e.detail?.body || e.detail?.title, type: 'info' })
     window.addEventListener('jarvis-alert', onAlert)
     setOnl(navigator.onLine);
@@ -104,7 +135,25 @@ export default function ChatPage() {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
     refreshLoc();
     const t = setInterval(refreshLoc, 3*60*1000);
-    return () => clearInterval(t);
+
+    // Live clock — update every 30s
+    const clockT = setInterval(() => setLiveTime(getLiveTime()), 30000);
+
+    // Silent background weather fetch
+    fetch('/api/jarvis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'current weather brief 1 line', history: [], userId: 'welcome', chatId: 'welcome_wx', chatMode: 'flash' })
+    }).then(r => r.json()).then(d => {
+      const reply = d.reply || d.text || '';
+      const tempMatch = reply.match(/(\d+)\s*[°℃C]/);
+      const iconMatch = reply.match(/[☀️🌤️⛅🌧️🌩️❄️🌫️🌦️🌨️]/u);
+      if (tempMatch) {
+        setWeatherInfo({ temp: tempMatch[0], icon: iconMatch?.[0] || '🌤️', city: 'Rewa' });
+      }
+    }).catch(() => {});
+
+    return () => { clearInterval(t); clearInterval(clockT); };
   }, [refreshLoc]);
 
   useEffect(() => {
@@ -113,117 +162,120 @@ export default function ChatPage() {
 
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
     if (!text.trim() && !file || loading) return;
-    setLoad(true);
-    const uMsg = { id:'u_'+Date.now(), role:'user', content: file ? (text || file.name) : text, timestamp: Date.now(), mode: chatMode, hasFile: !!file };
+
+    const url = extractURL(text)
+    const uMsg = {
+      id: Date.now().toString(), role:'user' as const,
+      content: text, timestamp: Date.now(),
+      file: file ? { name: file.name, type: file.type } : undefined,
+    };
     const cur  = [...msgs, uMsg]; setMsgs(cur); void save(chatId.current, cur);
+    setLoad(true); setToolProgress([]); setFollowupChips([]);
+
     try {
       const memPrompt = (await buildMemoryPrompt(cur.slice(-5))) + (studyMode ? '\n\nSTUDY MODE: MCQ, flashcards, simple mein samjhao.' : '')
-      let replied = false
-      
-      // Deep mode — tool-stream SSE (shows tool progress live)
+      const userName = localStorage.getItem('jarvis_profile_name') || 'Boss'
+
       if (chatMode === 'deep') {
-        try {
-          setToolProgress([])
-          const ds = await fetch('/api/tool-stream', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text, userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, chatMode: 'deep', history: cur.slice(-8), memoryPrompt: memPrompt }),
-          })
-          if (ds.ok && ds.body) {
-            const reader = ds.body.getReader(); const dec = new TextDecoder(); let buf = ''
-            const streamId = 'a_' + Date.now()
-            setMsgs((p:any[]) => [...p, { id: streamId, role:'assistant', content:'', thinking:'', timestamp:Date.now(), toolsUsed:[], richData:null, processingMs:0, model:'deep', mode:'deep', streaming:true }])
-            outer2: while(true) {
-              const { done, value } = await reader.read(); if(done) break
-              buf += dec.decode(value, { stream:true })
-              const lines = buf.split('\n'); buf = lines.pop() || ''
-              for (const line of lines) {
-                if (!line.startsWith('data: ')) continue
-                try {
-                  const ev = JSON.parse(line.slice(6))
-                  if (ev.type === 'tool') setToolProgress(p => ev.status === 'start' ? [...p.filter(x=>x!==ev.label), ev.label] : p.filter(x=>x!==ev.label))
-                  else if (ev.type === 'reply') {
-                    setMsgs((p:any[]) => p.map((m:any) => m.id===streamId ? {...m, content:ev.reply||'', thinking:ev.thinking||'', toolsUsed:ev.toolsUsed||[], richData:ev.richData, streaming:false} : m))
-                    setToolProgress([])
-                    // Set follow-up chips
-                    const chips = ev.toolsUsed?.includes('get_weather') ? FOLLOWUP_CHIPS.weather : ev.toolsUsed?.includes('generate_image') ? FOLLOWUP_CHIPS.image : FOLLOWUP_CHIPS.default
-                    setFollowupChips(chips)
-                    void save(chatId.current, [...cur, {id:streamId, role:'assistant', content:ev.reply||'', timestamp:Date.now()}])
-                    autoExtractMemory(text, ev.reply||'').catch(()=>{})
-                  }
-                  else if (ev.type === 'done') break outer2
-                } catch {}
-              }
-            }
-            setLoad(false); return
-          }
-        } catch { setToolProgress([]) }
-      }
+        // Deep mode: tool-stream
+        const streamId = Date.now().toString() + '_s';
+        setMsgs(p => [...p, { id:streamId, role:'assistant', content:'', streaming:true, timestamp:Date.now() }])
 
-      // Try streaming first (Groq/Gemini SSE)
-      try {
-        const sRes = await fetch('/api/stream', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history: cur.slice(-8).map((m:any) => ({ role: m.role==='assistant'?'assistant':'user', content: m.content||m.text||'' })), memoryPrompt: memPrompt, chatMode }),
+        let fileData: string|null = null
+        if (file) {
+          fileData = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target?.result as string); r.readAsDataURL(file) })
+        }
+
+        const res = await fetch('/api/tool-stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, history: cur.slice(-10), userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, memoryPrompt: memPrompt, fileData })
         })
-        if (sRes.ok && sRes.body) {
-          replied = true
-          const streamId = 'a_' + Date.now()
-          const sMsg = { id: streamId, role:'assistant', content:'', thinking:'', timestamp: Date.now(), toolsUsed:[], richData:null, processingMs:0, model:'streaming', mode: chatMode, streaming: true }
-          setMsgs((prev:any[]) => [...prev, sMsg])
-          
-          const reader = sRes.body!.getReader()
-          const decoder = new TextDecoder()
-          let buf = '', full = '', think = ''
-          
-          outer: while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            buf += decoder.decode(value, { stream: true })
-            const lines = buf.split('\n'); buf = lines.pop() || ''
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue
-              try {
-                const ev = JSON.parse(line.slice(6))
-                if (ev.type === 'status') { setMsgs((p:any[]) => p.map((m:any) => m.id===streamId ? {...m, status: ev.text} : m)) }
-                else if (ev.type === 'token') { full += ev.text; setMsgs((p:any[]) => p.map((m:any) => m.id===streamId ? {...m, content: full, status: ''} : m)) }
-                else if (ev.type === 'think') { think += ev.text; setMsgs((p:any[]) => p.map((m:any) => m.id===streamId ? {...m, thinking: think} : m)) }
-                else if (ev.type === 'done') { setMsgs((p:any[]) => p.map((m:any) => m.id===streamId ? {...m, streaming:false} : m)); break outer }
-                else if (ev.type === 'error') { replied = false; break outer }
-              } catch {}
-            }
-          }
-          if (replied && full) {
-            const finMsgs = cur.concat([{...sMsg, content: full, thinking: think, streaming: false}])
-            void save(chatId.current, finMsgs)
-            autoExtractMemory(text, full).catch(() => {})
-          }
-        }
-      } catch { replied = false }
 
-      // Fallback: non-streaming
-      if (!replied) {
-        const res = await fetch('/api/jarvis', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, userId: (typeof window!=='undefined' ? localStorage.getItem('jarvis_uid')||'user' : 'user'), chatId: chatId.current, userName: (typeof window!=='undefined' ? localStorage.getItem('jarvis_profile_name')||'User' : 'User'), chatMode, history: cur.slice(-10), memoryPrompt: memPrompt }),
-        });
-        const d = await res.json();
-        if (d.richData?.type === 'tts' && d.richData.data?.useBrowser) {
-          const u = new SpeechSynthesisUtterance(d.richData.data.text || text);
-          u.lang = d.richData.data.lang === 'hi' ? 'hi-IN' : 'en-US';
-          window.speechSynthesis.speak(u);
+        const reader = res.body!.getReader()
+        const dec = new TextDecoder()
+        let buf = '', finalReply = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n\n'); buf = lines.pop()!
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue
+            try {
+              const ev = JSON.parse(line.slice(5))
+              if (ev.type === 'tool_start') setToolProgress(p => [...p, `🔧 ${ev.tool}...`])
+              if (ev.type === 'tool_end')   setToolProgress(p => [...p, `✅ ${ev.tool}`])
+              if (ev.type === 'chunk') { finalReply += ev.text; setMsgs(p => p.map(m => m.id===streamId ? {...m, content:finalReply} : m)) }
+              if (ev.type === 'reply') {
+                finalReply = ev.reply || finalReply
+                setMsgs(p => p.map(m => m.id===streamId ? {...m, content:finalReply, streaming:false, toolsUsed:ev.toolsUsed, richData:ev.richData, processingMs:ev.processingMs} : m))
+                void save(chatId.current, [...cur, {id:streamId, role:'assistant', content:ev.reply||'', timestamp:Date.now()}])
+              }
+            } catch {}
+          }
         }
-        autoExtractMemory(text, d.reply || '').catch(() => {})
-        const aMsg = { id:'a_'+Date.now(), role:'assistant', content: d.reply||'Error', thinking: d.thinking||'', timestamp: Date.now(), toolsUsed: d.toolsUsed, richData: d.richData, processingMs: d.processingMs, model: d.model, mode: chatMode };
-        const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin);
+        setLoad(false); setToolProgress([]);
+        return
       }
-    } catch {
-      const fin = [...cur, { id:'e_'+Date.now(), role:'assistant', content: online ? '⚠️ Error — try again' : '📡 Internet nahi.', timestamp: Date.now() }];
-      setMsgs(fin); void save(chatId.current, fin);
-      setToast({ msg: 'Error aaya — try again', type: 'error' });
-      setTimeout(() => setToast(null), 3000);
+
+      if (chatMode === 'think') {
+        // Think mode: streaming
+        const streamId = Date.now().toString() + '_s';
+        setMsgs(p => [...p, { id:streamId, role:'assistant', content:'', streaming:true, timestamp:Date.now() }])
+
+        const res = await fetch('/api/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, history: cur.slice(-8), memoryPrompt: memPrompt, chatMode, userName })
+        })
+
+        const reader = res.body!.getReader()
+        const dec = new TextDecoder()
+        let buf = '', finalReply = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n\n'); buf = lines.pop()!
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue
+            try {
+              const ev = JSON.parse(line.slice(5))
+              if (ev.text) { finalReply += ev.text; setMsgs(p => p.map(m => m.id===streamId ? {...m, content:finalReply} : m)) }
+              if (ev.reply) {
+                setMsgs(p => p.map(m => m.id===streamId ? {...m, content:ev.reply, streaming:false, toolsUsed:ev.toolsUsed, richData:ev.richData} : m))
+                void save(chatId.current, [...cur, {id:streamId, role:'assistant', content:ev.reply||'', timestamp:Date.now()}])
+              }
+            } catch {}
+          }
+        }
+        setLoad(false);
+        return
+      }
+
+      // Auto / Flash mode
+      let fileData: string|null = null
+      if (file) {
+        fileData = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target?.result as string); r.readAsDataURL(file) })
+      }
+
+      const res = await fetch('/api/jarvis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, history: cur.slice(-10), memoryPrompt: memPrompt, fileData, url }),
+      })
+      const d = await res.json()
+      const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: d.reply||d.text||'Error', timestamp: Date.now(), toolsUsed: d.toolsUsed, richData: d.richData, processingMs: d.processingMs }
+      const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin)
+      setFollowupChips(getFollowUpChips(d.reply||''))
+      autoExtractMemory(text, d.reply||'').catch(()=>{})
+    } catch(e) {
+      const errMsg = { id: Date.now().toString()+'_e', role:'assistant' as const, content: '❌ Kuch error aaya. Dobara try karo.', timestamp: Date.now() }
+      setMsgs(fin => { const f=[...fin,errMsg]; void save(chatId.current,f); return f; })
     }
     setLoad(false);
-  }, [loading, msgs, online]);
+  }, [loading, msgs, studyMode]);
 
   const newChat = () => {
     chatId.current = 'chat_'+Date.now();
@@ -241,21 +293,54 @@ export default function ChatPage() {
       <div className="bg-grid"/>
       <Sidebar onNewChat={newChat} onLoadChat={loadOldChat} currentChatId={chatId.current}/>
 
+      {/* ── ONBOARDING (first visit) ───────────── */}
+      {showOnboard && (
+        <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(5,10,20,.97)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <div style={{ maxWidth:340, width:'100%', textAlign:'center' }}>
+            <div style={{ fontSize:54, marginBottom:10 }}>🤖</div>
+            <div style={{ fontSize:24, fontWeight:800, color:'#e8f4ff', letterSpacing:4, marginBottom:6 }}>JARVIS</div>
+            <div style={{ fontSize:13, color:'#4a7090', marginBottom:28, lineHeight:1.7 }}>
+              Tumhara personal AI assistant.<br/>
+              Pehle bata do — tumhara naam kya hai?
+            </div>
+            <input
+              autoFocus
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  const n = nameInput.trim() || 'Boss';
+                  localStorage.setItem('jarvis_profile_name', n);
+                  setUserName(n); setOnboard(false);
+                }
+              }}
+              placeholder="Apna naam likho..."
+              style={{ width:'100%', padding:'13px 16px', borderRadius:12, background:'rgba(0,229,255,.07)', border:'1.5px solid rgba(0,229,255,.3)', color:'#e8f4ff', fontSize:16, outline:'none', caretColor:'#00e5ff', marginBottom:10, textAlign:'center', boxSizing:'border-box' as const }}
+            />
+            <button
+              onClick={() => {
+                const n = nameInput.trim() || 'Boss';
+                localStorage.setItem('jarvis_profile_name', n);
+                setUserName(n); setOnboard(false);
+              }}
+              style={{ width:'100%', padding:'13px', borderRadius:12, background: nameInput.trim() ? 'linear-gradient(135deg,#00b4d8,#0077b6)' : 'rgba(0,229,255,.08)', border:'none', color: nameInput.trim() ? '#fff' : '#37474f', fontSize:15, fontWeight:700, cursor:'pointer' }}
+            >
+              {nameInput.trim() ? `Namaste, ${nameInput.trim()}! 👋` : 'Shuru karo →'}
+            </button>
+            <div style={{ marginTop:12, fontSize:10, color:'#1a3040' }}>Naam sirf tumhare device pe store hoga</div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 9px 58px', borderBottom:'1px solid rgba(255,255,255,.05)', flexShrink:0, background:'rgba(9,13,24,.96)', backdropFilter:'blur(10px)', zIndex:10 }}>
         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-          <div style={{ width:26, height:26, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.1),rgba(109,40,217,.1))', border:'1px solid rgba(0,229,255,.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, color:'#00e5ff', fontFamily:"'Space Mono',monospace" }}>J</div>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:'#e8f4ff', letterSpacing:3, fontFamily:"'Space Mono',monospace" }}>JARVIS</div>
-            <div style={{ fontSize:8, color:'#546e7a', letterSpacing:1 }}></div>
-          </div>
+          <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.18),rgba(109,40,217,.12))', border:'1px solid rgba(0,229,255,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#00e5ff' }}>J</div>
+          <div style={{ fontSize:11, fontWeight:700, color:'#e8f4ff', letterSpacing:3 }}>JARVIS</div>
+          {userName && <div style={{ fontSize:10, color:'#2a5070' }}>· {userName}</div>}
+          {locLbl && <div style={{ fontSize:9, color:'#1a3050', marginLeft:4 }}>{locLbl}</div>}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-          {locLbl && (
-            <button onClick={refreshLoc} style={{ padding:'2px 8px', borderRadius:20, background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.07)', color:'#78909c', fontSize:9, cursor:'pointer' }}>
-              {locLbl}
-            </button>
-          )}
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
           {msgs.length > 0 && (
             <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
@@ -266,14 +351,46 @@ export default function ChatPage() {
       {/* Messages */}
       <main style={{ flex:1, overflowY:'auto', position:'relative', zIndex:1 }}>
         {msgs.length === 0 ? (
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'36px 16px', minHeight:'62vh' }}>
-            <div style={{ fontSize:40, color:'rgba(0,229,255,.18)', marginBottom:8 }}>⬡</div>
-            <div style={{ fontSize:24, fontWeight:800, color:'#e8f4ff', letterSpacing:5, fontFamily:"'Space Mono',monospace", marginBottom:5 }}>JARVIS</div>
-            <div style={{ fontSize:10, color:'#142030', letterSpacing:1, marginBottom:26 }}>Tumhara personal AI</div>
-            {/* Study toggle */}
-            <div style={{ display:'flex', gap:6, marginBottom:10 }}>
-              <button onClick={() => setStudyMode(false)} style={{ flex:1, padding:'6px', borderRadius:20, fontSize:10, cursor:'pointer', background: !studyMode ? 'rgba(0,229,255,.1)' : 'transparent', border:`1px solid ${!studyMode?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)'}`, color: !studyMode?'#00e5ff':'#2a4060' }}>💬 General</button>
-              <button onClick={() => setStudyMode(true)} style={{ flex:1, padding:'6px', borderRadius:20, fontSize:10, cursor:'pointer', background: studyMode ? 'rgba(167,139,250,.1)' : 'transparent', border:`1px solid ${studyMode?'rgba(167,139,250,.3)':'rgba(255,255,255,.06)'}`, color: studyMode?'#a78bfa':'#2a4060' }}>📚 Study Mode</button>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'20px 16px' }}>
+
+            {/* Live info bar */}
+            <div style={{ width:'100%', maxWidth:440, marginBottom:16 }}>
+              <div style={{ textAlign:'center', marginBottom:12 }}>
+                <div style={{ fontSize:11, color:'#4a90b8', marginBottom:2 }}>{liveTime.greeting}</div>
+                <div style={{ fontSize:20, fontWeight:800, color:'#e8f4ff' }}>
+                  {userName ? `${userName} 👋` : 'Boss 👋'}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                <div style={{ flex:1, padding:'10px 12px', borderRadius:12, background:'rgba(0,229,255,.05)', border:'1px solid rgba(0,229,255,.1)' }}>
+                  <div style={{ fontSize:16, fontWeight:700, color:'#00e5ff', lineHeight:1 }}>{liveTime.time}</div>
+                  <div style={{ fontSize:9, color:'#3a6080', marginTop:3, lineHeight:1.4 }}>{liveTime.date}</div>
+                </div>
+                <div style={{ flex:1, padding:'10px 12px', borderRadius:12, background:'rgba(0,229,255,.05)', border:'1px solid rgba(0,229,255,.1)' }}>
+                  {weatherInfo ? (
+                    <>
+                      <div style={{ fontSize:16, fontWeight:700, color:'#e8f4ff', lineHeight:1 }}>{weatherInfo.icon} {weatherInfo.temp}</div>
+                      <div style={{ fontSize:9, color:'#3a6080', marginTop:3 }}>{weatherInfo.city} · Abhi</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize:16, color:'#1e3a50', lineHeight:1 }}>🌤️ —</div>
+                      <div style={{ fontSize:9, color:'#1e3040', marginTop:3 }}>Loading...</div>
+                    </>
+                  )}
+                </div>
+              </div>
+              {getTodayFestival() && (
+                <div style={{ padding:'7px 14px', borderRadius:10, background:'rgba(255,200,50,.08)', border:'1px solid rgba(255,200,50,.2)', color:'#ffd700', fontSize:12, textAlign:'center', marginBottom:8 }}>
+                  {getTodayFestival()}
+                </div>
+              )}
+            </div>
+
+            {/* Mode tabs */}
+            <div style={{ display:'flex', gap:6, marginBottom:10, width:'100%', maxWidth:440 }}>
+              <button onClick={() => setStudyMode(false)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: !studyMode ? 'rgba(0,229,255,.1)' : 'transparent', border:`1px solid ${!studyMode?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)'}`, color: !studyMode?'#00e5ff':'#2a4060' }}>💬 General</button>
+              <button onClick={() => setStudyMode(true)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: studyMode ? 'rgba(167,139,250,.1)' : 'transparent', border:`1px solid ${studyMode?'rgba(167,139,250,.3)':'rgba(255,255,255,.06)'}`, color: studyMode?'#a78bfa':'#2a4060' }}>📚 Study Mode</button>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, width:'100%', maxWidth:440 }}>
               {(studyMode ? STUDY_PROMPTS : STARTERS).map(s => (
@@ -308,20 +425,28 @@ export default function ChatPage() {
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ width:22, height:22, borderRadius:5, background:'rgba(120,60,255,.12)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#a78bfa' }}>J</span>
               <span style={{ fontSize:12, fontWeight:600, color:'#a78bfa' }}>JARVIS</span>
-              <span style={{ fontSize:10, color:'#607d8b' }}>
-                {mode === 'think' ? '🧠 soch raha hun...' : mode === 'deep' ? '🔬 deep analysis...' : 'soch raha hun...'}
-              </span>
-              <span style={{ display:'flex', gap:3, marginLeft:3 }}>
-                <span className="typing-dot"/><span className="typing-dot"/><span className="typing-dot"/>
+              <span style={{ display:'flex', gap:3, marginLeft:4 }}>
+                {[0,1,2].map(i => (
+                  <span key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#a78bfa', display:'block', opacity:.7, animation:`pulse 1s ${i*0.2}s infinite` }}/>
+                ))}
               </span>
             </div>
+            {toolProgress.length > 0 && (
+              <div style={{ marginTop:8, paddingLeft:30 }}>
+                {toolProgress.slice(-3).map((p,i) => (
+                  <div key={i} style={{ fontSize:10, color:'#3a6080', marginBottom:2 }}>{p}</div>
+                ))}
+              </div>
+            )}
           </div>
         )}
-        <div ref={bot} style={{ height:2 }}/>
+
+        <div ref={bot} style={{ height:1 }}/>
       </main>
 
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)}/>}
+
       <InputBar onSend={send} isLoading={loading} mode={mode} onModeChange={setMode}/>
-      {toast && <Toast message={toast.msg} type={toast.type}/>}
     </div>
   );
 }
