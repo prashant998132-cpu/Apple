@@ -454,17 +454,6 @@ export default function ChatPage() {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
-          {/* Search button */}
-          <button onClick={() => { setShowSearch(p => !p); setSearchQuery(''); setSearchResults([]); }}
-            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:`1px solid ${theme.border}`, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:theme.subtext }}>
-            🔍
-          </button>
-
-          {/* Tools link */}
-          <button onClick={() => router.push('/tools')}
-            style={{ width:26, height:26, borderRadius:7, background:'transparent', border:`1px solid ${theme.border}`, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color:theme.subtext }}>
-            🔧
-          </button>
 
           {/* Theme picker */}
           <div style={{ position:'relative' }}>

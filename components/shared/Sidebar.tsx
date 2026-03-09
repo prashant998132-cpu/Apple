@@ -195,9 +195,21 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Footer */}
-        <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(0,229,255,.06)', fontSize:10, color:'#1a3040', textAlign:'center' as const }}>
-          JARVIS · ₹0 Forever 🔒
+        {/* Footer — Settings + branding */}
+        <div style={{ padding:'10px 12px', borderTop:'1px solid rgba(0,229,255,.06)' }}>
+          <button onClick={() => go('/settings')}
+            style={{ width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:8,
+              background: active==='settings' ? 'rgba(0,229,255,.1)' : 'rgba(255,255,255,.03)',
+              border: `1px solid ${active==='settings' ? 'rgba(0,229,255,.2)' : 'rgba(255,255,255,.06)'}`,
+              color: active==='settings' ? '#00e5ff' : '#4a7090',
+              fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left' as const,
+            }}>
+            <span style={{ fontSize:16 }}>⚙️</span>
+            <span style={{ fontWeight: active==='settings' ? 600 : 400 }}>Settings</span>
+          </button>
+          <div style={{ fontSize:10, color:'#1a3040', textAlign:'center' as const }}>
+            JARVIS · ₹0 Forever 🔒
+          </div>
         </div>
       </div>
     </>
