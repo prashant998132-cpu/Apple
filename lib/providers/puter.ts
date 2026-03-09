@@ -1,57 +1,140 @@
-// lib/providers/puter.ts — Puter.js Image Generation
-// Browser-side only (client component mein use karo)
-// Unlimited, no API key needed
+// lib/providers/puter.ts
+// Puter.js — FREE unlimited AI + Cloud Storage
+// User apne Puter account se pay karta hai, developer $0
+// ─────────────────────────────────────────────────────
 
-export async function puterImage(prompt: string, size = 1024): Promise<string | null> {
-  try {
-    // Load Puter.js dynamically if not loaded
-    if (!(window as any).puter) {
-      await new Promise<void>((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = 'https://js.puter.com/v2/'
-        s.onload = () => resolve()
-        s.onerror = () => reject(new Error('puter_load_failed'))
-        document.head.appendChild(s)
-      })
-      // Wait for puter to init
-      await new Promise(r => setTimeout(r, 1000))
-    }
-
-    const puter = (window as any).puter
-    if (!puter?.ai?.txt2img) throw new Error('puter_api_unavailable')
-
-    const result = await puter.ai.txt2img(prompt)
-    if (result?.src) return result.src
-
-    return null
-  } catch (e: any) {
-    console.warn('Puter.js failed:', e.message)
-    return null
+declare global {
+  interface Window {
+    puter?: any
   }
 }
 
-// For text completion via Puter (Claude/GPT-4o free)
-export async function puterChat(messages: {role:string;content:string}[], model = 'claude-3-5-sonnet'): Promise<string | null> {
-  try {
-    if (!(window as any).puter) {
-      await new Promise<void>((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = 'https://js.puter.com/v2/'
-        s.onload = () => resolve()
-        s.onerror = () => reject()
-        document.head.appendChild(s)
-      })
-      await new Promise(r => setTimeout(r, 1000))
+// Load Puter.js script dynamically
+async function loadPuter(): Promise<any> {
+  if (typeof window === 'undefined') throw new Error('Client only')
+  if (window.puter) return window.puter
+
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = 'https://js.puter.com/v2/'
+    s.onload = () => {
+      const wait = setInterval(() => {
+        if (window.puter) { clearInterval(wait); resolve(window.puter) }
+      }, 100)
+      setTimeout(() => { clearInterval(wait); reject(new Error('Puter load timeout')) }, 8000)
     }
+    s.onerror = () => reject(new Error('Puter script failed'))
+    document.head.appendChild(s)
+  })
+}
 
-    const puter = (window as any).puter
-    if (!puter?.ai?.chat) throw new Error('puter_chat_unavailable')
+// ── AI Chat ───────────────────────────────────────────────
+export async function puterChat(
+  messages: Array<{ role: string; content: string }>,
+  model: 'gpt-4o' | 'claude-3-7-sonnet' | 'o1-mini' = 'gpt-4o'
+): Promise<string> {
+  const puter = await loadPuter()
+  const res = await puter.ai.chat(messages, { model })
+  return res?.message?.content?.[0]?.text
+    || res?.message?.content
+    || res?.text
+    || ''
+}
 
-    const lastMsg = messages[messages.length - 1]?.content || ''
-    const result = await puter.ai.chat(lastMsg, { model })
-    return result?.message?.content || result?.text || null
-  } catch (e: any) {
-    console.warn('Puter chat failed:', e.message)
-    return null
+// Streaming version
+export async function puterChatStream(
+  messages: Array<{ role: string; content: string }>,
+  onChunk: (text: string) => void,
+  model: 'gpt-4o' | 'claude-3-7-sonnet' = 'gpt-4o'
+): Promise<string> {
+  const puter = await loadPuter()
+  let full = ''
+  const res = await puter.ai.chat(messages, { model, stream: true })
+  for await (const part of res) {
+    const chunk = part?.text || part?.delta?.content || ''
+    if (chunk) { full += chunk; onChunk(chunk) }
   }
+  return full
+}
+
+// ── Cloud KV Storage ──────────────────────────────────────
+export async function puterSet(key: string, value: any): Promise<boolean> {
+  try {
+    const puter = await loadPuter()
+    await puter.kv.set(`jarvis_${key}`, JSON.stringify(value))
+    return true
+  } catch { return false }
+}
+
+export async function puterGet(key: string): Promise<any> {
+  try {
+    const puter = await loadPuter()
+    const val = await puter.kv.get(`jarvis_${key}`)
+    return val ? JSON.parse(val) : null
+  } catch { return null }
+}
+
+export async function puterDel(key: string): Promise<boolean> {
+  try {
+    const puter = await loadPuter()
+    await puter.kv.del(`jarvis_${key}`)
+    return true
+  } catch { return false }
+}
+
+// ── Cloud File Storage ────────────────────────────────────
+export async function puterSaveFile(
+  filename: string,
+  content: string | Blob,
+  folder = 'JARVIS'
+): Promise<string | null> {
+  try {
+    const puter = await loadPuter()
+    // Ensure folder exists
+    try { await puter.fs.mkdir(folder) } catch {}
+    const file = await puter.fs.write(`${folder}/${filename}`, content, { overwrite: true })
+    return file?.path || null
+  } catch { return null }
+}
+
+export async function puterReadFile(filename: string, folder = 'JARVIS'): Promise<string | null> {
+  try {
+    const puter = await loadPuter()
+    const blob: Blob = await puter.fs.read(`${folder}/${filename}`)
+    return await blob.text()
+  } catch { return null }
+}
+
+// ── Full Memory Backup ────────────────────────────────────
+export async function puterBackupMemory(memories: any[]): Promise<boolean> {
+  return puterSet('memories', { memories, ts: Date.now() })
+}
+
+export async function puterRestoreMemory(): Promise<any[] | null> {
+  const data = await puterGet('memories')
+  return data?.memories || null
+}
+
+export async function puterBackupChats(chats: any[]): Promise<boolean> {
+  return puterSet('chats_backup', { chats, ts: Date.now() })
+}
+
+// ── Is Puter available? ───────────────────────────────────
+export function isPuterAvailable(): boolean {
+  return typeof window !== 'undefined'
+}
+
+export async function isPuterSignedIn(): Promise<boolean> {
+  try {
+    const puter = await loadPuter()
+    return !!(await puter.auth.getUser())
+  } catch { return false }
+}
+
+export async function puterSignIn(): Promise<boolean> {
+  try {
+    const puter = await loadPuter()
+    await puter.auth.signIn()
+    return true
+  } catch { return false }
 }

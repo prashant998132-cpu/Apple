@@ -224,7 +224,9 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   }
 
   if (!reply) {
-    reply = 'Maafi, abhi sab AI unavailable hain. Thodi der baad try karo. 🙏'
+    // NOTE: Puter.js emergency fallback is client-side only
+    // Frontend (app/page.tsx) handles this via window.puter
+    reply = '⚡ Sab AI providers busy hain. Ek second... Puter.js se try karo (Settings → Storage → Puter Cloud). 🙏'
     safeMode = true
   }
 

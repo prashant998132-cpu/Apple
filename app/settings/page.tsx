@@ -333,6 +333,66 @@ export default function SettingsPage() {
               Chat history kahan save ho? Cloud = cross-device sync. Local = fast, offline, private.
             </div>
 
+            {/* ── Puter.js Cloud Backup ── */}
+            <div style={{ marginBottom:14, padding:'12px 13px', background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.15)', borderRadius:11 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <span style={{ fontSize:20 }}>☁️</span>
+                <div>
+                  <div style={{ fontSize:13, color:'#00e5ff', fontWeight:700 }}>Puter.js Cloud Backup</div>
+                  <div style={{ fontSize:9, color:'#2a5070' }}>FREE • Memory + Chats + Files cloud mein save • No API key</div>
+                </div>
+                <span style={{ marginLeft:'auto', fontSize:9, padding:'2px 7px', borderRadius:8, background:'rgba(0,230,118,.1)', color:'#00e676', border:'1px solid rgba(0,230,118,.2)' }}>FREE ∞</span>
+              </div>
+              <div style={{ fontSize:10, color:'#2a5070', marginBottom:10, lineHeight:1.6 }}>
+                Puter.js = ek baar sign in karo → memories, goals, habits sab cloud mein backup. Cross-device sync. Developer ko $0 cost.
+              </div>
+              <div style={{ display:'flex', gap:6 }}>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Load puter dynamically
+                      const s = document.createElement('script')
+                      s.src = 'https://js.puter.com/v2/'
+                      document.head.appendChild(s)
+                      await new Promise(r => { s.onload = r; setTimeout(r, 5000) })
+                      const p = (window as any).puter
+                      if (!p) { alert('Puter load failed — try again'); return }
+                      await p.auth.signIn()
+                      // Backup memories from localStorage
+                      const memories = localStorage.getItem('jarvis_memories') || '[]'
+                      await p.kv.set('jarvis_memories', memories)
+                      await p.kv.set('jarvis_backup_ts', String(Date.now()))
+                      alert('✅ Backup complete! Puter cloud mein save ho gaya.')
+                    } catch(e: any) { alert('Error: ' + (e?.message || e)) }
+                  }}
+                  style={{ flex:1, padding:'8px', background:'rgba(0,229,255,.1)', border:'1px solid rgba(0,229,255,.3)', borderRadius:7, color:'#00e5ff', fontSize:11, cursor:'pointer', fontWeight:600 }}>
+                  ☁️ Backup Now
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const s = document.createElement('script')
+                      s.src = 'https://js.puter.com/v2/'
+                      document.head.appendChild(s)
+                      await new Promise(r => { s.onload = r; setTimeout(r, 5000) })
+                      const p = (window as any).puter
+                      if (!p) { alert('Puter load failed'); return }
+                      await p.auth.signIn()
+                      const memories = await p.kv.get('jarvis_memories')
+                      if (memories) {
+                        localStorage.setItem('jarvis_memories', memories)
+                        alert('✅ Restore complete! Memories wapas aa gayi.')
+                      } else {
+                        alert('⚠️ Koi backup nahi mila Puter cloud mein.')
+                      }
+                    } catch(e: any) { alert('Error: ' + (e?.message || e)) }
+                  }}
+                  style={{ flex:1, padding:'8px', background:'rgba(167,139,250,.1)', border:'1px solid rgba(167,139,250,.3)', borderRadius:7, color:'#a78bfa', fontSize:11, cursor:'pointer', fontWeight:600 }}>
+                  ⬇️ Restore
+                </button>
+              </div>
+            </div>
+
             {/* Storage mode */}
             <div style={{ display:'flex', gap:7, marginBottom:14 }}>
               {(['auto','select'] as const).map(m => (
