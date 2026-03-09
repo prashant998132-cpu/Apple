@@ -98,7 +98,7 @@ export async function tryProviders<T>(
     if (result.ok) {
       return { result: result.data, provider: id, tried, errors };
     }
-    errors.push(result);
+    errors.push(result as any);
     // Don't retry quota/auth errors for this provider
     // Continue to next
   }

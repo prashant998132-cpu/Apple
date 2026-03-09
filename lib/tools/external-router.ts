@@ -414,7 +414,6 @@ export async function routeTools(message: string): Promise<ToolResult[]> {
     movie:      () => getMovie(message),
     news:       () => getNews(message),
     reddit:     () => getHackerNews(), // fallback
-    holiday:    () => getCountry(message),
     sports:     () => getNews('sports cricket ipl score'),
     currency:   () => getCurrency(message),
     airquality: () => getAirQuality(message),
