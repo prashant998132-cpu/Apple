@@ -9,6 +9,8 @@ import { initProactiveEngine, detectChainedIntent, requestWakeLock, setupWakeLoc
 import { getFullLocation, loadPlaces, distanceKm, syncLocationToCloud } from '../lib/location/tracker';
 import { useRouter } from 'next/navigation';
 import PinLock, { isPINEnabled } from '../components/shared/PinLock';
+import { getDeviceContext, deviceContextToPrompt, getBatteryHint, vibrate } from '../lib/core/deviceContext';
+import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
@@ -127,12 +129,19 @@ export default function ChatPage() {
   const [studyMode, setStudyMode] = useState(false);
   const [toolProgress, setToolProgress] = useState<string[]>([])
   const [followupChips, setFollowupChips] = useState<string[]>([])
+  // Device
+  const [batteryPct, setBatteryPct] = useState<number|null>(null);
+  const [batteryCharging, setBatteryCharging] = useState(false);
+  const [netType, setNetType]  = useState('');
+  const deviceCtxRef = useRef<string>('');
   // Personalization
   const [userName, setUserName]   = useState('');
   const [nameInput, setNameInput] = useState('');
   const [showOnboard, setOnboard] = useState(false);
   const [liveTime, setLiveTime]   = useState(getLiveTime());
   const [weatherInfo, setWeatherInfo] = useState<{temp:string;icon:string;city:string}|null>(null);
+  // Auto session title
+  const [chatTitle, setChatTitle] = useState('');
 
   const router = useRouter();
   const [pinUnlocked, setPinUnlocked] = useState(false);
@@ -164,6 +173,47 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    // Device context init — battery, network, etc.
+    getDeviceContext().then(ctx => {
+      deviceCtxRef.current = deviceContextToPrompt(ctx);
+      if (ctx.battery) {
+        setBatteryPct(ctx.battery.level);
+        setBatteryCharging(ctx.battery.charging);
+        // Battery change listener
+        (navigator as any).getBattery?.().then((bat: any) => {
+          bat.addEventListener('levelchange', () => {
+            const pct = Math.round(bat.level * 100);
+            setBatteryPct(pct);
+            setBatteryCharging(bat.charging);
+            deviceCtxRef.current = deviceContextToPrompt({ ...ctx, battery: { level: pct, charging: bat.charging, chargingTime: bat.chargingTime, dischargingTime: bat.dischargingTime } });
+            // Low battery warning
+            if (pct === 20 && !bat.charging) {
+              setToast({ msg: '🔋 Battery 20% — charge karo!', type: 'info' });
+              vibrate([200, 100, 200]);
+            }
+          });
+          bat.addEventListener('chargingchange', () => {
+            setBatteryCharging(bat.charging);
+            setToast({ msg: bat.charging ? '⚡ Charging shuru' : '🔋 Charging band', type: 'info' });
+          });
+        }).catch(() => {});
+      }
+      setNetType(ctx.network.type);
+    });
+
+    // Daily usage reset at midnight
+    resetDailyUsage();
+    const midnightTimer = setTimeout(resetDailyUsage, (() => {
+      const now = new Date(); const midnight = new Date(now); midnight.setHours(24,0,0,0);
+      return midnight.getTime() - now.getTime();
+    })());
+
+    // Network change listener
+    const conn = (navigator as any).connection;
+    if (conn) {
+      conn.addEventListener('change', () => setNetType(conn.effectiveType ?? ''));
+    }
+
     // PIN check
     setPinEnabled(isPINEnabled());
 
@@ -270,6 +320,14 @@ export default function ChatPage() {
 
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
     if (!text.trim() && !file || loading) return;
+
+    // Auto session title on first message
+    if (msgs.length === 0 && text.trim()) {
+      const title = getAutoTitle(text);
+      setChatTitle(title);
+      // Save to sidebar history label
+      try { localStorage.setItem(`jarvis_title_${chatId.current}`, title); } catch {}
+    }
 
     const url = extractURL(text)
     const uMsg = {
@@ -446,13 +504,34 @@ export default function ChatPage() {
 
       {/* Header */}
       <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 9px 58px', borderBottom:`1px solid ${theme.border}`, flexShrink:0, background:theme.headerBg, backdropFilter:'blur(10px)', zIndex:10 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-          <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.18),rgba(109,40,217,.12))', border:'1px solid rgba(0,229,255,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#00e5ff' }}>J</div>
-          <div style={{ fontSize:11, fontWeight:700, color:theme.text, letterSpacing:3 }}>JARVIS</div>
-          {userName && <div style={{ fontSize:10, color:theme.subtext }}>· {userName}</div>}
-          {locLbl && <div style={{ fontSize:9, color:theme.muted, marginLeft:4 }}>{locLbl}</div>}
+        <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0, flex:1 }}>
+          <div style={{ width:22, height:22, borderRadius:6, background:'linear-gradient(135deg,rgba(0,229,255,.18),rgba(109,40,217,.12))', border:'1px solid rgba(0,229,255,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#00e5ff', flexShrink:0 }}>J</div>
+          <div style={{ minWidth:0 }}>
+            {chatTitle ? (
+              <div style={{ fontSize:11, fontWeight:700, color:'#c8e0f0', letterSpacing:.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160 }}>{chatTitle}</div>
+            ) : (
+              <div style={{ fontSize:11, fontWeight:700, color:theme.text, letterSpacing:3 }}>JARVIS</div>
+            )}
+            <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:1 }}>
+              {userName && <div style={{ fontSize:9, color:theme.subtext }}>{userName}</div>}
+              {locLbl && <div style={{ fontSize:9, color:theme.muted }}>· {locLbl}</div>}
+              {/* Network badge */}
+              {netType && netType !== 'unknown' && (
+                <div style={{ fontSize:8, color: netType==='4g'||netType==='wifi'?'#00e676': netType==='3g'?'#ffd700':'#ef5350', border:`1px solid currentColor`, borderRadius:4, padding:'0 3px', opacity:.7 }}>
+                  {netType.toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+          {/* Battery indicator */}
+          {batteryPct !== null && (
+            <div style={{ display:'flex', alignItems:'center', gap:2 }}>
+              <span style={{ fontSize:10 }}>{batteryCharging ? '⚡' : batteryPct <= 20 ? '🔴' : batteryPct <= 50 ? '🟡' : '🟢'}</span>
+              <span style={{ fontSize:9, color: batteryPct<=20?'#ef5350':batteryPct<=50?'#ffd700':'#00e676', fontFamily:'monospace' }}>{batteryPct}%</span>
+            </div>
+          )}
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
 
           {/* Theme picker */}

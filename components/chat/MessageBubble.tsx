@@ -140,37 +140,41 @@ function RichContent({ richData }: { richData: any }) {
 function ActionBar({ msg, isUser }: { msg: any; isUser: boolean }) {
   const [liked, setLiked]   = useState<'up'|'down'|null>(null);
   const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const copy = () => {
-    navigator.clipboard?.writeText(msg.content||'').then(()=>{
-      setCopied(true); setTimeout(()=>setCopied(false), 1500);
-    });
+    navigator.clipboard?.writeText(msg.content||'').then(()=>{ setCopied(true); setTimeout(()=>setCopied(false), 1500); });
   };
   const share = () => {
-    if (navigator.share) {
-      navigator.share({ text: msg.content||'' }).catch(()=>{});
-    } else copy();
+    if (navigator.share) navigator.share({ text: msg.content||'' }).catch(()=>{});
+    else copy();
+  };
+  const speak = () => {
+    if (speaking) { window.speechSynthesis?.cancel(); setSpeaking(false); return; }
+    const text = (msg.content||'').replace(/<[^>]+>/g,'').replace(/\*\*/g,'').slice(0,500);
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'hi-IN';
+    utt.rate = 0.95;
+    utt.onstart  = () => setSpeaking(true);
+    utt.onend    = () => setSpeaking(false);
+    utt.onerror  = () => setSpeaking(false);
+    window.speechSynthesis?.speak(utt);
   };
 
-  const btn: React.CSSProperties = {
-    background:'none', border:'none', cursor:'pointer',
-    padding:'3px 6px', fontSize:13, borderRadius:6, color:'#2e4a60',
-  };
+  const btn: React.CSSProperties = { background:'none', border:'none', cursor:'pointer', padding:'3px 6px', fontSize:13, borderRadius:6, color:'#2e4a60' };
 
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:1, marginTop:2,
-      justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+    <div style={{ display:'flex', alignItems:'center', gap:1, marginTop:2, justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
       {!isUser && (
         <>
-          <button style={{ ...btn, color: liked==='up' ? '#00e676' : '#2e4a60' }}
-            onClick={()=>setLiked(liked==='up'?null:'up')}>👍</button>
-          <button style={{ ...btn, color: liked==='down' ? '#ff5252' : '#2e4a60' }}
-            onClick={()=>setLiked(liked==='down'?null:'down')}>👎</button>
+          <button style={{ ...btn, color: liked==='up' ? '#00e676' : '#2e4a60' }} onClick={()=>setLiked(liked==='up'?null:'up')}>👍</button>
+          <button style={{ ...btn, color: liked==='down' ? '#ff5252' : '#2e4a60' }} onClick={()=>setLiked(liked==='down'?null:'down')}>👎</button>
+          <button style={{ ...btn, color: speaking ? '#00e5ff' : '#2e4a60' }} onClick={speak} title="Sunao">
+            {speaking ? '⏹' : '🔊'}
+          </button>
         </>
       )}
-      <button style={{ ...btn, color: copied ? '#00e676' : '#2e4a60' }} onClick={copy}>
-        {copied ? '✓' : '📋'}
-      </button>
+      <button style={{ ...btn, color: copied ? '#00e676' : '#2e4a60' }} onClick={copy}>{copied ? '✓' : '📋'}</button>
       <button style={btn} onClick={share}>↗️</button>
     </div>
   );
