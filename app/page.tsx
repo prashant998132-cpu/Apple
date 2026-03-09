@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import PinLock, { isPINEnabled } from '../components/shared/PinLock';
 import { getDeviceContext, deviceContextToPrompt, getBatteryHint, vibrate } from '../lib/core/deviceContext';
 import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
+import { smartHistory } from '../lib/core/contextCompressor';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
@@ -142,6 +143,9 @@ export default function ChatPage() {
   const [weatherInfo, setWeatherInfo] = useState<{temp:string;icon:string;city:string}|null>(null);
   // Auto session title
   const [chatTitle, setChatTitle] = useState('');
+  const [lastProvider, setLastProvider] = useState(
+    typeof window !== 'undefined' ? localStorage.getItem('jarvis_last_provider') || '' : ''
+  );
 
   const router = useRouter();
   const [pinUnlocked, setPinUnlocked] = useState(false);
@@ -355,7 +359,7 @@ export default function ChatPage() {
         const res = await fetch('/api/tool-stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history: cur.slice(-10), userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, memoryPrompt: memPrompt, fileData })
+          body: JSON.stringify({ message: text, history: smartHistory(cur, 'deep'), userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, memoryPrompt: memPrompt, fileData })
         })
 
         const reader = res.body!.getReader()
@@ -393,7 +397,7 @@ export default function ChatPage() {
         const res = await fetch('/api/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history: cur.slice(-8), memoryPrompt: memPrompt, chatMode, userName })
+          body: JSON.stringify({ message: text, history: smartHistory(cur, chatMode as any), memoryPrompt: memPrompt, chatMode, userName })
         })
 
         const reader = res.body!.getReader()
@@ -429,10 +433,13 @@ export default function ChatPage() {
       const res = await fetch('/api/jarvis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, history: cur.slice(-10), memoryPrompt: memPrompt, fileData, url }),
+        body: JSON.stringify({ message: text, userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, history: smartHistory(cur, chatMode as any), memoryPrompt: memPrompt, fileData, url }),
       })
       const d = await res.json()
-      const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: d.reply||d.text||'Error', timestamp: Date.now(), toolsUsed: d.toolsUsed, richData: d.richData, processingMs: d.processingMs }
+      // Track which provider responded
+      if (d.provider) { localStorage.setItem('jarvis_last_provider', d.provider); setLastProvider(d.provider); }
+      if (d.model)    { localStorage.setItem('jarvis_last_model', d.model); }
+      const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: d.reply||d.text||'Error', timestamp: Date.now(), toolsUsed: d.toolsUsed, richData: d.richData, processingMs: d.processingMs, model: d.model, provider: d.provider }
       const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin)
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
@@ -515,11 +522,27 @@ export default function ChatPage() {
             <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:1 }}>
               {userName && <div style={{ fontSize:9, color:theme.subtext }}>{userName}</div>}
               {locLbl && <div style={{ fontSize:9, color:theme.muted }}>· {locLbl}</div>}
-              {/* Network badge */}
-              {netType && netType !== 'unknown' && (
-                <div style={{ fontSize:8, color: netType==='4g'||netType==='wifi'?'#00e676': netType==='3g'?'#ffd700':'#ef5350', border:`1px solid currentColor`, borderRadius:4, padding:'0 3px', opacity:.7 }}>
-                  {netType.toUpperCase()}
+              {/* Loading: "Thinking with Groq..." */}
+              {loading ? (
+                <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#00e5ff', display:'inline-block', animation:'pulse 1s infinite' }}/>
+                  <span style={{ fontSize:8, color:'#00e5ff' }}>Thinking{lastProvider ? ` · ${lastProvider}` : ''}...</span>
                 </div>
+              ) : (
+                <>
+                  {/* Network badge */}
+                  {netType && netType !== 'unknown' && (
+                    <div style={{ fontSize:8, color: netType==='4g'||netType==='wifi'?'#00e676': netType==='3g'?'#ffd700':'#ef5350', border:`1px solid currentColor`, borderRadius:4, padding:'0 3px', opacity:.7 }}>
+                      {netType.toUpperCase()}
+                    </div>
+                  )}
+                  {/* Last provider badge */}
+                  {lastProvider && msgs.length > 0 && (
+                    <div style={{ fontSize:8, color:'#4a90b8', border:'1px solid rgba(74,144,184,.3)', borderRadius:4, padding:'0 4px', opacity:.8 }}>
+                      {lastProvider.replace('_fast','').replace('_deep','').replace(/_/g,' ')}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

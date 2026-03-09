@@ -24,16 +24,31 @@ function renderMarkdown(text: string): string {
     .replace(/\\\[([\s\S]+?)\\\]/g, (_,m) => { mathBlocks.push(`\\[${m}\\]`); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\(([\s\S]+?)\\\)/g, (_,m) => { mathBlocks.push(`\\(${m}\\)`); return `%%MATH${mathBlocks.length-1}%%`; });
 
+  let codeBlockCounter = 0;
+
   let html = protected_text
     .replace(/\[LEARN:[^\]]*\]/g, '')
     // Normalize any garbled unicode bullets / arrows → clean bullet
     .replace(/[\u2022\u2023\u25E6\u2043\u2219\u27A2\u27A4\u2794\u00E2\u00A2]/g, '•')
-    // Code blocks
-    .replace(/```([\w]*)\n?([\s\S]*?)```/g, (_,lang,c) =>
-      `<pre style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.12);border-radius:7px;padding:6px 9px;margin:4px 0;overflow-x:auto;font-size:11px;color:#a8ffec;font-family:monospace;line-height:1.5">${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`)
+    // Code blocks with copy button
+    .replace(/```([\w]*)\n?([\s\S]*?)```/g, (_,lang,c) => {
+      const escaped = c.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safeCode = JSON.stringify(c);
+      const langLabel = lang ? `<span style="font-size:9px;color:#4a7090;padding:1px 6px;border-radius:4px;background:rgba(0,229,255,.06)">${lang}</span>` : '<span/>';
+      return `<div style="margin:6px 0"><div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-bottom:none;border-radius:7px 7px 0 0;padding:4px 9px">${langLabel}<button onclick="(function(b){navigator.clipboard&&navigator.clipboard.writeText(${safeCode}).then(()=>{b.textContent='✓ Copied';setTimeout(()=>{b.textContent='📋 Copy'},1500)})})(this)" style="background:none;border:none;color:#4a7090;font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px">📋 Copy</button></div><pre style="background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-top:none;border-radius:0 0 7px 7px;padding:8px 10px;margin:0;overflow-x:auto;font-size:11px;color:#a8ffec;font-family:monospace;line-height:1.6">${escaped}</pre></div>`;
+    })
     .replace(/`([^`]+?)`/g, '<code style="background:rgba(0,229,255,.1);color:#a8ffec;padding:1px 5px;border-radius:4px;font-size:11px">$1</code>')
     .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#e8f4ff">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em style="color:#c8e6f5">$1</em>')
+    // Tables
+    .replace(/\|(.+)\|\n\|[-: |]+\|\n((?:\|.+\|\n?)*)/gm, (_:string, header:string, rows:string) => {
+      const hc = header.split('|').filter((x:string)=>x.trim()).map((x:string)=>`<th style="padding:5px 10px;border:1px solid rgba(0,229,255,.15);color:#00e5ff;font-size:11px;text-align:left;white-space:nowrap">${x.trim()}</th>`).join('');
+      const rb = rows.trim().split('\n').map((row:string)=>{
+        const cc = row.split('|').filter((x:string)=>x.trim()).map((x:string)=>`<td style="padding:5px 10px;border:1px solid rgba(0,229,255,.08);color:#c8dff0;font-size:11px">${x.trim()}</td>`).join('');
+        return `<tr style="border-bottom:1px solid rgba(0,229,255,.05)">${cc}</tr>`;
+      }).join('');
+      return `<div style="overflow-x:auto;margin:8px 0;border-radius:8px;border:1px solid rgba(0,229,255,.12)"><table style="border-collapse:collapse;width:100%"><thead style="background:rgba(0,229,255,.06)"><tr>${hc}</tr></thead><tbody>${rb}</tbody></table></div>`;
+    })
     .replace(/^### (.+)$/gm, '<div style="color:#00e5ff;font-weight:700;font-size:12px;margin:6px 0 2px;letter-spacing:.3px">$1</div>')
     .replace(/^## (.+)$/gm, '<div style="color:#00e5ff;font-weight:700;font-size:13px;margin:7px 0 2px">$1</div>')
     .replace(/^# (.+)$/gm, '<div style="color:#00e5ff;font-weight:800;font-size:14px;margin:8px 0 3px">$1</div>')

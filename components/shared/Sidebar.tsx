@@ -244,6 +244,30 @@ export default function Sidebar({ onNewChat, onLoadChat, currentChatId }: {
         </div>
 
         <div style={{ padding:'8px 12px', borderTop:'1px solid rgba(0,229,255,.06)' }}>
+          {/* Export chat */}
+          {chats.length > 0 && currentChatId && (
+            <button onClick={async () => {
+              try {
+                const req = indexedDB.open('jarvis_v10', 1)
+                req.onsuccess = () => {
+                  const get = req.result.transaction('chats','readonly').objectStore('chats').get(currentChatId!)
+                  get.onsuccess = () => {
+                    const msgs: any[] = get.result?.data || []
+                    const text = msgs.map((m: any) =>
+                      `[${m.role === 'user' ? 'You' : 'JARVIS'}] ${new Date(m.timestamp||0).toLocaleTimeString('hi-IN')}\n${m.content}\n`
+                    ).join('\n---\n\n')
+                    const blob = new Blob([text], { type:'text/plain' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url; a.download = `JARVIS_${currentChatId}.txt`; a.click()
+                    URL.revokeObjectURL(url)
+                  }
+                }
+              } catch {}
+            }} style={{ width:'100%', padding:'7px 12px', borderRadius:8, marginBottom:6, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.05)', color:'#2a5070', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', gap:8, textAlign:'left' as const }}>
+              <span>📤</span> Export current chat
+            </button>
+          )}
           <button onClick={()=>{ setOpen(false); router.push('/settings') }} style={{ width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:8, background: active==='settings'?'rgba(0,229,255,.1)':'rgba(255,255,255,.03)', border:`1px solid ${active==='settings'?'rgba(0,229,255,.2)':'rgba(255,255,255,.06)'}`, color: active==='settings'?'#00e5ff':'#4a7090', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left' as const }}>
             <span style={{ fontSize:16 }}>⚙️</span>
             <span style={{ fontWeight: active==='settings'?600:400 }}>Settings</span>

@@ -178,9 +178,25 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
           {voiceRecording ? (
             <>
               <span style={{ fontSize:18 }}>🎙️</span>
-              <span style={{ fontSize:11, color:'#ef5350', flex:1, fontWeight:600 }}>
-                ● Recording... {Math.floor(voiceTime/60)}:{String(voiceTime%60).padStart(2,'0')}
-              </span>
+              {/* Waveform animation */}
+              <div style={{ display:'flex', alignItems:'center', gap:2, flex:1 }}>
+                {[1,2,3,4,5,4,3,2].map((h,i) => (
+                  <div key={i} style={{
+                    width:3, borderRadius:2,
+                    background:'#ef5350',
+                    animation:`wave${(i%3)+1} ${0.5+i*0.07}s ease-in-out infinite alternate`,
+                    height: `${h*4}px`,
+                  }}/>
+                ))}
+                <span style={{ fontSize:11, color:'#ef5350', fontWeight:600, marginLeft:6 }}>
+                  {Math.floor(voiceTime/60)}:{String(voiceTime%60).padStart(2,'0')}
+                </span>
+              </div>
+              <style>{`
+                @keyframes wave1 { from{height:6px} to{height:18px} }
+                @keyframes wave2 { from{height:10px} to{height:6px} }
+                @keyframes wave3 { from{height:4px} to{height:14px} }
+              `}</style>
               <button onClick={stopVoiceNote}
                 style={{ background:'rgba(239,83,80,.15)', border:'1px solid rgba(239,83,80,.3)', color:'#ef5350', fontSize:11, borderRadius:6, padding:'3px 8px', cursor:'pointer' }}>
                 ⏹ Stop
@@ -286,7 +302,11 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             ref={textareaRef}
             value={input}
             onChange={e => { setInput(e.target.value); setTimeout(resize,0) }}
-            onKeyDown={e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend()} }}
+            onKeyDown={e => {
+              if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handleSend() }
+              // Ctrl+Enter also sends (for desktop power users)
+              if(e.key==='Enter' && e.ctrlKey){ e.preventDefault(); handleSend() }
+            }}
             placeholder="Kuch bhi poocho..."
             rows={1}
             style={{
@@ -396,7 +416,7 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
       <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:5, paddingLeft:2 }}>
         <div style={{ width:5, height:5, borderRadius:'50%', background:curMode.color, boxShadow:`0 0 4px ${curMode.color}` }} />
         <span style={{ fontSize:10, color:'#546e7a' }}>{curMode.icon} {curMode.label}</span>
-        <span style={{ marginLeft:'auto', fontSize:9, color:'#263238' }}>Enter = send</span>
+        <span style={{ marginLeft:'auto', fontSize:9, color:'#263238' }}>Enter = send · Shift+Enter = newline</span>
       </div>
 
       <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleFile} />
