@@ -1,321 +1,313 @@
 'use client'
-// ConnectedApps.tsx — Settings mein sabhi 67 services, pin/favorite, toggle, key input
 import { useState, useEffect } from 'react'
 
-interface Service {
-  id: string
-  name: string
-  emoji: string
-  category: string
-  free: boolean
-  keyName?: string       // localStorage key for API key
-  keyPlaceholder?: string
-  keyLink?: string
-  description: string
-  triggers: string       // example queries
-}
-
-const ALL_SERVICES: Service[] = [
-  // ── UNLIMITED FREE (no key) ──────────────────────────────
-  { id:'weather',    name:'Weather',            emoji:'🌤️', category:'India & World', free:true,  description:'Live mausam — wttr.in',         triggers:'"aaj ka mausam?"' },
-  { id:'forecast',   name:'3-Day Forecast',     emoji:'📅', category:'India & World', free:true,  description:'3 din ka forecast',             triggers:'"kal ka mausam?"' },
-  { id:'airquality', name:'Air Quality / AQI',  emoji:'🌫️', category:'India & World', free:true,  description:'PM2.5, AQI data',               triggers:'"delhi ka AQI?"' },
-  { id:'country',    name:'Country Info',        emoji:'🌍', category:'India & World', free:true,  description:'Capital, population, currency', triggers:'"India ki info?"' },
-  { id:'holiday',    name:'India Holidays',      emoji:'🎉', category:'India & World', free:true,  description:'Upcoming public holidays',      triggers:'"next chutti kab?"' },
-  { id:'cricket',    name:'Cricket Scores',      emoji:'🏏', category:'India & World', free:true,  description:'IPL, Test match latest',        triggers:'"IPL score?"' },
-  { id:'time',       name:'Time & Date',         emoji:'🕐', category:'India & World', free:true,  description:'Live time, any timezone',       triggers:'"abhi kya time hai?"' },
-  { id:'timezone',   name:'World Clocks',        emoji:'🌍', category:'India & World', free:true,  description:'Sab countries ka time ek saath',triggers:'"world clock dikhao"' },
-  { id:'earthquake', name:'Earthquake News',     emoji:'🌍', category:'India & World', free:true,  description:'Latest seismic activity',       triggers:'"aaj koi bhookamp?"' },
-  { id:'sunrise',    name:'Sunrise / Sunset',    emoji:'☀️', category:'India & World', free:true,  description:'GPS se aaj ka suraj time',      triggers:'"aaj suraj kab uggega?"' },
-  { id:'ipinfo',     name:'Network / IP Info',   emoji:'🌐', category:'India & World', free:true,  description:'Mera IP, ISP, location',        triggers:'"mera IP kya hai?"' },
-  { id:'geoip',      name:'IP Geolocation',      emoji:'📍', category:'India & World', free:true,  description:'Kisi bhi IP ki location dhundho',triggers:'"8.8.8.8 kahan se hai?"' },
-
-  // ── CALCULATORS ─────────────────────────────────────────
-  { id:'bmi',     name:'BMI Calculator',   emoji:'⚖️', category:'Calculators', free:true, description:'Body mass index check karo', triggers:'"170cm 65kg ka BMI?"' },
-  { id:'emi',     name:'Loan EMI',         emoji:'💰', category:'Calculators', free:true, description:'Home/Car loan EMI calculate', triggers:'"10 lakh 8.5% 20 saal EMI?"' },
-  { id:'sip',     name:'SIP Calculator',   emoji:'📊', category:'Calculators', free:true, description:'Mutual fund return calculate', triggers:'"5000 SIP 12% 10yr?"' },
-  { id:'agecalc', name:'Age Calculator',   emoji:'🎂', category:'Calculators', free:true, description:'DOB se exact age nikalo',     triggers:'"15/08/2000 ki age?"' },
-
-  // ── FINANCE ─────────────────────────────────────────────
-  { id:'crypto',    name:'Crypto Prices',     emoji:'💰', category:'Finance', free:true,  description:'Bitcoin, Ethereum, sab coins', triggers:'"bitcoin ka price?"' },
-  { id:'currency',  name:'Currency Exchange',  emoji:'💱', category:'Finance', free:true,  description:'Live exchange rates',          triggers:'"1 dollar mein kitne rupee?"' },
-  { id:'stock',     name:'NSE/BSE Stocks',     emoji:'📈', category:'Finance', free:true,  description:'Indian stock quotes live',     triggers:'"Reliance ka share price?"' },
-
-  // ── KNOWLEDGE ────────────────────────────────────────────
-  { id:'wikipedia',   name:'Wikipedia',         emoji:'📖', category:'Knowledge', free:true, description:'Kisi bhi topic ki info',         triggers:'"Einstein kya hai?"' },
-  { id:'dictionary',  name:'Dictionary',         emoji:'📚', category:'Knowledge', free:true, description:'English word ka meaning',        triggers:'"ephemeral ka matlab?"' },
-  { id:'wordofday',   name:'Word of the Day',    emoji:'📝', category:'Knowledge', free:true, description:'Naya vocabulary word daily',     triggers:'"aaj ka naya word?"' },
-  { id:'numberfact',  name:'Number Facts',        emoji:'🔢', category:'Knowledge', free:true, description:'Kisi number ke baare mein fact', triggers:'"42 ke baare mein batao"' },
-  { id:'mathfact',    name:'Math Facts',          emoji:'🧮', category:'Knowledge', free:true, description:'Maths ka koi interesting fact',  triggers:'"100 ka math fact?"' },
-  { id:'datefact',    name:'On This Day',         emoji:'📅', category:'Knowledge', free:true, description:'Aaj ke din itihas mein kya hua', triggers:'"aaj ke din kya hua?"' },
-  { id:'trivia',      name:'Trivia / GK Quiz',    emoji:'🧠', category:'Knowledge', free:true, description:'Random GK question',            triggers:'"ek GK question do"' },
-  { id:'gutenberg',   name:'Free Books',           emoji:'📚', category:'Knowledge', free:true, description:'10,000+ classic books free',    triggers:'"Shakespeare ki free book?"' },
-
-  // ── ENTERTAINMENT ────────────────────────────────────────
-  { id:'joke',      name:'Jokes',              emoji:'😄', category:'Entertainment', free:true, description:'Programming + safe jokes',     triggers:'"joke sunao"' },
-  { id:'meme',      name:'Meme Generator',     emoji:'😂', category:'Entertainment', free:true, description:'Reddit se trending meme',      triggers:'"meme dikhao"' },
-  { id:'quote',     name:'Inspirational Quote',emoji:'💬', category:'Entertainment', free:true, description:'Random life quotes',           triggers:'"koi achha quote do"' },
-  { id:'motivation',name:'Motivation Quotes',  emoji:'✨', category:'Entertainment', free:true, description:'ZenQuotes motivational',       triggers:'"motivate karo mujhe"' },
-  { id:'advice',    name:'Life Advice',         emoji:'💡', category:'Entertainment', free:true, description:'Random useful advice',         triggers:'"koi advice do"' },
-  { id:'bored',     name:'Activity Ideas',      emoji:'🎯', category:'Entertainment', free:true, description:'Bored? Kuch karne ki idea',   triggers:'"bored hoon kya karun?"' },
-  { id:'catfact',   name:'Cat Facts',           emoji:'🐱', category:'Entertainment', free:true, description:'Billi ke baare mein facts',    triggers:'"cat ka fact batao"' },
-  { id:'dogfact',   name:'Dog Facts',           emoji:'🐕', category:'Entertainment', free:true, description:'Kutta ke baare mein facts',    triggers:'"dog fact?"' },
-  { id:'chucknorris',name:'Chuck Norris Jokes', emoji:'💪', category:'Entertainment', free:true, description:'Chuck Norris random jokes',    triggers:'"chuck norris joke"' },
-  { id:'cocktail',  name:'Cocktail / Drink Recipes',emoji:'🍹',category:'Entertainment',free:true,description:'Mocktail + cocktail recipes',  triggers:'"mojito kaise banate?"' },
-  { id:'recipe',    name:'Food Recipes',         emoji:'🍳', category:'Entertainment', free:true, description:'Khana banane ki recipe',       triggers:'"pasta recipe batao"' },
-  { id:'food',      name:'Food Nutrition',       emoji:'🍎', category:'Entertainment', free:true, description:'Calories, protein, carbs info',triggers:'"maggi mein kya hota?"' },
-  { id:'anime',     name:'Anime Info',           emoji:'🎌', category:'Entertainment', free:true, description:'Anime synopsis, ratings',      triggers:'"Naruto anime info?"' },
-
-  // ── SCIENCE & SPACE ──────────────────────────────────────
-  { id:'nasa',       name:'NASA Photo of Day',   emoji:'🚀', category:'Space & Science', free:true, description:'APOD — space ki tasveer',   triggers:'"aaj ki space photo?"' },
-  { id:'iss',        name:'ISS Live Location',    emoji:'🛸', category:'Space & Science', free:true, description:'Space station kahan hai?',  triggers:'"ISS abhi kahan hai?"' },
-  { id:'mars',       name:'Mars Weather',         emoji:'🔴', category:'Space & Science', free:true, description:'Red Planet ka mausam!',     triggers:'"Mars ka mausam?"' },
-  { id:'spacenews',  name:'Space News',           emoji:'🚀', category:'Space & Science', free:true, description:'SpaceX, ISRO, NASA news',   triggers:'"space mein kya ho raha?"' },
-  { id:'sciencenews',name:'Science News',         emoji:'🔬', category:'Space & Science', free:true, description:'Latest scientific discoveries',triggers:'"science news?"' },
-
-  // ── TECH & DEV TOOLS ────────────────────────────────────
-  { id:'ghtrending', name:'GitHub Trending',    emoji:'🔥', category:'Tech & Dev', free:true, description:'Aaj ke hot repos',              triggers:'"github trending kya hai?"' },
-  { id:'hackernews', name:'HackerNews',          emoji:'💻', category:'Tech & Dev', free:true, description:'Tech startup news',             triggers:'"tech news dikhao"' },
-  { id:'hash',       name:'SHA-256 Hash',        emoji:'🔐', category:'Tech & Dev', free:true, description:'Text ka hash generate karo',    triggers:'"hello world ka hash?"' },
-  { id:'base64',     name:'Base64 Encode/Decode',emoji:'🔤', category:'Tech & Dev', free:true, description:'Base64 convert karo',           triggers:'"base64 encode hello"' },
-  { id:'uuid',       name:'UUID Generator',      emoji:'🆔', category:'Tech & Dev', free:true, description:'Random unique ID generate',     triggers:'"UUID banao"' },
-  { id:'password',   name:'Password Strength',   emoji:'🔒', category:'Tech & Dev', free:true, description:'Password kitna strong hai?',   triggers:'"password Jarvis@123 check?"' },
-  { id:'qr',         name:'QR Code Generator',   emoji:'📱', category:'Tech & Dev', free:true, description:'URL/text ka QR code banao',    triggers:'"QR code banao jarvis.ai ke liye"' },
-  { id:'shorturl',   name:'URL Shortener',        emoji:'🔗', category:'Tech & Dev', free:true, description:'Lamba URL short karo',         triggers:'"short karo https://example.com"' },
-  { id:'color',      name:'Color Info',           emoji:'🎨', category:'Tech & Dev', free:true, description:'Hex code ka RGB/HSL/Name',     triggers:'"#ff6b35 ka naam?"' },
-  { id:'pokemon',    name:'PokéAPI',              emoji:'⚡', category:'Tech & Dev', free:true, description:'Pokemon stats, types',          triggers:'"Pikachu ki stats?"' },
-
-  // ── CREATIVITY ───────────────────────────────────────────
-  { id:'aiimage',  name:'AI Image Generator',  emoji:'🎨', category:'Creativity', free:true, description:'Pollinations se AI image',      triggers:'"iron man drawing banao"' },
-  { id:'youtube',  name:'YouTube Trending',    emoji:'▶️', category:'Creativity', free:true, description:'India mein trending videos',    triggers:'"youtube trending kya hai?"' },
-
-  // ── BOOKS & READING ──────────────────────────────────────
-  { id:'book', name:'Book Search', emoji:'📚', category:'Books', free:true, description:'OpenLibrary book search', triggers:'"Harry Potter book info?"' },
-
-  // ── OPTIONAL (key chahiye) ───────────────────────────────
-  { id:'github',   name:'GitHub Personal',   emoji:'🐙', category:'Optional (Key)', free:false, keyName:'jarvis_key_github_pat',    keyPlaceholder:'ghp_...', keyLink:'https://github.com/settings/tokens', description:'Apne repos, commits, issues', triggers:'"mera latest commit?"' },
-  { id:'vercel',   name:'Vercel Projects',   emoji:'▲',  category:'Optional (Key)', free:false, keyName:'jarvis_key_vercel_token',  keyPlaceholder:'vercel_...', keyLink:'https://vercel.com/account/tokens', description:'Apne Vercel deployments',    triggers:'"mera latest deploy?"' },
-  { id:'news',     name:'News (GNews)',       emoji:'📰', category:'Optional (Key)', free:false, keyName:'jarvis_key_gnews',         keyPlaceholder:'GNews API Key', keyLink:'https://gnews.io', description:'100 news/day free',            triggers:'"aaj ki khabar?"' },
-  { id:'movie',    name:'Movies (OMDB)',      emoji:'🎬', category:'Optional (Key)', free:false, keyName:'jarvis_key_omdb',          keyPlaceholder:'OMDB API Key', keyLink:'http://www.omdbapi.com/apikey.aspx', description:'1000 movies/day free',    triggers:'"Inception ki info?"' },
-  { id:'agify',    name:'Name Age Predictor', emoji:'🎂', category:'Extras', free:true, description:'Naam se average age predict', triggers:'"Priya ki predicted age?"' },
+// ── AI PROVIDERS ──────────────────────────────────────────
+const AI_PROVIDERS = [
+  // FREE — no key
+  { id:'pollinations', name:'Pollinations AI',   emoji:'🌸', free:true,  keyName:'',                    limit:'Unlimited ∞',   quality:3, note:'Always works, no key' },
+  { id:'openrouter0',  name:'OpenRouter Free',    emoji:'🔀', free:true,  keyName:'',                    limit:'200 req/day',   quality:3, note:'Free models' },
+  // KEY NEEDED
+  { id:'groq',         name:'Groq (Llama 3.3)',   emoji:'⚡', free:false, keyName:'jarvis_key_groq',     limit:'6000 req/day',  quality:5, note:'Fastest — Primary' },
+  { id:'gemini',       name:'Gemini 2.0 Flash',   emoji:'💎', free:false, keyName:'jarvis_key_gemini',   limit:'1500 req/day',  quality:5, note:'Best quality free' },
+  { id:'together',     name:'Together AI',         emoji:'🤝', free:false, keyName:'jarvis_key_together', limit:'$25 credit',    quality:4, note:'Many models' },
+  { id:'cerebras',     name:'Cerebras',            emoji:'🧠', free:false, keyName:'jarvis_key_cerebras', limit:'1000 req/day',  quality:4, note:'Ultra fast' },
+  { id:'mistral',      name:'Mistral Small',       emoji:'🌊', free:false, keyName:'jarvis_key_mistral',  limit:'500 req/day',   quality:4, note:'European AI' },
+  { id:'cohere',       name:'Cohere Command-R',    emoji:'🔮', free:false, keyName:'jarvis_key_cohere',   limit:'1000 req/day',  quality:4, note:'Good for RAG' },
+  { id:'fireworks',    name:'Fireworks AI',        emoji:'🎆', free:false, keyName:'jarvis_key_fireworks',limit:'600 req/day',   quality:4, note:'Fast inference' },
+  { id:'deepinfra',    name:'DeepInfra',           emoji:'🏗️', free:false, keyName:'jarvis_key_deepinfra',limit:'500 req/day',   quality:3, note:'Many open models' },
+  { id:'huggingface',  name:'HuggingFace',         emoji:'🤗', free:false, keyName:'jarvis_key_hf',       limit:'1000 req/day',  quality:3, note:'Open source models' },
+  { id:'openai',       name:'OpenAI GPT-4o',       emoji:'🟢', free:false, keyName:'jarvis_key_openai',   limit:'Paid',          quality:5, note:'Best overall' },
+  { id:'anthropic',    name:'Claude (Anthropic)',  emoji:'🔶', free:false, keyName:'jarvis_key_anthropic',limit:'Paid',          quality:5, note:'Best reasoning' },
+  { id:'deepseek',     name:'DeepSeek R1',         emoji:'🐋', free:false, keyName:'jarvis_key_deepseek', limit:'Free credits',  quality:5, note:'Best free reasoning' },
+  { id:'aimlapi',      name:'AIML API',            emoji:'🧬', free:false, keyName:'jarvis_key_aimlapi',  limit:'Free credits',  quality:4, note:'100+ models' },
+  { id:'perplexity',   name:'Perplexity',          emoji:'🔍', free:false, keyName:'jarvis_key_perplexity',limit:'$5 credit',    quality:4, note:'Web search AI' },
 ]
 
-const CATEGORIES = ['Pinned ⭐', 'India & World', 'Finance', 'Calculators', 'Knowledge', 'Entertainment', 'Space & Science', 'Tech & Dev', 'Creativity', 'Books', 'Optional (Key)', 'Extras']
+// ── PRODUCTIVITY & CREATIVE APPS ──────────────────────────
+const CONNECTED_APPS = [
+  // DEV TOOLS
+  { id:'github',    name:'GitHub',          emoji:'🐙', cat:'Dev Tools',    free:false, keyName:'jarvis_key_github_pat',    ph:'ghp_...',    link:'https://github.com/settings/tokens',    desc:'Repos, commits, issues, PRs' },
+  { id:'vercel',    name:'Vercel',          emoji:'▲',  cat:'Dev Tools',    free:false, keyName:'jarvis_key_vercel_token',  ph:'vercel_...', link:'https://vercel.com/account/tokens',      desc:'Deployments, logs, projects' },
+  { id:'supabase',  name:'Supabase',        emoji:'⚡', cat:'Dev Tools',    free:false, keyName:'jarvis_key_supabase',      ph:'sbp_...',    link:'https://supabase.com/dashboard',         desc:'Database, auth, storage' },
+  // PRODUCTIVITY
+  { id:'notion',    name:'Notion',          emoji:'📝', cat:'Productivity', free:false, keyName:'jarvis_key_notion',        ph:'secret_...', link:'https://www.notion.so/my-integrations',  desc:'Notes, databases, pages' },
+  { id:'todoist',   name:'Todoist',         emoji:'✅', cat:'Productivity', free:false, keyName:'jarvis_key_todoist',       ph:'API token',  link:'https://todoist.com/prefs/integrations', desc:'Tasks, projects, reminders' },
+  { id:'airtable',  name:'Airtable',        emoji:'📊', cat:'Productivity', free:false, keyName:'jarvis_key_airtable',      ph:'pat...',     link:'https://airtable.com/account',           desc:'Spreadsheet database' },
+  // CREATIVE
+  { id:'canva',     name:'Canva',           emoji:'🎨', cat:'Creative',     free:false, keyName:'jarvis_key_canva',         ph:'API key',    link:'https://www.canva.com/developers/',      desc:'Design generation, templates' },
+  { id:'stability', name:'Stability AI',   emoji:'🖼️', cat:'Creative',     free:false, keyName:'jarvis_key_stability',     ph:'sk-...',     link:'https://platform.stability.ai/',         desc:'Image generation (SDXL)' },
+  { id:'replicate', name:'Replicate',       emoji:'🔁', cat:'Creative',     free:false, keyName:'jarvis_key_replicate',     ph:'r8_...',     link:'https://replicate.com/account',          desc:'AI models — image/video/audio' },
+  { id:'elevenlabs',name:'ElevenLabs',      emoji:'🎙️', cat:'Creative',     free:false, keyName:'jarvis_key_elevenlabs',    ph:'xi-api-...', link:'https://elevenlabs.io/settings',         desc:'Ultra-realistic TTS voice' },
+  // SEARCH & DATA
+  { id:'serper',    name:'Serper (Google)', emoji:'🔎', cat:'Search',       free:false, keyName:'jarvis_key_serper',        ph:'...',        link:'https://serper.dev',                     desc:'Google search API — 2500/mo free' },
+  { id:'gnews',     name:'GNews',           emoji:'📰', cat:'Search',       free:false, keyName:'jarvis_key_gnews',         ph:'...',        link:'https://gnews.io',                       desc:'News API — 100/day free' },
+  { id:'newsapi',   name:'NewsAPI',         emoji:'📡', cat:'Search',       free:false, keyName:'jarvis_key_newsapi',       ph:'...',        link:'https://newsapi.org',                    desc:'News from 80,000+ sources' },
+  { id:'omdb',      name:'OMDB (Movies)',   emoji:'🎬', cat:'Search',       free:false, keyName:'jarvis_key_omdb',          ph:'...',        link:'http://www.omdbapi.com/apikey.aspx',     desc:'1000 movies/day free' },
+  // COMMUNICATION
+  { id:'telegram',  name:'Telegram Bot',   emoji:'✈️', cat:'Communication',free:false, keyName:'jarvis_key_telegram',      ph:'bot_token',  link:'https://t.me/BotFather',                 desc:'Send messages via Telegram' },
+  { id:'whatsapp',  name:'WhatsApp Cloud', emoji:'💬', cat:'Communication',free:false, keyName:'jarvis_key_whatsapp',      ph:'token',      link:'https://developers.facebook.com',        desc:'WhatsApp Business API' },
+  // FINANCE
+  { id:'alphavatange',name:'AlphaVantage', emoji:'📈', cat:'Finance',      free:false, keyName:'jarvis_key_alphavantage',  ph:'...',        link:'https://www.alphavantage.co/support/#api-key', desc:'Stocks, forex, crypto — 25/day free' },
+  { id:'coinmarketcap',name:'CoinMarketCap',emoji:'💰',cat:'Finance',      free:false, keyName:'jarvis_key_cmc',           ph:'...',        link:'https://pro.coinmarketcap.com/signup',   desc:'Crypto prices — 10k/mo free' },
+]
+
+// ── FREE SERVICES (no key needed) ─────────────────────────
+const FREE_SERVICES = [
+  { id:'weather',    name:'Weather',         emoji:'🌤️', desc:'wttr.in — always free' },
+  { id:'wikipedia',  name:'Wikipedia',       emoji:'📖', desc:'Knowledge base' },
+  { id:'nasa',       name:'NASA APOD',       emoji:'🚀', desc:'Space photo daily' },
+  { id:'crypto_f',   name:'Crypto Prices',   emoji:'💰', desc:'CoinGecko — free' },
+  { id:'cricket',    name:'Cricket Scores',  emoji:'🏏', desc:'Live IPL/Test scores' },
+  { id:'stock_f',    name:'Stocks NSE/BSE',  emoji:'📈', desc:'Yahoo Finance — free' },
+  { id:'qr',         name:'QR Generator',    emoji:'📱', desc:'qrserver.com — free' },
+  { id:'uuid',       name:'UUID Generator',  emoji:'🆔', desc:'Local generation' },
+  { id:'hash',       name:'SHA-256 Hash',    emoji:'🔐', desc:'Crypto.subtle — local' },
+  { id:'translate',  name:'Translation',     emoji:'🌐', desc:'LibreTranslate — free' },
+  { id:'hackernews', name:'HackerNews',      emoji:'💻', desc:'Tech news — free' },
+  { id:'gutenberg',  name:'Free Books',      emoji:'📚', desc:'10k+ classic books' },
+  { id:'iss',        name:'ISS Location',    emoji:'🛸', desc:'Real-time ISS tracker' },
+  { id:'earthquake', name:'Earthquake Data', emoji:'🌍', desc:'USGS seismic data' },
+  { id:'bmi_f',      name:'BMI Calculator',  emoji:'⚖️', desc:'Local calculation' },
+  { id:'emi_f',      name:'Loan EMI Calc',   emoji:'💰', desc:'Local calculation' },
+  { id:'sip_f',      name:'SIP Calculator',  emoji:'📊', desc:'Local calculation' },
+  { id:'aiimage_f',  name:'AI Image',        emoji:'🎨', desc:'Pollinations — unlimited' },
+  { id:'anime',      name:'Anime Info',      emoji:'🎌', desc:'Jikan API — free' },
+  { id:'pokemon',    name:'PokéAPI',          emoji:'⚡', desc:'All pokemon data' },
+]
 
 export default function ConnectedApps() {
-  const [pinned, setPinned] = useState<string[]>([])
+  const [keys, setKeys]         = useState<Record<string,string>>({})
+  const [starred, setStarred]   = useState<string[]>([])
   const [disabled, setDisabled] = useState<string[]>([])
-  const [keys, setKeys] = useState<Record<string,string>>({})
-  const [editKey, setEditKey] = useState<string|null>(null)
-  const [tempKey, setTempKey] = useState('')
-  const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState('Pinned ⭐')
+  const [editKey, setEditKey]   = useState<string|null>(null)
+  const [tempKey, setTempKey]   = useState('')
+  const [section, setSection]   = useState<'ai'|'apps'|'free'>('ai')
 
   useEffect(() => {
-    const p = JSON.parse(localStorage.getItem('jarvis_pinned_services') || '[]')
-    const d = JSON.parse(localStorage.getItem('jarvis_disabled_services') || '[]')
-    setPinned(p)
-    setDisabled(d)
-    // Load saved keys
+    const s = JSON.parse(localStorage.getItem('jarvis_starred_apps') || '[]')
+    const d = JSON.parse(localStorage.getItem('jarvis_disabled_apps') || '[]')
+    setStarred(s); setDisabled(d)
     const k: Record<string,string> = {}
-    ALL_SERVICES.forEach(s => {
-      if (s.keyName) {
-        const val = localStorage.getItem(s.keyName)
-        if (val) k[s.id] = val
-      }
+    ;[...AI_PROVIDERS, ...CONNECTED_APPS].forEach(p => {
+      if (p.keyName) { const v = localStorage.getItem(p.keyName); if(v) k[p.id] = v }
     })
     setKeys(k)
   }, [])
 
-  const togglePin = (id: string) => {
-    const next = pinned.includes(id) ? pinned.filter(x=>x!==id) : [...pinned, id]
-    setPinned(next)
-    localStorage.setItem('jarvis_pinned_services', JSON.stringify(next))
+  const toggleStar = (id: string) => {
+    const n = starred.includes(id) ? starred.filter(x=>x!==id) : [...starred, id]
+    setStarred(n); localStorage.setItem('jarvis_starred_apps', JSON.stringify(n))
   }
-
   const toggleEnable = (id: string) => {
-    const next = disabled.includes(id) ? disabled.filter(x=>x!==id) : [...disabled, id]
-    setDisabled(next)
-    localStorage.setItem('jarvis_disabled_services', JSON.stringify(next))
+    const n = disabled.includes(id) ? disabled.filter(x=>x!==id) : [...disabled, id]
+    setDisabled(n); localStorage.setItem('jarvis_disabled_apps', JSON.stringify(n))
+  }
+  const saveKey = (keyName: string, id: string) => {
+    if (!keyName || !tempKey.trim()) return
+    localStorage.setItem(keyName, tempKey.trim())
+    setKeys(p => ({...p, [id]: tempKey.trim()}))
+    setEditKey(null); setTempKey('')
   }
 
-  const saveKey = (svc: Service) => {
-    if (!svc.keyName) return
-    localStorage.setItem(svc.keyName, tempKey)
-    setKeys(prev => ({...prev, [svc.id]: tempKey}))
-    setEditKey(null)
-    setTempKey('')
-  }
-
-  // Filter by search
-  const filtered = search.trim()
-    ? ALL_SERVICES.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase()) || s.triggers.toLowerCase().includes(search.toLowerCase()))
-    : null
-
-  // Get services for active category
-  const getServices = () => {
-    if (filtered) return filtered
-    if (activeCategory === 'Pinned ⭐') return ALL_SERVICES.filter(s => pinned.includes(s.id))
-    return ALL_SERVICES.filter(s => s.category === activeCategory)
-  }
-
-  const displayServices = getServices()
-  const pinnedCount = pinned.length
-  const enabledCount = ALL_SERVICES.length - disabled.length
-
-  const s = {
+  const C = {
     wrap: { padding:'0 0 80px' },
-    header: { marginBottom:12 },
-    stats: { display:'flex', gap:8, marginBottom:10 },
-    stat: { flex:1, padding:'8px 10px', background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.08)', borderRadius:8, textAlign:'center' as const },
-    statNum: { fontSize:18, fontWeight:700, color:'#00e5ff' },
-    statLabel: { fontSize:9, color:'#2a5070', marginTop:2 },
-    searchBox: { width:'100%', padding:'9px 12px', background:'rgba(255,255,255,.04)', border:'1px solid rgba(0,229,255,.12)', borderRadius:9, color:'#e0f4ff', fontSize:13, boxSizing:'border-box' as const, marginBottom:10 },
-    catScroll: { display:'flex', gap:6, overflowX:'auto' as const, paddingBottom:6, marginBottom:10, scrollbarWidth:'none' as const },
-    catBtn: (active: boolean) => ({ flexShrink:0, padding:'5px 10px', borderRadius:20, border:`1px solid ${active?'#00e5ff':'rgba(0,229,255,.1)'}`, background:active?'rgba(0,229,255,.1)':'transparent', color:active?'#00e5ff':'#2a5070', fontSize:10, cursor:'pointer', whiteSpace:'nowrap' as const }),
-    card: (enabled: boolean) => ({ background:enabled?'#071828':'rgba(5,12,28,.6)', border:`1px solid rgba(0,229,255,${enabled?.06:.03})`, borderRadius:10, padding:'10px 12px', marginBottom:6, opacity:enabled?1:.5 }),
-    cardTop: { display:'flex', alignItems:'flex-start', gap:10 },
-    emoji: { fontSize:22, flexShrink:0, marginTop:2 },
+    tabs: { display:'flex', gap:6, marginBottom:12 },
+    tab: (a:boolean) => ({ flex:1, padding:'8px 4px', borderRadius:8, border:`1px solid ${a?'#00e5ff':'rgba(0,229,255,.1)'}`, background:a?'rgba(0,229,255,.1)':'transparent', color:a?'#00e5ff':'#2a5070', fontSize:11, cursor:'pointer', fontWeight:a?700:400 }),
+    stats: { display:'flex', gap:6, marginBottom:12 },
+    stat: { flex:1, padding:'8px 6px', background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.06)', borderRadius:8, textAlign:'center' as const },
+    statN: { fontSize:16, fontWeight:700, color:'#00e5ff' },
+    statL: { fontSize:9, color:'#2a5070' },
+    card: (on:boolean) => ({ background:on?'#071828':'rgba(5,10,20,.5)', border:`1px solid rgba(0,229,255,${on?.07:.03})`, borderRadius:10, padding:'10px 12px', marginBottom:6, opacity:on?1:.5 }),
+    row: { display:'flex', alignItems:'flex-start', gap:10 },
+    em: { fontSize:22, flexShrink:0, marginTop:2 },
     info: { flex:1, minWidth:0 },
     name: { fontSize:13, color:'#c8e0f0', fontWeight:600 },
-    desc: { fontSize:10, color:'#2a5070', marginTop:1 },
-    trigger: { fontSize:9, color:'#1a3050', marginTop:2, fontStyle:'italic' as const },
-    actions: { display:'flex', gap:6, alignItems:'center', flexShrink:0 },
-    pinBtn: (active: boolean) => ({ background:'transparent', border:'none', fontSize:16, cursor:'pointer', opacity:active?1:.3, padding:'2px 4px' }),
-    togBtn: (on: boolean) => ({ width:38, height:20, borderRadius:10, background:on?'rgba(0,229,255,.3)':'rgba(255,255,255,.06)', border:`1px solid ${on?'#00e5ff':'rgba(255,255,255,.1)'}`, cursor:'pointer', position:'relative' as const, flexShrink:0 }),
-    togDot: (on: boolean) => ({ position:'absolute' as const, top:2, left:on?18:2, width:14, height:14, borderRadius:'50%', background:on?'#00e5ff':'#2a4060', transition:'left .2s' }),
-    keySection: { marginTop:8, padding:'8px 10px', background:'rgba(255,152,0,.04)', border:'1px solid rgba(255,152,0,.1)', borderRadius:7 },
-    keyStatus: { fontSize:10, color:'#ff9944', marginBottom:6 },
-    keyRow: { display:'flex', gap:6, alignItems:'center' },
-    keyInput: { flex:1, padding:'6px 8px', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,152,0,.2)', borderRadius:6, color:'#e0f4ff', fontSize:11, fontFamily:'monospace' },
+    sub: { fontSize:10, color:'#2a5070', marginTop:1 },
+    note: { fontSize:9, color:'#1a3050', marginTop:1, fontStyle:'italic' as const },
+    actions: { display:'flex', gap:5, alignItems:'center', flexShrink:0 },
+    star: (a:boolean) => ({ background:'transparent', border:'none', fontSize:15, cursor:'pointer', opacity:a?1:.25, padding:'2px 3px' }),
+    tog: (on:boolean) => ({ width:36, height:20, borderRadius:10, background:on?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)', border:`1px solid ${on?'#00e5ff':'rgba(255,255,255,.1)'}`, cursor:'pointer', position:'relative' as const, flexShrink:0 }),
+    togDot: (on:boolean) => ({ position:'absolute' as const, top:2, left:on?16:2, width:14, height:14, borderRadius:'50%', background:on?'#00e5ff':'#2a4060', transition:'left .18s' }),
+    keyBox: { marginTop:8, padding:'8px 10px', background:'rgba(255,152,0,.04)', border:'1px solid rgba(255,152,0,.1)', borderRadius:7 },
+    keyStatus: (has:boolean) => ({ fontSize:10, color:has?'#00e676':'#ff9944', marginBottom:6 }),
+    keyRow: { display:'flex', gap:6 },
+    keyIn: { flex:1, padding:'6px 8px', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,152,0,.2)', borderRadius:6, color:'#e0f4ff', fontSize:11, fontFamily:'monospace' },
     keySave: { padding:'6px 10px', background:'rgba(255,152,0,.15)', border:'1px solid rgba(255,152,0,.3)', borderRadius:6, color:'#ff9944', fontSize:11, cursor:'pointer', whiteSpace:'nowrap' as const },
-    keyLink: { fontSize:9, color:'#1a3050', marginTop:4 },
-    emptyMsg: { textAlign:'center' as const, padding:'30px 0', color:'#1a3050', fontSize:12 },
-    freeBadge: { fontSize:8, padding:'1px 5px', borderRadius:10, background:'rgba(0,230,118,.1)', color:'#00e676', border:'1px solid rgba(0,230,118,.2)', marginLeft:4 },
-    optBadge: { fontSize:8, padding:'1px 5px', borderRadius:10, background:'rgba(255,152,0,.1)', color:'#ffa000', border:'1px solid rgba(255,152,0,.2)', marginLeft:4 },
+    keyCancel: { padding:'6px 8px', background:'transparent', border:'1px solid rgba(239,83,80,.2)', borderRadius:6, color:'#ef5350', fontSize:11, cursor:'pointer' },
+    keyBtn: { width:'100%', padding:'7px', background:'rgba(255,152,0,.08)', border:'1px solid rgba(255,152,0,.2)', borderRadius:6, color:'#ff9944', fontSize:11, cursor:'pointer', marginTop:2 },
+    freeBadge: { fontSize:8, padding:'1px 6px', borderRadius:10, background:'rgba(0,230,118,.1)', color:'#00e676', border:'1px solid rgba(0,230,118,.2)', marginLeft:5 },
+    keyBadge: { fontSize:8, padding:'1px 6px', borderRadius:10, background:'rgba(255,152,0,.1)', color:'#ffa000', border:'1px solid rgba(255,152,0,.2)', marginLeft:5 },
+    connBadge: { fontSize:8, padding:'1px 6px', borderRadius:10, background:'rgba(0,230,118,.12)', color:'#00e676', border:'1px solid rgba(0,230,118,.25)', marginLeft:5 },
+    catHeader: { fontSize:9, color:'#1e3a50', letterSpacing:2, fontWeight:700, marginTop:10, marginBottom:5, paddingLeft:2 },
+    qualBar: (q:number) => ({ display:'flex', gap:2, marginTop:3 }),
+    dot: (filled:boolean) => ({ width:6, height:6, borderRadius:'50%', background:filled?'#00e5ff':'rgba(0,229,255,.15)' }),
   }
 
+  const connectedAI = AI_PROVIDERS.filter(p => !p.free && keys[p.id]).length
+  const connectedApps = CONNECTED_APPS.filter(p => keys[p.id]).length
+  const starredCount = starred.length
+
+  // Sort: starred first
+  const sortedAI = [...AI_PROVIDERS].sort((a,b) => {
+    const as = starred.includes(a.id) ? 0 : 1
+    const bs = starred.includes(b.id) ? 0 : 1
+    return as - bs
+  })
+
   return (
-    <div style={s.wrap}>
+    <div style={C.wrap}>
       {/* Stats */}
-      <div style={s.stats}>
-        <div style={s.stat}>
-          <div style={s.statNum}>67</div>
-          <div style={s.statLabel}>Total Services</div>
-        </div>
-        <div style={s.stat}>
-          <div style={s.statNum}>{enabledCount}</div>
-          <div style={s.statLabel}>Active</div>
-        </div>
-        <div style={s.stat}>
-          <div style={s.statNum}>{pinnedCount}</div>
-          <div style={s.statLabel}>Pinned ⭐</div>
-        </div>
-        <div style={s.stat}>
-          <div style={{...s.statNum, color:'#00e676'}}>63</div>
-          <div style={s.statLabel}>FREE</div>
-        </div>
+      <div style={C.stats}>
+        <div style={C.stat}><div style={C.statN}>{AI_PROVIDERS.length}</div><div style={C.statL}>AI Models</div></div>
+        <div style={C.stat}><div style={C.statN}>{connectedAI + 2}</div><div style={C.statL}>Connected</div></div>
+        <div style={C.stat}><div style={{...C.statN, color:'#ffd700'}}>{starredCount}</div><div style={C.statL}>⭐ Starred</div></div>
+        <div style={C.stat}><div style={{...C.statN, color:'#00e676'}}>{FREE_SERVICES.length}</div><div style={C.statL}>Free APIs</div></div>
       </div>
 
-      {/* Search */}
-      <input
-        style={s.searchBox}
-        placeholder="🔍 Search services..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
+      {/* Section tabs */}
+      <div style={C.tabs}>
+        <button style={C.tab(section==='ai')} onClick={()=>setSection('ai')}>🤖 AI Models</button>
+        <button style={C.tab(section==='apps')} onClick={()=>setSection('apps')}>🔌 Apps</button>
+        <button style={C.tab(section==='free')} onClick={()=>setSection('free')}>✅ Free APIs</button>
+      </div>
 
-      {/* Category tabs */}
-      {!search && (
-        <div style={s.catScroll}>
-          {CATEGORIES.map(cat => (
-            <button key={cat} style={s.catBtn(activeCategory===cat)} onClick={() => setActiveCategory(cat)}>
-              {cat === 'Pinned ⭐' ? `⭐ Pinned (${pinnedCount})` : cat}
-            </button>
-          ))}
+      {/* ── AI PROVIDERS ── */}
+      {section === 'ai' && (
+        <div>
+          <div style={{ fontSize:10, color:'#4a7090', marginBottom:10, lineHeight:1.6, padding:'8px 10px', background:'rgba(0,229,255,.03)', borderRadius:8 }}>
+            💡 <b>Smart Router:</b> JARVIS automatically uses starred providers first, then falls back in order. Limit 85% pe reach karte hi next provider pe switch ho jaata hai.
+          </div>
+          {sortedAI.map(p => {
+            const on = !disabled.includes(p.id)
+            const hasKey = p.free || !!keys[p.id]
+            const isEditing = editKey === p.id
+            const isStarred = starred.includes(p.id)
+            return (
+              <div key={p.id} style={C.card(on)}>
+                <div style={C.row}>
+                  <div style={C.em}>{p.emoji}</div>
+                  <div style={C.info}>
+                    <div style={C.name}>
+                      {p.name}
+                      {p.free ? <span style={C.freeBadge}>FREE ∞</span> : hasKey ? <span style={C.connBadge}>CONNECTED</span> : <span style={C.keyBadge}>KEY NEEDED</span>}
+                    </div>
+                    <div style={C.sub}>{p.limit}</div>
+                    <div style={C.note}>{p.note}</div>
+                    {/* Quality dots */}
+                    <div style={C.qualBar(p.quality)}>
+                      {[1,2,3,4,5].map(i => <div key={i} style={C.dot(i<=p.quality)}/>)}
+                    </div>
+                  </div>
+                  <div style={C.actions}>
+                    <button style={C.star(isStarred)} onClick={()=>toggleStar(p.id)} title="Star as priority">⭐</button>
+                    <div style={C.tog(on)} onClick={()=>toggleEnable(p.id)}>
+                      <div style={C.togDot(on)}/>
+                    </div>
+                  </div>
+                </div>
+                {!p.free && (
+                  <div style={C.keyBox}>
+                    <div style={C.keyStatus(!!keys[p.id])}>{keys[p.id] ? '✅ Connected' : '⚠️ API Key nahi hai'}</div>
+                    {isEditing ? (
+                      <div>
+                        <div style={C.keyRow}>
+                          <input style={C.keyIn} type="password" placeholder="API Key paste karo..." value={tempKey} onChange={e=>setTempKey(e.target.value)} autoFocus/>
+                          <button style={C.keySave} onClick={()=>saveKey(p.keyName,p.id)}>Save</button>
+                          <button style={C.keyCancel} onClick={()=>{setEditKey(null);setTempKey('')}}>✕</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button style={C.keyBtn} onClick={()=>{setEditKey(p.id);setTempKey(keys[p.id]||'')}}>
+                        {keys[p.id] ? '✏️ Key update karo' : '+ Key add karo'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
-      {/* Service cards */}
-      {displayServices.length === 0 ? (
-        <div style={s.emptyMsg}>
-          {activeCategory === 'Pinned ⭐' && !search
-            ? '⭐ Koi pin nahi hua — neeche ⭐ dabao apni pasandida services pin karne ke liye'
-            : 'Koi service nahi mili'}
-        </div>
-      ) : (
-        displayServices.map(svc => {
-          const isEnabled = !disabled.includes(svc.id)
-          const isPinned = pinned.includes(svc.id)
-          const hasKey = svc.keyName && keys[svc.id]
-          const isEditing = editKey === svc.id
-
-          return (
-            <div key={svc.id} style={s.card(isEnabled)}>
-              <div style={s.cardTop}>
-                <div style={s.emoji}>{svc.emoji}</div>
-                <div style={s.info}>
-                  <div style={s.name}>
-                    {svc.name}
-                    {svc.free
-                      ? <span style={s.freeBadge}>FREE</span>
-                      : <span style={s.optBadge}>KEY</span>
-                    }
-                  </div>
-                  <div style={s.desc}>{svc.description}</div>
-                  <div style={s.trigger}>e.g. {svc.triggers}</div>
-                </div>
-                <div style={s.actions}>
-                  {/* Pin button */}
-                  <button style={s.pinBtn(isPinned)} onClick={() => togglePin(svc.id)} title={isPinned ? 'Unpin' : 'Pin to top'}>
-                    ⭐
-                  </button>
-                  {/* Toggle ON/OFF */}
-                  <div style={s.togBtn(isEnabled)} onClick={() => toggleEnable(svc.id)}>
-                    <div style={s.togDot(isEnabled)}/>
-                  </div>
-                </div>
-              </div>
-
-              {/* Key section for optional services */}
-              {!svc.free && (
-                <div style={s.keySection}>
-                  <div style={s.keyStatus}>
-                    {hasKey ? '✅ Key saved' : '⚠️ API Key chahiye'}
-                  </div>
-                  {isEditing ? (
-                    <div>
-                      <div style={s.keyRow}>
-                        <input
-                          style={s.keyInput}
-                          type="password"
-                          placeholder={svc.keyPlaceholder}
-                          value={tempKey}
-                          onChange={e => setTempKey(e.target.value)}
-                          autoFocus
-                        />
-                        <button style={s.keySave} onClick={() => saveKey(svc)}>Save</button>
-                        <button style={{...s.keySave, color:'#ef5350', borderColor:'rgba(239,83,80,.3)'}} onClick={() => setEditKey(null)}>✕</button>
-                      </div>
-                      {svc.keyLink && (
-                        <div style={s.keyLink}>
-                          Key yahan se lo: <a href={svc.keyLink} target="_blank" rel="noreferrer" style={{color:'#1a4060'}}>{svc.keyLink}</a>
+      {/* ── CONNECTED APPS ── */}
+      {section === 'apps' && (
+        <div>
+          <div style={{ fontSize:10, color:'#4a7090', marginBottom:10, lineHeight:1.6, padding:'8px 10px', background:'rgba(0,229,255,.03)', borderRadius:8 }}>
+            🔌 <b>Third-party apps:</b> Key add karo → JARVIS in apps ke saath kaam karega. Star karo jo sabse zyada use karte ho.
+          </div>
+          {['Dev Tools','Productivity','Creative','Search','Communication','Finance'].map(cat => {
+            const items = CONNECTED_APPS.filter(a => a.cat === cat)
+            return (
+              <div key={cat}>
+                <div style={C.catHeader}>{cat.toUpperCase()}</div>
+                {items.map(app => {
+                  const on = !disabled.includes(app.id)
+                  const hasKey = !!keys[app.id]
+                  const isEditing = editKey === app.id
+                  const isStarred = starred.includes(app.id)
+                  return (
+                    <div key={app.id} style={C.card(on)}>
+                      <div style={C.row}>
+                        <div style={C.em}>{app.emoji}</div>
+                        <div style={C.info}>
+                          <div style={C.name}>
+                            {app.name}
+                            {hasKey ? <span style={C.connBadge}>CONNECTED</span> : <span style={C.keyBadge}>KEY NEEDED</span>}
+                          </div>
+                          <div style={C.sub}>{app.desc}</div>
                         </div>
-                      )}
+                        <div style={C.actions}>
+                          <button style={C.star(isStarred)} onClick={()=>toggleStar(app.id)}>⭐</button>
+                          <div style={C.tog(on)} onClick={()=>toggleEnable(app.id)}>
+                            <div style={C.togDot(on)}/>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={C.keyBox}>
+                        <div style={C.keyStatus(hasKey)}>{hasKey ? '✅ Connected' : '⚠️ API Key chahiye'}</div>
+                        {isEditing ? (
+                          <div>
+                            <div style={C.keyRow}>
+                              <input style={C.keyIn} type="password" placeholder={app.ph} value={tempKey} onChange={e=>setTempKey(e.target.value)} autoFocus/>
+                              <button style={C.keySave} onClick={()=>saveKey(app.keyName,app.id)}>Save</button>
+                              <button style={C.keyCancel} onClick={()=>{setEditKey(null);setTempKey('')}}>✕</button>
+                            </div>
+                            <div style={{ fontSize:9, color:'#1a3050', marginTop:4 }}>
+                              Key yahan se lo: <a href={app.link} target="_blank" rel="noreferrer" style={{color:'#1e4060'}}>{app.link}</a>
+                            </div>
+                          </div>
+                        ) : (
+                          <button style={C.keyBtn} onClick={()=>{setEditKey(app.id);setTempKey(keys[app.id]||'')}}>
+                            {hasKey ? '✏️ Key update karo' : '+ Key add karo'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <button
-                      style={{...s.keySave, width:'100%'}}
-                      onClick={() => { setEditKey(svc.id); setTempKey(keys[svc.id] || '') }}
-                    >
-                      {hasKey ? '✏️ Key Update karo' : '+ Key Add karo'}
-                    </button>
-                  )}
-                </div>
-              )}
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── FREE APIS ── */}
+      {section === 'free' && (
+        <div>
+          <div style={{ fontSize:10, color:'#00e676', marginBottom:10, lineHeight:1.6, padding:'8px 10px', background:'rgba(0,230,118,.03)', borderRadius:8, border:'1px solid rgba(0,230,118,.1)' }}>
+            ✅ Yeh sab <b>FREE hain — koi key nahi chahiye.</b> Bas baat karo, JARVIS automatically use karega.
+          </div>
+          {FREE_SERVICES.map(s => (
+            <div key={s.id} style={{ ...C.card(true), display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:20 }}>{s.emoji}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, color:'#c8e0f0', fontWeight:600 }}>{s.name} <span style={C.freeBadge}>FREE</span></div>
+                <div style={{ fontSize:10, color:'#2a5070' }}>{s.desc}</div>
+              </div>
+              <span style={{ fontSize:10, color:'#00e676' }}>✓ Active</span>
             </div>
-          )
-        })
+          ))}
+        </div>
       )}
     </div>
   )
