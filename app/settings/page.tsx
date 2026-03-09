@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Sidebar from '../../components/shared/Sidebar'
 import { setPIN, clearPIN, isPINEnabled, verifyPIN } from '../../components/shared/PinLock'
 import MemoryTab from '../../components/settings/MemoryTab'
+import ConnectedApps from '../../components/settings/ConnectedApps'
 
-type MainTab = 'mode' | 'keys' | 'storage' | 'memory' | 'security'
+type MainTab = 'mode' | 'keys' | 'apps' | 'storage' | 'memory' | 'security'
 type KeyTab  = 'llm' | 'tts' | 'image' | 'music' | 'social'
 
 // ── Provider options — best first ─────────────────────────
@@ -189,9 +190,9 @@ export default function SettingsPage() {
 
       {/* Main tabs */}
       <div style={s.mainTabs}>
-        {(['mode','keys','storage','memory'] as MainTab[]).map(t => (
+        {(['mode','keys','apps','storage','memory'] as MainTab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={s.mainTab(tab===t)}>
-            {t === 'mode' ? '⚡ Mode' : t === 'keys' ? '🔑 API Keys' : t === 'storage' ? '💾 Storage' : '🧠 Memory'}
+            {t === 'mode' ? '⚡ Mode' : t === 'keys' ? '🔑 Keys' : t === 'apps' ? '🔌 Apps' : t === 'storage' ? '💾 Store' : '🧠 Memory'}
           </button>
         ))}
       </div>
@@ -442,6 +443,9 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        )}
+        {tab === 'apps' && (
+          <ConnectedApps />
         )}
         {tab === 'memory' && (
           <MemoryTab />
