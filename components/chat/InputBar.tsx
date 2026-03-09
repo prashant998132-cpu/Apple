@@ -34,11 +34,17 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
   const [showCompress, setShowComp] = useState(false)
   const [attachFile, setAttach]     = useState<File|null>(null)
   const [attachPreview, setPreview] = useState<string|null>(null)
+  const [voiceRecording, setVoiceRec] = useState(false)
+  const [voiceTime, setVoiceTime]   = useState(0)
 
   const textareaRef  = useRef<HTMLTextAreaElement>(null)
   const recRef       = useRef<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraRef    = useRef<HTMLInputElement>(null)
+  const pdfInputRef  = useRef<HTMLInputElement>(null)
+  const voiceTimerRef = useRef<any>(null)
+  const mediaRecRef  = useRef<MediaRecorder|null>(null)
+  const audioChunks  = useRef<Blob[]>([])
 
   const resize = () => {
     const el = textareaRef.current
@@ -79,6 +85,36 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
       r.onload = (ev) => setPreview(ev.target?.result as string)
       r.readAsDataURL(f)
     }
+  }
+
+  const startVoiceNote = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+      audioChunks.current = []
+      mr.ondataavailable = e => { if(e.data.size>0) audioChunks.current.push(e.data) }
+      mr.onstop = () => {
+        const blob = new Blob(audioChunks.current, { type:'audio/webm' })
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type:'audio/webm' })
+        setAttach(file)
+        setPreview('voice')
+        stream.getTracks().forEach(t=>t.stop())
+        setVoiceRec(false)
+        clearInterval(voiceTimerRef.current)
+        setVoiceTime(0)
+      }
+      mr.start()
+      mediaRecRef.current = mr
+      setVoiceRec(true)
+      setVoiceTime(0)
+      voiceTimerRef.current = setInterval(() => setVoiceTime(t=>t+1), 1000)
+      setShowPlus(false)
+    } catch { alert('Mic access nahi mila') }
+  }
+
+  const stopVoiceNote = () => {
+    mediaRecRef.current?.stop()
+    clearInterval(voiceTimerRef.current)
   }
 
   const handleCompress = async (promptText: string) => {
@@ -135,14 +171,43 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
     }}>
 
       {/* Attach preview */}
-      {attachPreview && (
+      {(attachPreview || voiceRecording) && (
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8,
           padding:'5px 10px', background:'rgba(0,229,255,.06)',
           borderRadius:10, border:'1px solid rgba(0,229,255,.15)' }}>
-          <img src={attachPreview} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:'cover' }} />
-          <span style={{ fontSize:11, color:'#90caf9', flex:1 }}>{attachFile?.name}</span>
-          <button onClick={()=>{setAttach(null);setPreview(null)}}
-            style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>✕</button>
+          {voiceRecording ? (
+            <>
+              <span style={{ fontSize:18 }}>🎙️</span>
+              <span style={{ fontSize:11, color:'#ef5350', flex:1, fontWeight:600 }}>
+                ● Recording... {Math.floor(voiceTime/60)}:{String(voiceTime%60).padStart(2,'0')}
+              </span>
+              <button onClick={stopVoiceNote}
+                style={{ background:'rgba(239,83,80,.15)', border:'1px solid rgba(239,83,80,.3)', color:'#ef5350', fontSize:11, borderRadius:6, padding:'3px 8px', cursor:'pointer' }}>
+                ⏹ Stop
+              </button>
+            </>
+          ) : attachPreview === 'voice' ? (
+            <>
+              <span style={{ fontSize:18 }}>🎵</span>
+              <span style={{ fontSize:11, color:'#90caf9', flex:1 }}>{attachFile?.name}</span>
+              <button onClick={()=>{setAttach(null);setPreview(null)}}
+                style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>✕</button>
+            </>
+          ) : attachFile?.type === 'application/pdf' ? (
+            <>
+              <span style={{ fontSize:22 }}>📄</span>
+              <span style={{ fontSize:11, color:'#90caf9', flex:1 }}>{attachFile?.name}</span>
+              <button onClick={()=>{setAttach(null);setPreview(null)}}
+                style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>✕</button>
+            </>
+          ) : (
+            <>
+              <img src={attachPreview!} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:'cover' }} />
+              <span style={{ fontSize:11, color:'#90caf9', flex:1 }}>{attachFile?.name}</span>
+              <button onClick={()=>{setAttach(null);setPreview(null)}}
+                style={{ background:'none', border:'none', color:'#ef5350', fontSize:16, cursor:'pointer' }}>✕</button>
+            </>
+          )}
         </div>
       )}
 
@@ -197,7 +262,19 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
                 onPointerDown={()=>{fileInputRef.current?.click();setShowPlus(false)}}
                 style={popupBtn()}>
                 <span style={{ fontSize:15 }}>🖼️</span>
-                <span style={{ color:'#c8e0f0', fontSize:13 }}>Image / PDF</span>
+                <span style={{ color:'#c8e0f0', fontSize:13 }}>Image</span>
+              </button>
+              <button data-popup="plus"
+                onPointerDown={()=>{pdfInputRef.current?.click();setShowPlus(false)}}
+                style={popupBtn()}>
+                <span style={{ fontSize:15 }}>📄</span>
+                <span style={{ color:'#c8e0f0', fontSize:13 }}>PDF</span>
+              </button>
+              <button data-popup="plus"
+                onPointerDown={()=>{startVoiceNote()}}
+                style={popupBtn()}>
+                <span style={{ fontSize:15 }}>🎵</span>
+                <span style={{ color:'#c8e0f0', fontSize:13 }}>Voice Note</span>
               </button>
             </div>
           )}
@@ -322,7 +399,8 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
         <span style={{ marginLeft:'auto', fontSize:9, color:'#263238' }}>Enter = send</span>
       </div>
 
-      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" style={{ display:'none' }} onChange={handleFile} />
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleFile} />
+      <input ref={pdfInputRef}  type="file" accept="application/pdf" style={{ display:'none' }} onChange={handleFile} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={handleFile} />
     </div>
   )
