@@ -427,7 +427,7 @@ export async function routeTools(message: string): Promise<ToolResult[]> {
     fact:       () => getRandomFact(),
     meme:       () => getMeme(),
     forecast:   () => getForecast(message),
-    holiday:    () => getPublicHoliday(),
+    holiday_2:    () => getPublicHoliday(),
     youtube:    () => getYouTubeTrending(),
     shorturl:   () => getShortURL(message),
     mathfact:   () => getMathFact(message),
