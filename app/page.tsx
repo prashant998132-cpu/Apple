@@ -483,7 +483,8 @@ export default function ChatPage() {
       </header>
 
       {/* Messages */}
-      <main style={{ flex:1, overflowY:'auto', position:'relative', zIndex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+      <main style={{ flex:1, overflowY:'auto', position:'relative', zIndex:1 }}>
+        <div style={{ minHeight:'100%', display:'flex', flexDirection:'column', justifyContent:'flex-end', paddingBottom:4 }}>
         {msgs.length === 0 ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'20px 16px' }}>
 
@@ -576,6 +577,7 @@ export default function ChatPage() {
         )}
 
         <div ref={bot} style={{ height:1 }}/>
+        </div>
       </main>
 
       {toast && <Toast message={toast.msg} type={toast.type}/>}
