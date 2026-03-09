@@ -165,26 +165,6 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Navigation */}
-        <div style={{ padding:'6px 12px', borderBottom:'1px solid rgba(0,229,255,.06)' }}>
-          <div style={{ fontSize:9, color:'#1e3a50', letterSpacing:2, fontWeight:700, marginBottom:4, paddingLeft:4 }}>PAGES</div>
-          {NAV.map(n => (
-            <button key={n.id} onClick={() => go(n.href)}
-              style={{
-                width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:2,
-                background: active === n.id ? 'rgba(0,229,255,.12)' : 'transparent',
-                border: active === n.id ? '1px solid rgba(0,229,255,.2)' : '1px solid transparent',
-                color: active === n.id ? '#00e5ff' : '#4a7090',
-                fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left' as const,
-              }}
-            >
-              <span style={{ fontSize:16 }}>{n.icon}</span>
-              <span style={{ fontWeight: active === n.id ? 600 : 400 }}>{n.label}</span>
-              {active === n.id && <span style={{ marginLeft:'auto', width:6, height:6, borderRadius:'50%', background:'#00e5ff', display:'block' }}/>}
-            </button>
-          ))}
-        </div>
-
         {/* Chat History */}
         <div style={{ flex:1, overflowY:'auto', padding:'8px 12px' }}>
           <div style={{ fontSize:9, color:'#1e3a50', letterSpacing:2, fontWeight:700, marginBottom:6, paddingLeft:4 }}>CHAT HISTORY</div>

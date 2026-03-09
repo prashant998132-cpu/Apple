@@ -494,7 +494,7 @@ export default function ChatPage() {
       </header>
 
       {/* Messages */}
-      <main style={{ flex:1, overflowY:'auto', position:'relative', zIndex:1 }}>
+      <main style={{ flex:1, overflowY:'auto', position:'relative', zIndex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
         {msgs.length === 0 ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'20px 16px' }}>
 
