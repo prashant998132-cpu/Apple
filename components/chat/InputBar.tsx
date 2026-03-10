@@ -135,15 +135,37 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
     setComp(false)
   }
 
+  const [sttLang, setSttLang]   = useState<'hi-IN'|'en-IN'|'en-US'>('hi-IN')
+
   const toggleRecord = () => {
     if (isRecording) { recRef.current?.stop(); setRec(false); return }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return
     const rec = new SR()
-    rec.lang = 'hi-IN'; rec.continuous = false; rec.interimResults = false
+    // Multi-language: hi-IN primary, en-IN fallback
+    rec.lang = sttLang
+    rec.continuous = true      // Keep recording until Stop
+    rec.interimResults = true  // Show partial results
+    rec.maxAlternatives = 1
+
     rec.onresult = (e: any) => {
-      const t = e.results[0][0].transcript
-      setInput(p => p + (p ? ' ' : '') + t); setTimeout(resize, 0)
+      let interim = '', final = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript
+        if (e.results[i].isFinal) final += t
+        else interim += t
+      }
+      if (final) {
+        setInput(p => p + (p ? ' ' : '') + final.trim())
+        setTimeout(resize, 0)
+      }
+    }
+    rec.onerror = (e: any) => {
+      // Auto retry in English if Hindi fails
+      if (e.error === 'language-not-supported' && sttLang === 'hi-IN') {
+        setSttLang('en-IN')
+      }
+      setRec(false)
     }
     rec.onend = () => setRec(false)
     rec.start(); recRef.current = rec; setRec(true)
@@ -323,6 +345,19 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
             onFocus={e=>e.target.style.borderColor='rgba(0,229,255,.4)'}
             onBlur={e=>e.target.style.borderColor='rgba(255,255,255,.12)'}
           />
+          {/* Lang toggle — tiny pill above mic */}
+          {isRecording && (
+            <button
+              onClick={e=>{ e.stopPropagation(); setSttLang(l => l==='hi-IN'?'en-IN':'hi-IN') }}
+              style={{
+                position:'absolute', right:0, bottom:40,
+                fontSize:8, color:'#00e5ff', background:'rgba(0,229,255,.12)',
+                border:'1px solid rgba(0,229,255,.3)', borderRadius:8,
+                padding:'2px 5px', cursor:'pointer', whiteSpace:'nowrap',
+              }}>
+              {sttLang==='hi-IN'?'HI':'EN'}
+            </button>
+          )}
           {/* Mic — inside textarea, right side */}
           <button
             onClick={toggleRecord}

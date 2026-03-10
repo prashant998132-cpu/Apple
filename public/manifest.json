@@ -1,26 +1,32 @@
 {
-  "name": "JARVIS — Your AI Assistant",
+  "name": "JARVIS — Personal AI",
   "short_name": "JARVIS",
-  "description": "Personal AI Assistant powered by multi-model AI",
+  "description": "Autonomous Hindi-first AI assistant",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0a0a14",
-  "theme_color": "#0a0a14",
-  "categories": ["productivity", "utilities"],
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#020917",
+  "theme_color": "#00e5ff",
+  "orientation": "portrait-primary",
+  "lang": "hi-IN",
+  "id": "/",
   "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "/icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png" },
+    { "src": "/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png" },
+    { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "screenshots": [],
+  "screenshots": [
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "form_factor": "narrow" }
+  ],
+  "shortcuts": [
+    { "name": "New Chat",  "url": "/",        "icons": [{"src":"/icons/icon-96x96.png","sizes":"96x96"}] },
+    { "name": "Settings",  "url": "/settings","icons": [{"src":"/icons/icon-96x96.png","sizes":"96x96"}] }
+  ],
+  "categories": ["productivity", "utilities", "lifestyle"],
   "prefer_related_applications": false
 }

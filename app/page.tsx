@@ -15,7 +15,7 @@ import { smartHistory } from '../lib/core/contextCompressor';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
-  { icon:'📚', t:'Mujhe aaj ke liye study plan bana do' },
+  { icon:'📚', t:'Mujhe aaj ke liye koi interesting cheez batao' },
   { icon:'🖼️', t:'Ek realistic jungle image banao' },
   { icon:'🚂', t:'Nearest station se Delhi train kab hai?' },
   { icon:'🧠', t:'Ek concept samjhao — simple language mein' },
@@ -268,7 +268,7 @@ export default function ChatPage() {
     if (t.match(/image|photo|picture|banao/)) return '🎨 Image Generation';
     if (t.match(/news|khabar|today/)) return '📰 News Discussion';
     if (t.match(/code|function|program|script/)) return '💻 Coding Help';
-    if (t.match(/study|neet|jee|formula|physics|chemistry|bio/)) return '📚 Study Session';
+    if (t.match(/study|physics|chemistry|math|science/)) return '📚 Study Session';
     if (t.match(/recipe|food|khana|cook/)) return '🍛 Recipe Chat';
     if (t.match(/cricket|ipl|score|match/)) return '🏏 Cricket';
     if (t.match(/math|calculate|solve|equation/)) return '🔢 Math Help';

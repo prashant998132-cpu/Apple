@@ -5,7 +5,7 @@
 
 export type CallType =
   | 'groq_only'      // fast, cheap — greetings, simple chat
-  | 'gemini_only'    // reasoning needed — NEET, complex
+  | 'gemini_only'    // reasoning needed — complex, research
   | 'tool_direct'    // skip LLM, call tool API directly
   | 'gemini_tools'   // full Gemini with function calling
 
@@ -124,7 +124,7 @@ export function decideRoute(
     }
   }
 
-  // 3. NEET / educational → Gemini (needs reasoning)
+  // 3. Educational / complex → Gemini (needs reasoning)
   if (NEET_KEYWORDS.some(k => m.includes(k))) {
     return {
       callType: 'gemini_only',

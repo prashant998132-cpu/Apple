@@ -24,8 +24,6 @@ function renderMarkdown(text: string): string {
     .replace(/\\\[([\s\S]+?)\\\]/g, (_,m) => { mathBlocks.push(`\\[${m}\\]`); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\(([\s\S]+?)\\\)/g, (_,m) => { mathBlocks.push(`\\(${m}\\)`); return `%%MATH${mathBlocks.length-1}%%`; });
 
-  let codeBlockCounter = 0;
-
   let html = protected_text
     .replace(/\[LEARN:[^\]]*\]/g, '')
     // Normalize any garbled unicode bullets / arrows → clean bullet
@@ -100,12 +98,29 @@ function WeatherCard({ data }: { data: any }) {
 function ImageCard({ data }: { data: any }) {
   const url = data?.image_url||data?.image_data_url||data?.imageUrl;
   if (!url) return null;
+  const [full, setFull] = useState(false);
+  const download = () => { const a = document.createElement('a'); a.href=url; a.download=`JARVIS_${Date.now()}.png`; a.click(); };
   return (
-    <div style={{ marginTop:6, borderRadius:10, overflow:'hidden', border:'1px solid rgba(0,229,255,.1)' }}>
-      <img src={url} alt={data.prompt||''} style={{ width:'100%', maxHeight:240, objectFit:'cover', display:'block' }}
-        onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}} />
-      {data.prompt && <div style={{ padding:'5px 9px', fontSize:10, color:'#546e7a', background:'rgba(0,15,35,.6)' }}>"{data.prompt.slice(0,70)}"</div>}
-    </div>
+    <>
+      <div style={{ marginTop:6, borderRadius:10, overflow:'hidden', border:'1px solid rgba(0,229,255,.12)' }}>
+        <div style={{ position:'relative' }}>
+          <img src={url} alt={data.prompt||''} onClick={()=>setFull(true)}
+            style={{ width:'100%', maxHeight:280, objectFit:'cover', display:'block', cursor:'zoom-in' }}
+            onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}} />
+          <div style={{ position:'absolute', bottom:6, right:6, display:'flex', gap:5 }}>
+            <button onClick={download} style={{ background:'rgba(0,0,0,.75)', border:'1px solid rgba(255,255,255,.15)', borderRadius:7, padding:'4px 9px', color:'#e8f4ff', fontSize:11, cursor:'pointer' }}>⬇️ Save</button>
+            <button onClick={()=>setFull(true)} style={{ background:'rgba(0,0,0,.75)', border:'1px solid rgba(255,255,255,.15)', borderRadius:7, padding:'4px 9px', color:'#e8f4ff', fontSize:11, cursor:'pointer' }}>⛶ Full</button>
+          </div>
+        </div>
+        {data.prompt && <div style={{ padding:'5px 10px', fontSize:10, color:'#546e7a' }}>"{data.prompt.slice(0,70)}"</div>}
+      </div>
+      {full && (
+        <div onClick={()=>setFull(false)} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.95)', display:'flex', alignItems:'center', justifyContent:'center', padding:12 }}>
+          <img src={url} alt="" style={{ maxWidth:'100%', maxHeight:'90vh', borderRadius:8, objectFit:'contain' }}/>
+          <button onClick={download} style={{ position:'absolute', bottom:24, right:24, background:'rgba(0,229,255,.2)', border:'1px solid rgba(0,229,255,.4)', borderRadius:10, padding:'10px 18px', color:'#00e5ff', fontSize:13, cursor:'pointer', fontWeight:600 }}>⬇️ Download</button>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -28,7 +28,7 @@ const ROUTER_CATEGORIES = [
   {
     id: 'reasoning',
     label: '🧠 Reasoning / Think Mode',
-    desc: 'Complex problems, NEET/JEE, code, deep analysis',
+    desc: 'Complex problems, coding, deep analysis, research',
     providers: [
       { id:'deepseek',   name:'DeepSeek R1',        emoji:'🐋', limit:'Free credits', free:false, key:'jarvis_key_deepseek',    quality:5 },
       { id:'gemini_r',   name:'Gemini 2.0 Flash',  emoji:'💎', limit:'1500/day',    free:false, key:'jarvis_key_gemini',      quality:5 },

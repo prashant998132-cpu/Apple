@@ -17,7 +17,7 @@ function generateTitle(firstMsg: string): string {
   if (t.match(/image|photo|picture|banao|draw|generate/)) return '🎨 Image Gen'
   if (t.match(/news|khabar|samachar/)) return '📰 News'
   if (t.match(/code|function|program|script|bug|typescript|javascript|python/)) return '💻 Code'
-  if (t.match(/neet|jee|physics|chemistry|biology|formula/)) return '📚 NEET'
+  if (t.match(/physics|chemistry|biology|formula|science|experiment/)) return '🔬 Science'
   if (t.match(/study|padhai|revision|notes|flashcard|mcq|quiz/)) return '📖 Study'
   if (t.match(/recipe|food|khana|cook/)) return '🍛 Recipe'
   if (t.match(/cricket|ipl|score|match/)) return '🏏 Cricket'

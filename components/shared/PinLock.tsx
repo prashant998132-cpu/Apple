@@ -11,8 +11,80 @@ async function sha256(text: string): Promise<string> {
 const PIN_KEY = 'jarvis_pin_hash'
 const ATTEMPTS_KEY = 'jarvis_pin_attempts'
 const LOCK_UNTIL_KEY = 'jarvis_pin_locked_until'
+const BIOMETRIC_KEY = 'jarvis_biometric_enabled'
 const MAX_ATTEMPTS = 5
 const LOCK_DURATION = 5 * 60 * 1000 // 5 minutes
+
+// ── WebAuthn Biometric ────────────────────────────────────
+export async function isBiometricAvailable(): Promise<boolean> {
+  try {
+    if (!window.PublicKeyCredential) return false
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+  } catch { return false }
+}
+
+export async function registerBiometric(): Promise<boolean> {
+  try {
+    const uid = localStorage.getItem('jarvis_uid') || 'jarvis_user'
+    const challenge = crypto.getRandomValues(new Uint8Array(32))
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'JARVIS', id: window.location.hostname },
+        user: {
+          id: new TextEncoder().encode(uid),
+          name: uid,
+          displayName: 'JARVIS User',
+        },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',   // fingerprint/FaceID only (no USB key)
+          userVerification: 'required',
+          residentKey: 'preferred',
+        },
+        timeout: 60000,
+      }
+    }) as PublicKeyCredential | null
+
+    if (!credential) return false
+    // Save credential id for later verification
+    const credId = btoa(String.fromCharCode(...new Uint8Array((credential.rawId))))
+    localStorage.setItem(BIOMETRIC_KEY, credId)
+    return true
+  } catch (e) {
+    console.error('Biometric register:', e)
+    return false
+  }
+}
+
+export async function verifyBiometric(): Promise<boolean> {
+  try {
+    const credIdStr = localStorage.getItem(BIOMETRIC_KEY)
+    if (!credIdStr) return false
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32))
+    const credIdBytes = Uint8Array.from(atob(credIdStr), c => c.charCodeAt(0))
+
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        rpId: window.location.hostname,
+        allowCredentials: [{ type: 'public-key', id: credIdBytes }],
+        userVerification: 'required',
+        timeout: 60000,
+      }
+    })
+    return !!assertion
+  } catch { return false }
+}
+
+export function isBiometricRegistered(): boolean {
+  return !!localStorage.getItem(BIOMETRIC_KEY)
+}
+
+export function isPINEnabled(): boolean {
+  return !!localStorage.getItem(PIN_KEY)
+}
 
 interface PinLockProps {
   onUnlock: () => void
@@ -50,6 +122,29 @@ export default function PinLock({ onUnlock }: PinLockProps) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [lockedUntil])
+
+  const [bioAvailable, setBioAvail] = useState(false)
+  const [bioLoading, setBioLoad]    = useState(false)
+  const [bioError, setBioError]     = useState('')
+
+  useEffect(() => {
+    isBiometricAvailable().then(ok => setBioAvail(ok && isBiometricRegistered()))
+  }, [])
+
+  // Auto-trigger biometric on open if registered
+  useEffect(() => {
+    if (bioAvailable && !isLocked) {
+      setTimeout(() => tryBiometric(), 400)
+    }
+  }, [bioAvailable])
+
+  const tryBiometric = async () => {
+    setBioLoad(true); setBioError('')
+    const ok = await verifyBiometric()
+    setBioLoad(false)
+    if (ok) { onUnlock() }
+    else { setBioError('Biometric failed — PIN daalo') }
+  }
 
   const tryUnlock = useCallback(async (p: string) => {
     if (lockedUntil && Date.now() < lockedUntil) return
@@ -154,6 +249,28 @@ export default function PinLock({ onUnlock }: PinLockProps) {
         ))}
       </div>
 
+      {/* Biometric button */}
+      {bioAvailable && !isLocked && (
+        <button
+          onClick={tryBiometric}
+          disabled={bioLoading}
+          style={{
+            marginTop: 24, padding: '12px 28px',
+            background: bioLoading ? 'rgba(0,229,255,.05)' : 'rgba(0,229,255,.1)',
+            border: '1.5px solid rgba(0,229,255,.3)',
+            borderRadius: 14, color: '#00e5ff',
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 8,
+            transition: 'all .2s',
+          }}
+        >
+          {bioLoading ? '⟳ Scanning...' : '🔏 Fingerprint / Face ID'}
+        </button>
+      )}
+      {bioError && (
+        <div style={{ marginTop: 10, fontSize: 11, color: '#ffa000' }}>{bioError}</div>
+      )}
+
       <style>{`
         @keyframes shake {
           0%,100%{transform:translateX(0)}
@@ -172,10 +289,6 @@ export async function setPIN(newPin: string): Promise<void> {
   if (!newPin || newPin.length !== 4) throw new Error('PIN must be 4 digits')
   const hash = await sha256(newPin)
   localStorage.setItem(PIN_KEY, hash)
-}
-
-export function isPINEnabled(): boolean {
-  return !!localStorage.getItem(PIN_KEY)
 }
 
 export function clearPIN(): void {
