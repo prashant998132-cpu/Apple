@@ -12,7 +12,6 @@ import {
 } from '../providers/llm'
 import { cacheGet, cacheSet, TTL } from './responseCache'
 import { trackCall, isNearLimit, pickProvider } from './usageTracker'
-import { findAutoApp, recordAppUse } from './connectedAppsManager'
 import { pickModelTier, getModelForTier } from './agentDispatcher'
 
 export interface OrchestratorInput {
@@ -169,14 +168,8 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
 
   // ── AUTO MODE — Smart routing ──────────────────────────────
   if (!reply && chatMode === 'auto') {
-    // Check if a connected app should handle this automatically
-    const autoApp = typeof window === 'undefined' ? null : findAutoApp(input.message)
-    if (autoApp) {
-      recordAppUse(autoApp.id)
-      // App detected — inject context into message for AI
-      input = { ...input, message: `[Connected: ${autoApp.name}] ${input.message}` }
-    }
-
+    // Pass connected app hint from client via input (set in page.tsx sendMessage)
+    // connectedAppsManager runs client-side only — server gets hint via message prefix
     const decision = route(input.message)
 
     // Direct tool (no LLM): datetime, calculate, etc

@@ -44,6 +44,37 @@ async function getEdgeTTSUrl(text: string, voice = 'hi-IN-SwaraNeural', speed = 
 }
 
 export async function POST(req: NextRequest) {
+  const contentType = req.headers.get('content-type') || '';
+
+  // Whisper transcription mode — audio blob sent as FormData
+  if (contentType.includes('multipart/form-data')) {
+    try {
+      const form = await req.formData();
+      const audio = form.get('audio') as File | null;
+      if (!audio) return NextResponse.json({ error: 'No audio' }, { status: 400 });
+
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!groqKey) return NextResponse.json({ text: '', error: 'No Groq key for Whisper' });
+
+      const fd = new FormData();
+      fd.append('file', audio, 'audio.webm');
+      fd.append('model', 'whisper-large-v3-turbo');
+      fd.append('language', 'hi');  // Hindi primary
+      fd.append('response_format', 'json');
+
+      const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}` },
+        body: fd,
+        signal: AbortSignal.timeout(20000),
+      });
+      const d = await r.json() as { text?: string };
+      return NextResponse.json({ text: d.text || '', provider: 'Groq Whisper' });
+    } catch(e: any) {
+      return NextResponse.json({ text: '', error: e.message });
+    }
+  }
+
   const { text, lang = 'hi', speed = 1.0 } = await req.json();
   if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 

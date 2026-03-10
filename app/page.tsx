@@ -148,6 +148,7 @@ export default function ChatPage() {
   const [followupChips, setFollowupChips] = useState<string[]>([])
   // Device
   const [batteryPct, setBatteryPct] = useState<number|null>(null);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [batteryCharging, setBatteryCharging] = useState(false);
   const [netType, setNetType]  = useState('');
   const deviceCtxRef = useRef<string>('');
@@ -326,10 +327,21 @@ export default function ChatPage() {
 
     // Auto session title on first message
     if (msgs.length === 0 && text.trim()) {
-      const title = getAutoTitle(text);
-      setChatTitle(title);
-      // Save to sidebar history label
-      try { localStorage.setItem(`jarvis_title_${chatId.current}`, title); } catch {}
+      // Quick keyword title immediately
+      const quickTitle = getAutoTitle(text);
+      setChatTitle(quickTitle);
+      try { localStorage.setItem(`jarvis_title_${chatId.current}`, quickTitle); } catch {}
+      // Async AI title — Groq nano, 1 call, upgrades title silently
+      fetch('/api/jarvis', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ message: \`Give a 4-6 word chat title for: "\${text.slice(0,80)}". Reply ONLY the title, no quotes.\`, chatId:'title', userId:'system', chatMode:'flash', history:[] })
+      }).then(r=>r.json()).then(d=>{
+        const aiTitle = (d.reply||'').trim().slice(0,40);
+        if (aiTitle && aiTitle.length > 3) {
+          setChatTitle(aiTitle);
+          try { localStorage.setItem(`jarvis_title_${chatId.current}`, aiTitle); } catch {}
+        }
+      }).catch(()=>{});
     }
 
     const url = extractURL(text)
@@ -554,6 +566,11 @@ export default function ChatPage() {
               <span style={{ fontSize:9, color: batteryPct<=20?'#ef5350':batteryPct<=50?'#ffd700':'#00e676', fontFamily:'monospace' }}>{batteryPct}%</span>
             </div>
           )}
+{installPrompt && (
+                <button onClick={() => { installPrompt.prompt(); setInstallPrompt(null); }} style={{ background:'none', border:'1px solid #00e5ff44', borderRadius:8, padding:'2px 8px', color:'#00e5ff', fontSize:10, cursor:'pointer', marginLeft:4 }}>
+                  📲 Install
+                </button>
+              )}
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
 
           {/* Theme picker */}
@@ -681,7 +698,7 @@ export default function ChatPage() {
         </div>
       </main>
 
-      {toast && <Toast message={toast.msg} type={toast.type}/>}
+      {toast && <Toast message={toast.msg} type={toast.type} onDismiss={() => setToast(null)}/>}
 
       <InputBar onSend={send} isLoading={loading} mode={mode} onModeChange={setMode}/>
     </div>

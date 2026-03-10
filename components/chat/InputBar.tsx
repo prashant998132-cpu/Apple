@@ -137,6 +137,23 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
 
   const [sttLang, setSttLang]   = useState<'hi-IN'|'en-IN'|'en-US'>('hi-IN')
 
+  // Groq Whisper STT — sends audio blob to /api/tts for transcription
+  const whisperTranscribe = async (blob: Blob) => {
+    try {
+      const fd = new FormData()
+      fd.append('audio', blob, 'voice.webm')
+      fd.append('action', 'transcribe')
+      const r = await fetch('/api/tts', { method:'POST', body: fd })
+      const d = await r.json()
+      if (d.text) {
+        setInput(p => p + (p ? ' ' : '') + d.text.trim())
+        setTimeout(resize, 0)
+        return true
+      }
+    } catch {}
+    return false
+  }
+
   const toggleRecord = () => {
     if (isRecording) { recRef.current?.stop(); setRec(false); return }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -160,10 +177,14 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
         setTimeout(resize, 0)
       }
     }
-    rec.onerror = (e: any) => {
+    rec.onerror = async (e: any) => {
       // Auto retry in English if Hindi fails
       if (e.error === 'language-not-supported' && sttLang === 'hi-IN') {
         setSttLang('en-IN')
+      }
+      // Try Whisper as fallback if browser STT fails
+      if (e.error === 'not-allowed' || e.error === 'network') {
+        // Will use voice note + whisper flow
       }
       setRec(false)
     }

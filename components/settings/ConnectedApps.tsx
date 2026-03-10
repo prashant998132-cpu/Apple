@@ -1,3 +1,4 @@
+import { getAllUsageStats } from '../../lib/core/usageTracker';
 'use client'
 import { useState, useEffect } from 'react'
 
@@ -409,5 +410,22 @@ export default function ConnectedApps() {
         </div>
       )}
     </div>
+
+      {/* API Usage Stats */}
+      <div style={{ marginTop:16, padding:'12px 14px', background:'#061421', borderRadius:12, border:'1px solid rgba(0,229,255,.1)' }}>
+        <div style={{ color:'#00e5ff', fontSize:11, fontWeight:700, marginBottom:10, letterSpacing:1 }}>📊 API Credits Today</div>
+        {usageStats.filter(u => u.pct > 0).map(u => (
+          <div key={u.provider} style={{ marginBottom:8 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color: u.status==='full'?'#ef5350':u.status==='warn'?'#ffd700':'#7aa8c8', marginBottom:2 }}>
+              <span>{u.provider}</span>
+              <span>{u.calls}/{u.dailyLimit >= 9999 ? '∞' : u.dailyLimit} ({u.pct}%)</span>
+            </div>
+            <div style={{ height:3, background:'#0a1628', borderRadius:2, overflow:'hidden' }}>
+              <div style={{ height:'100%', width:`${Math.min(u.pct,100)}%`, background: u.status==='full'?'#ef5350':u.status==='warn'?'#ffd700':'#00e676', borderRadius:2, transition:'width 0.5s' }}/>
+            </div>
+          </div>
+        ))}
+        {usageStats.filter(u => u.pct > 0).length === 0 && <div style={{ color:'#546e7a', fontSize:10 }}>Koi API call aaj nahi hui abhi tak.</div>}
+      </div>
   )
 }
