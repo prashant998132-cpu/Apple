@@ -85,6 +85,9 @@ export function detectIntent(msg: string): string[] {
   if (m.match(/anime|manga|jikan|naruto|one piece|dragon ball/)) intents.push('anime')
   if (m.match(/motivat|inspire|himmat|josh|positive|kuch sunao achha/)) intents.push('motivation')
   if (m.match(/ip location|ip address lookup|trace ip|kahan se hai/)) intents.push('geoip')
+  if (m.match(/search|google|find|look up|dhundo/)) intents.push('serper')
+  if (m.match(/https?:\/\//)) intents.push('jina')
+  if (m.match(/youtube.*transcript|youtu\.be|youtube\.com\/watch/)) intents.push('youtube_transcript')
   return [...new Set(intents)]
 }
 
@@ -455,6 +458,9 @@ export async function routeTools(message: string): Promise<ToolResult[]> {
     anime:      () => getAnimeInfo(message),
     motivation: () => getMotivationalQuote(),
     geoip:      () => getIPGeolocation(message),
+    serper:            () => getSerperSearch(message),
+    jina:              () => getJinaReader(message),
+    youtube_transcript:() => getYouTubeTranscript(message),
   }
 
   const toRun = intents.slice(0, 2).filter(i => toolMap[i])
@@ -879,4 +885,66 @@ async function getIPGeolocation(q: string): Promise<ToolResult> {
     const d = await r.json()
     return { tool:'geoip', success:true, data:`📍 IP Geolocation:\nIP: ${d.query}\nLocation: ${d.city}, ${d.regionName}, ${d.country} (${d.countryCode})\nISP: ${d.isp}\nCoords: ${d.lat}, ${d.lon}\nTimezone: ${d.timezone}` }
   } catch { return { tool:'geoip', success:false, data:'IP location unavailable' } }
+}
+
+// ══════════════════════════════════════════════════════════════
+// v10.17 — Serper Search + Jina URL Reader + YouTube Transcript
+// ══════════════════════════════════════════════════════════════
+
+async function getSerperSearch(q: string): Promise<ToolResult> {
+  try {
+    const key = process.env.SERPER_API_KEY || (typeof window !== 'undefined' ? localStorage.getItem('jarvis_key_serper') : '')
+    if (!key) {
+      // Fallback: DuckDuckGo instant answer (no key)
+      const query = q.replace(/search|find|look up|dhundo|batao/gi, '').trim()
+      const r = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`, { signal: AbortSignal.timeout(5000) })
+      const d = await r.json()
+      const ans = d.AbstractText || d.Answer || ''
+      if (ans) return { tool:'serper', success:true, data:`🔍 ${query}:\n${ans.slice(0,400)}\nSource: ${d.AbstractURL||'DuckDuckGo'}` }
+      return { tool:'serper', success:false, data:'Serper API key nahi hai. Settings → Apps → Serper mein add karo (2500 free/mo).' }
+    }
+    const query = q.replace(/search|find|look up|dhundo|batao/gi, '').trim()
+    const r = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: query, gl: 'in', hl: 'en', num: 5 }),
+      signal: AbortSignal.timeout(8000)
+    })
+    const d = await r.json()
+    const results = d.organic?.slice(0, 3).map((x: any) => `• ${x.title}\n  ${x.snippet}\n  ${x.link}`).join('\n\n') || ''
+    const answer = d.answerBox?.answer || d.answerBox?.snippet || ''
+    return { tool:'serper', success:true, data:`🔍 Search: "${query}"\n\n${answer ? `✅ ${answer}\n\n` : ''}${results}` }
+  } catch(e: any) { return { tool:'serper', success:false, data:'Search unavailable: ' + e.message } }
+}
+
+async function getJinaReader(q: string): Promise<ToolResult> {
+  try {
+    // Extract URL from message
+    const urlMatch = q.match(/https?:\/\/[^\s]+/)
+    if (!urlMatch) return { tool:'jina', success:false, data:'URL nahi mili message mein' }
+    const url = urlMatch[0]
+    // Jina Reader is free, no key needed
+    const r = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { 'Accept': 'text/plain' },
+      signal: AbortSignal.timeout(15000)
+    })
+    const text = await r.text()
+    return { tool:'jina', success:true, data:`📄 URL Content:\n${text.slice(0, 1500)}${text.length > 1500 ? '\n...[truncated]' : ''}` }
+  } catch(e: any) { return { tool:'jina', success:false, data:'URL read failed: ' + e.message } }
+}
+
+async function getYouTubeTranscript(q: string): Promise<ToolResult> {
+  try {
+    // Extract YouTube video ID
+    const ytMatch = q.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/)
+    if (!ytMatch) return { tool:'youtube_transcript', success:false, data:'YouTube URL nahi mili. Format: https://youtube.com/watch?v=VIDEO_ID' }
+    const videoId = ytMatch[1]
+    // Use Jina to read YouTube transcript (works for many videos)
+    const r = await fetch(`https://r.jina.ai/https://www.youtube.com/watch?v=${videoId}`, {
+      headers: { 'Accept': 'text/plain' },
+      signal: AbortSignal.timeout(20000)
+    })
+    const text = await r.text()
+    return { tool:'youtube_transcript', success:true, data:`🎬 YouTube Video (${videoId}):\n${text.slice(0, 2000)}${text.length > 2000 ? '\n...[truncated]' : ''}` }
+  } catch(e: any) { return { tool:'youtube_transcript', success:false, data:'Transcript unavailable: ' + e.message } }
 }

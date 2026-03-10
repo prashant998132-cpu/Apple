@@ -11,6 +11,7 @@ import {
   detectQueryType, askLLM
 } from '../providers/llm'
 import { cacheGet, cacheSet, TTL } from './responseCache'
+import { trackCall, isNearLimit, pickProvider } from './usageTracker'
 import { pickModelTier, getModelForTier } from './agentDispatcher'
 
 export interface OrchestratorInput {
@@ -113,7 +114,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   // ── FLASH MODE — Groq Llama 8B, fastest ─────────────────
   if (chatMode === 'flash') {
     try {
-      if (groqKey) {
+      if (groqKey && !isNearLimit('groq')) {
         const flashModel = getModelForTier(pickModelTier(input.message, 'groq', 1, 'flash'))
         const r = await askGroq(simpleMsgs, simplePrompt, flashModel)
         reply = r.text; model = r.model; provider = '⚡ Groq Llama 8B (Flash)'; apiCallsMade++
@@ -146,6 +147,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
         thinking = ex.thinking
         reply = ex.answer || r.text
         model = r.model; provider = r.provider; apiCallsMade++
+        trackCall('groq')
       } catch(e: any) { errors.push('Think/DS: ' + e.message) }
     }
   }

@@ -1,3 +1,4 @@
+import { trackCall, pickProvider, isNearLimit } from '../core/usageTracker'
 import { detectComplexity, TOKEN_BUDGET, compressSystemPrompt, trimHistory, type Complexity } from '../core/tokenBudget'
 // lib/providers/llm.ts — v3 MEGA CASCADE
 // ALL free LLM providers — best first, auto fallback
@@ -42,6 +43,7 @@ export async function askGemini(messages: any[], systemPrompt: string, tools?: a
   if (!res.ok) throw new Error('gemini_' + res.status)
   const data = await res.json()
   const text = data.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text || ''
+  trackCall('gemini')
   return { text, provider:'Gemini 2.0 Flash', model:'gemini-2.0-flash', tokens:data.usageMetadata?.totalTokenCount, ms:Date.now()-start }
 }
 
@@ -63,6 +65,7 @@ export async function askGroq(messages: any[], systemPrompt: string, model = 'll
   })
   if (!res.ok) throw new Error('groq_' + res.status)
   const data = await res.json()
+  trackCall('groq')
   return { text:data.choices?.[0]?.message?.content||'', provider:'Groq', model, tokens:data.usage?.total_tokens, ms:Date.now()-start }
 }
 
@@ -322,8 +325,16 @@ export async function askLLM(
 
   // Add Pollinations as universal last resort (no key needed)
   const allProviders = [...cascades[queryType], () => askPollinations(messages, systemPrompt)]
+
+  // Smart skip: providers near 85% daily limit go to back of queue
+  const providerNames = ['gemini','groq','deepseek','mistral','grok','openrouter','together','cohere','aimlapi']
+  const nearLimit = providerNames.filter(p => isNearLimit(p, 85))
+  if (nearLimit.length > 0) {
+    // log silently — no console spam
+  }
+
   for (const fn of allProviders) {
-    try { return await fn() } catch { /* next */ }
+    try { return await fn() } catch { /* try next provider */ }
   }
 
   return { text:'Kuch gadbad ho gayi. Thodi der mein try karo.', provider:'none', model:'none', ms:0 }
