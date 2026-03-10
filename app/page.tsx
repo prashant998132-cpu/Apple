@@ -120,6 +120,22 @@ const THEMES = {
 }
 type ThemeKey = keyof typeof THEMES;
 
+// ── Auto Session Title (pure, no state) ──────────────────
+function getAutoTitle(text: string): string {
+  const t = text.trim().toLowerCase();
+  if (t.match(/weather|mausam|baarish/)) return '\u{1F324}\uFE0F Weather Chat';
+  if (t.match(/image|photo|picture|banao/)) return '\u{1F3A8} Image Generation';
+  if (t.match(/news|khabar|today/)) return '\u{1F4F0} News Discussion';
+  if (t.match(/code|function|program|script/)) return '\u{1F4BB} Coding Help';
+  if (t.match(/study|physics|chemistry|math|science/)) return '\u{1F4DA} Study Session';
+  if (t.match(/recipe|food|khana|cook/)) return '\u{1F35B} Recipe Chat';
+  if (t.match(/cricket|ipl|score|match/)) return '\u{1F3CF} Cricket';
+  if (t.match(/song|music|gana/)) return '\u{1F3B5} Music';
+  if (t.match(/joke|funny|meme/)) return '\u{1F604} Fun Chat';
+  const clean = text.replace(/[^a-zA-Z0-9 \u0900-\u097F]/g, '').trim();
+  return clean.slice(0, 30) || 'Chat Session';
+}
+
 export default function ChatPage() {
   const [msgs, setMsgs]   = useState<any[]>([]);
   const [loading, setLoad] = useState(false);
@@ -260,24 +276,7 @@ export default function ChatPage() {
       }
     }).catch(() => {});
 
-  
-  // ── Auto Session Title (rule-based instant) ──────────────
-  const getAutoTitle = (text: string): string => {
-    const t = text.trim().toLowerCase();
-    if (t.match(/weather|mausam|baarish/)) return '🌤️ Weather Chat';
-    if (t.match(/image|photo|picture|banao/)) return '🎨 Image Generation';
-    if (t.match(/news|khabar|today/)) return '📰 News Discussion';
-    if (t.match(/code|function|program|script/)) return '💻 Coding Help';
-    if (t.match(/study|physics|chemistry|math|science/)) return '📚 Study Session';
-    if (t.match(/recipe|food|khana|cook/)) return '🍛 Recipe Chat';
-    if (t.match(/cricket|ipl|score|match/)) return '🏏 Cricket';
-    if (t.match(/math|calculate|solve|equation/)) return '🔢 Math Help';
-    if (t.match(/song|music|gana/)) return '🎵 Music';
-    if (t.match(/joke|funny|meme/)) return '😄 Fun Chat';
-    // Fallback: first 30 chars
-    const clean = text.replace(/[^a-zA-Z0-9 ऀ-ॿ]/g, '').trim();
-    return clean.slice(0, 30) || 'Chat Session';
-  };
+
 
   // ── Chat Search ───────────────────────────────────────────
   const searchChats = async (q: string) => {
