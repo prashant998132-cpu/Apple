@@ -24,6 +24,8 @@ function renderMarkdown(text: string): string {
     .replace(/\\\[([\s\S]+?)\\\]/g, (_,m) => { mathBlocks.push(`\\[${m}\\]`); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\(([\s\S]+?)\\\)/g, (_,m) => { mathBlocks.push(`\\(${m}\\)`); return `%%MATH${mathBlocks.length-1}%%`; });
 
+  let codeBlockCounter = 0;
+
   let html = protected_text
     .replace(/\[LEARN:[^\]]*\]/g, '')
     // Normalize any garbled unicode bullets / arrows → clean bullet
