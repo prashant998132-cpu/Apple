@@ -164,6 +164,7 @@ export default function ConnectedApps() {
   const [tempKey, setTempKey] = useState('')
   const [tab, setTab]         = useState<'router'|'apps'|'free'>('router')
   const [openCat, setOpenCat] = useState<string>('chat')
+  const [usageStats, setUsageStats] = useState<ReturnType<typeof getAllUsageStats>>(() => getAllUsageStats())
 
   useEffect(() => {
     setStarred(JSON.parse(localStorage.getItem('jarvis_starred_apps')||'[]'))
