@@ -1,3 +1,6 @@
+import { dispatch, getModelForTier } from './agentDispatcher';
+import { cacheGet, cacheSet, TTL } from './responseCache';
+
 // lib/core/smartRouter.ts
 // Smart API Router — decides WHAT to call and HOW
 // Zero waste: simple queries never hit expensive APIs
