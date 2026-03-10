@@ -75,6 +75,7 @@ export interface RouterDecision {
   needsVideo: boolean;
   isLocal: boolean;          // Rewa/India specific
   estimatedTokens: number;
+  cacheTTL: number;          // 0 = no cache, >0 = ms to cache
 }
 
 // ── Gemini Message Format ─────────────────────────────────

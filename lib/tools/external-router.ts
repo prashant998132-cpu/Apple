@@ -1,3 +1,4 @@
+import { isMediaSafe, buildImageCDNUrl } from '../core/mediaGuard';
 // lib/tools/external-router.ts — JARVIS Smart Tool Router v2
 // 30+ free services. Intent detection → sirf relevant API call.
 // FREE FIRST, no wasted credits.

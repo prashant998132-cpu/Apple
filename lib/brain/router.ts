@@ -116,6 +116,16 @@ export function route(userMessage: string): RouterDecision {
   const tools = [...new Set(matchedTools)].slice(0, 6); // Max 6 tools per query
   const estimatedTokens = brain === 'direct' ? 0 : estimateTokens(text, tools);
 
+  // Cache TTL hint — how long this response stays fresh
+  const cacheTTL =
+    matchedTools.some(t => t.includes('weather'))  ? 600_000  : // 10 min
+    matchedTools.some(t => t.includes('news'))     ? 300_000  : // 5 min
+    matchedTools.some(t => t.includes('crypto'))   ? 30_000   : // 30 sec
+    matchedTools.some(t => t.includes('datetime')) ? 60_000   : // 1 min
+    brain === 'direct'                             ? 60_000   : // 1 min
+    brain === 'groq'                               ? 300_000  : // 5 min
+                                                    0;          // no cache (complex/creative)
+
   return {
     brain,
     tools,
@@ -126,7 +136,8 @@ export function route(userMessage: string): RouterDecision {
     needsImage: imageNeeded,
     needsVideo: videoNeeded,
     isLocal,
-    estimatedTokens
+    estimatedTokens,
+    cacheTTL,
   };
 }
 

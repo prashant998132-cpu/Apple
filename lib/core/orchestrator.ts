@@ -10,6 +10,8 @@ import {
   askGroq, askDeepSeek, askMistral, askOpenRouter,
   detectQueryType, askLLM
 } from '../providers/llm'
+import { cacheGet, cacheSet, TTL } from './responseCache'
+import { pickModelTier, getModelForTier } from './agentDispatcher'
 
 export interface OrchestratorInput {
   message: string
@@ -80,6 +82,14 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   let reply = ''
 
   const chatMode = input.chatMode || 'auto'
+
+  // ── CACHE CHECK — skip all API calls if we have fresh response ──
+  const cacheCategory = chatMode === 'flash' ? 'flash' : chatMode === 'auto' ? 'auto' : chatMode
+  const cached = cacheGet<OrchestratorOutput>(cacheCategory, input.message)
+  if (cached && chatMode === 'flash') {
+    return { ...cached, processingMs: 1, routeReason: 'cache_hit' }
+  }
+
   const geminiKey = !!process.env.NEXT_PUBLIC_GEMINI_API_KEY
   const groqKey   = !!process.env.GROQ_API_KEY
   safeMode = !geminiKey && !groqKey
@@ -104,7 +114,8 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   if (chatMode === 'flash') {
     try {
       if (groqKey) {
-        const r = await askGroq(simpleMsgs, simplePrompt, 'llama-3.1-8b-instant')
+        const flashModel = getModelForTier(pickModelTier(input.message, 'groq', 1, 'flash'))
+        const r = await askGroq(simpleMsgs, simplePrompt, flashModel)
         reply = r.text; model = r.model; provider = '⚡ Groq Llama 8B (Flash)'; apiCallsMade++
       } else {
         const r = await askLLM(simpleMsgs, simplePrompt)
@@ -238,11 +249,21 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   ]
   // chat history saved client-side via lib/storage/index.ts
 
-  return {
+  const result: OrchestratorOutput = {
     reply, thinking, richData, toolsUsed, model, provider,
     processingMs: Date.now() - start,
     safeMode, errors,
     routeReason: chatMode,
     apiCallsMade,
   }
+
+  // ── CACHE SAVE — store for next identical query ──
+  if (reply && !safeMode) {
+    const ttl = chatMode === 'flash' ? TTL.NEWS :   // flash = 5 min
+                chatMode === 'auto'  ? TTL.DEFAULT : // auto = 5 min
+                TTL.DEFAULT
+    cacheSet(cacheCategory, input.message, result, ttl)
+  }
+
+  return result
 }
