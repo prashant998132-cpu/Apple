@@ -24,8 +24,6 @@ function renderMarkdown(text: string): string {
     .replace(/\\\[([\s\S]+?)\\\]/g, (_,m) => { mathBlocks.push(`\\[${m}\\]`); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\(([\s\S]+?)\\\)/g, (_,m) => { mathBlocks.push(`\\(${m}\\)`); return `%%MATH${mathBlocks.length-1}%%`; });
 
-  let codeBlockCounter = 0;
-
   let html = protected_text
     .replace(/\[LEARN:[^\]]*\]/g, '')
     // Normalize any garbled unicode bullets / arrows → clean bullet
@@ -98,10 +96,11 @@ function WeatherCard({ data }: { data: any }) {
 }
 
 function ImageCard({ data }: { data: any }) {
-  const url = data?.image_url||data?.image_data_url||data?.imageUrl;
-  if (!url) return null;
+  // hooks MUST be before any conditional return (rules-of-hooks)
   const [full, setFull] = useState(false);
-  const download = () => { const a = document.createElement('a'); a.href=url; a.download=`JARVIS_${Date.now()}.png`; a.click(); };
+  const url = data?.image_url||data?.image_data_url||data?.imageUrl;
+  const download = () => { const a = document.createElement('a'); a.href=url||''; a.download=`JARVIS_${Date.now()}.png`; a.click(); };
+  if (!url) return null;
   return (
     <>
       <div style={{ marginTop:6, borderRadius:10, overflow:'hidden', border:'1px solid rgba(0,229,255,.12)' }}>
@@ -114,7 +113,7 @@ function ImageCard({ data }: { data: any }) {
             <button onClick={()=>setFull(true)} style={{ background:'rgba(0,0,0,.75)', border:'1px solid rgba(255,255,255,.15)', borderRadius:7, padding:'4px 9px', color:'#e8f4ff', fontSize:11, cursor:'pointer' }}>⛶ Full</button>
           </div>
         </div>
-        {data.prompt && <div style={{ padding:'5px 10px', fontSize:10, color:'#546e7a' }}>"{data.prompt.slice(0,70)}"</div>}
+        {data.prompt && <div style={{ padding:'5px 10px', fontSize:10, color:'#546e7a' }}>&ldquo;{data.prompt.slice(0,70)}&rdquo;</div>}
       </div>
       {full && (
         <div onClick={()=>setFull(false)} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.95)', display:'flex', alignItems:'center', justifyContent:'center', padding:12 }}>

@@ -329,7 +329,7 @@ export default function ConnectedApps() {
         <div>
           <div style={{ fontSize:10, color:'#4a7090', marginBottom:10, padding:'8px 10px', background:'rgba(0,229,255,.03)', border:'1px solid rgba(0,229,255,.08)', borderRadius:8, lineHeight:1.7 }}>
             🔌 <b>Third-party apps:</b> Key add karo → Chat mein directly use ho jaayega.<br/>
-            Jaise: "GitHub pe naya issue banao" → auto GitHub API call
+            Jaise: &ldquo;GitHub pe naya issue banao&rdquo; → auto GitHub API call
           </div>
           {APP_CATEGORIES.map(catObj => (
             <div key={catObj.cat}>

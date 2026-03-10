@@ -352,7 +352,7 @@ export default function VoiceboxPage() {
               Niche wale button pe tap karo<br/>
               aur JARVIS se baat karo<br/>
               <span style={{ fontSize:11, color:'#0e2035' }}>
-                "Hey JARVIS, aaj ka mausam batao"
+                &ldquo;Hey JARVIS, aaj ka mausam batao&rdquo;
               </span>
             </div>
           </div>

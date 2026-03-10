@@ -223,7 +223,7 @@ export default function SettingsPage() {
                   <div style={{ fontSize:11, color:'#1e3858', marginTop:5, lineHeight:1.6 }}>{info.desc}</div>
                   {active && m === 'smart' && (
                     <div style={{ marginTop:8, padding:'6px 9px', background:'rgba(0,229,255,.05)', borderRadius:6, fontSize:10, color:'#00e5ff' }}>
-                      ✅ Active — "hello" → Groq | "image banao" → direct API | "cell kya hai" → Gemini
+                      ✅ Active — &ldquo;hello&rdquo; → Groq | &ldquo;image banao&rdquo; → direct API | &ldquo;cell kya hai&rdquo; → Gemini
                     </div>
                   )}
                 </div>
