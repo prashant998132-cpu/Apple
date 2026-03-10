@@ -268,6 +268,10 @@ export default function Sidebar({ onNewChat, onLoadChat, currentChatId }: {
               <span>📤</span> Export current chat
             </button>
           )}
+          <button onClick={()=>{ setOpen(false); router.push('/era') }} style={{ width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:8, background: active==='era'?'rgba(102,126,234,.12)':'rgba(255,255,255,.03)', border:`1px solid ${active==='era'?'rgba(102,126,234,.3)':'rgba(255,255,255,.06)'}`, color: active==='era'?'#9fa8da':'#4a7090', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left' as const }}>
+            <span style={{ fontSize:16 }}>💙</span>
+            <span style={{ fontWeight: active==='era'?600:400 }}>Era — Companion</span>
+          </button>
           <button onClick={()=>{ setOpen(false); router.push('/settings') }} style={{ width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:8, background: active==='settings'?'rgba(0,229,255,.1)':'rgba(255,255,255,.03)', border:`1px solid ${active==='settings'?'rgba(0,229,255,.2)':'rgba(255,255,255,.06)'}`, color: active==='settings'?'#00e5ff':'#4a7090', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left' as const }}>
             <span style={{ fontSize:16 }}>⚙️</span>
             <span style={{ fontWeight: active==='settings'?600:400 }}>Settings</span>

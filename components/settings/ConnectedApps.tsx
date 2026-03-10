@@ -409,7 +409,6 @@ export default function ConnectedApps() {
           ))}
         </div>
       )}
-    </div>
 
       {/* API Usage Stats */}
       <div style={{ marginTop:16, padding:'12px 14px', background:'#061421', borderRadius:12, border:'1px solid rgba(0,229,255,.1)' }}>
@@ -427,5 +426,6 @@ export default function ConnectedApps() {
         ))}
         {usageStats.filter(u => u.pct > 0).length === 0 && <div style={{ color:'#546e7a', fontSize:10 }}>Koi API call aaj nahi hui abhi tak.</div>}
       </div>
+    </div>
   )
 }
