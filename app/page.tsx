@@ -334,7 +334,7 @@ export default function ChatPage() {
       // Async AI title — Groq nano, 1 call, upgrades title silently
       fetch('/api/jarvis', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ message: \`Give a 4-6 word chat title for: "\${text.slice(0,80)}". Reply ONLY the title, no quotes.\`, chatId:'title', userId:'system', chatMode:'flash', history:[] })
+        body: JSON.stringify({ message: 'Give a 4-6 word chat title for: "' + text.slice(0,80) + '". Reply ONLY the title, no quotes.', chatId:'title', userId:'system', chatMode:'flash', history:[] })
       }).then(r=>r.json()).then(d=>{
         const aiTitle = (d.reply||'').trim().slice(0,40);
         if (aiTitle && aiTitle.length > 3) {
