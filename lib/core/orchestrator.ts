@@ -109,7 +109,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   const simpleMsgs = [...simpleHistory, { role: 'user', content: input.message }]
 
   const userProfile = buildUserProfile(input)
-  const simplePrompt = buildSimplePrompt(chatMode)
+  const simplePrompt = buildSimplePrompt(chatMode, input.memoryPrompt)
 
   // ── FLASH MODE — Groq Llama 8B, fastest ─────────────────
   if (chatMode === 'flash') {
@@ -167,10 +167,10 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   }
 
   // ── AUTO MODE — Smart routing ──────────────────────────────
+  let _routerCacheTTL = 0  // router's smart TTL for cache (weather=10m, crypto=30s...)
   if (!reply && chatMode === 'auto') {
-    // Pass connected app hint from client via input (set in page.tsx sendMessage)
-    // connectedAppsManager runs client-side only — server gets hint via message prefix
     const decision = route(input.message)
+    _routerCacheTTL = decision.cacheTTL || 0
 
     // Direct tool (no LLM): datetime, calculate, etc
     if (decision.brain === 'direct' && decision.tools[0]) {
@@ -245,13 +245,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
     safeMode = true
   }
 
-  // Save to cloud (non-blocking)
-  const updatedHistory = [
-    ...(input.history || []),
-    { role: 'user',      content: input.message, ts: Date.now() },
-    { role: 'assistant', content: reply,          ts: Date.now(), toolsUsed, model, thinking },
-  ]
-  // chat history saved client-side via lib/storage/index.ts
+  // Chat history saved client-side via lib/storage/index.ts
 
   const result: OrchestratorOutput = {
     reply, thinking, richData, toolsUsed, model, provider,
@@ -261,12 +255,12 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
     apiCallsMade,
   }
 
-  // ── CACHE SAVE — store for next identical query ──
+  // ── CACHE SAVE — use router's smart TTL for auto, else defaults ──
   if (reply && !safeMode) {
-    const ttl = chatMode === 'flash' ? TTL.NEWS :   // flash = 5 min
-                chatMode === 'auto'  ? TTL.DEFAULT : // auto = 5 min
+    const ttl = chatMode === 'flash' ? TTL.NEWS :
+                chatMode === 'auto'  ? (_routerCacheTTL || TTL.DEFAULT) :
                 TTL.DEFAULT
-    cacheSet(cacheCategory, input.message, result, ttl)
+    if (ttl > 0) cacheSet(cacheCategory, input.message, result, ttl)
   }
 
   return result

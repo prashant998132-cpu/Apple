@@ -14,7 +14,9 @@ export async function POST(req: NextRequest) {
       history      = [],
       location,
       providerMode = 'smart',
-      chatMode     = 'auto',   // ← NEW: flash | think | deep | auto
+      chatMode     = 'auto',   // ← flash | think | deep | auto
+      userName,                // ← user's name for personalization
+      memoryPrompt,            // ← memory context string
     } = await req.json()
 
     if (!message?.trim()) {
@@ -37,6 +39,8 @@ export async function POST(req: NextRequest) {
       providerMode,
       forcedProvider,
       chatMode,
+      userName,
+      memoryPrompt,
     })
 
     return NextResponse.json({

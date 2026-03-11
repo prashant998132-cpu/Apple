@@ -325,6 +325,20 @@ export default function ChatPage() {
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
     if (!text.trim() && !file || loading) return;
 
+    // ── SLASH COMMANDS — instant shortcuts, zero API cost ──
+    const slash = text.trim()
+    if (slash === '/clear') { newChat(); return }
+    if (slash === '/w' || slash === '/weather') { return send('Aaj ka mausam kya hai?', 'auto') }
+    if (slash === '/n' || slash === '/news')    { return send('Aaj ki top 5 khabar kya hai?', 'auto') }
+    if (slash === '/img')                       { return send('Ek beautiful AI art image banao', 'auto') }
+    if (slash === '/coins' || slash === '/btc') { return send('Bitcoin aur Ethereum ki aaj ki price kya hai?', 'auto') }
+    if (slash === '/think')                     { return send(text.replace('/think','').trim() || 'Koi interesting cheez batao', 'think') }
+    if (slash === '/deep')                      { return send(text.replace('/deep','').trim() || 'Koi interesting cheez batao', 'deep') }
+    if (slash === '/time')                      { return send('Abhi kya time hai aur aaj ki date?', 'auto') }
+    if (slash.startsWith('/img '))              { return send(slash.slice(5) + ' ka image banao', 'auto') }
+    if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
+    if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
+
     // Auto session title on first message
     if (msgs.length === 0 && text.trim()) {
       // Quick keyword title immediately
@@ -595,7 +609,20 @@ export default function ChatPage() {
             )}
           </div>
           {msgs.length > 0 && (
-            <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
+            <>
+              {/* Web Share — native mobile share sheet */}
+              <button onClick={() => {
+                const txt = msgs.map(m => (m.role==='user'?'You: ':'JARVIS: ') + m.content).join('
+
+')
+                if (navigator.share) {
+                  navigator.share({ title: chatTitle || 'JARVIS Chat', text: txt.slice(0,2000) }).catch(()=>{})
+                } else {
+                  navigator.clipboard?.writeText(txt).then(() => alert('Chat copied!')).catch(()=>{})
+                }
+              }} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }} title="Share chat">⬆</button>
+              <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
+            </>
           )}
         </div>
       </header>
@@ -605,6 +632,13 @@ export default function ChatPage() {
         <div style={{ minHeight:'100%', display:'flex', flexDirection:'column', justifyContent:'flex-end', paddingBottom:4 }}>
         {msgs.length === 0 ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'20px 16px' }}>
+            {/* Slash command hint */}
+            <div style={{ width:'100%', maxWidth:440, marginBottom:8, padding:'6px 12px', borderRadius:8, background:'rgba(0,229,255,.03)', border:'1px solid rgba(0,229,255,.06)', fontSize:10, color:'#2a5070', display:'flex', flexWrap:'wrap', gap:'4px 12px' }}>
+              <span style={{ color:'#4a90b8', fontWeight:600 }}>Shortcuts:</span>
+              {['/w weather','/n news','/img image','/btc coins','/think reason','/clear reset'].map(s=>(
+                <span key={s} style={{ cursor:'pointer', color:'#3a7090' }} onClick={() => send(s.split(' ')[0], 'auto')}>{s}</span>
+              ))}
+            </div>
 
             {/* Live info bar */}
             <div style={{ width:'100%', maxWidth:440, marginBottom:16 }}>
