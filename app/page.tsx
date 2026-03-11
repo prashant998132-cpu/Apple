@@ -5,11 +5,11 @@ import Sidebar from '../components/shared/Sidebar';
 import InputBar, { ChatMode } from '../components/chat/InputBar';
 import Toast from '../components/shared/Toast';
 import { buildMemoryPrompt, autoExtractMemory, saveChat, loadChat } from '../lib/storage'
-import { initProactiveEngine, detectChainedIntent, requestWakeLock, setupWakeLockPersist } from '../lib/proactive/engine'
+import { initProactiveEngine, requestWakeLock, setupWakeLockPersist } from '../lib/proactive/engine'
 import { getFullLocation, loadPlaces, distanceKm, syncLocationToCloud } from '../lib/location/tracker';
 import { useRouter } from 'next/navigation';
 import PinLock, { isPINEnabled } from '../components/shared/PinLock';
-import { getDeviceContext, deviceContextToPrompt, getBatteryHint, vibrate } from '../lib/core/deviceContext';
+import { getDeviceContext, deviceContextToPrompt, vibrate } from '../lib/core/deviceContext';
 import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 import { smartHistory } from '../lib/core/contextCompressor';
 
@@ -327,11 +327,10 @@ export default function ChatPage() {
 
     // ── SLASH COMMANDS — instant shortcuts, zero API cost ──
     const slash = text.trim()
-    if (slash === '/clear') { newChat(); return }
+    if (slash === '/clear') { chatId.current = 'chat_'+Date.now(); setMsgs([]); setChatTitle(''); return }
     if (slash === '/w' || slash === '/weather') { return send('Aaj ka mausam kya hai?', 'auto') }
     if (slash === '/n' || slash === '/news')    { return send('Aaj ki top 5 khabar kya hai?', 'auto') }
     if (slash === '/img')                       { return send('Ek beautiful AI art image banao', 'auto') }
-    if (slash === '/coins' || slash === '/btc') { return send('Bitcoin aur Ethereum ki aaj ki price kya hai?', 'auto') }
     if (slash === '/think')                     { return send(text.replace('/think','').trim() || 'Koi interesting cheez batao', 'think') }
     if (slash === '/deep')                      { return send(text.replace('/deep','').trim() || 'Koi interesting cheez batao', 'deep') }
     if (slash === '/time')                      { return send('Abhi kya time hai aur aaj ki date?', 'auto') }
@@ -461,9 +460,19 @@ export default function ChatPage() {
         body: JSON.stringify({ message: text, userId: localStorage.getItem('jarvis_uid')||'user', chatId: chatId.current, userName, chatMode, history: smartHistory(cur, chatMode as any), memoryPrompt: memPrompt, fileData, url }),
       })
       const d = await res.json()
-      // Track which provider responded
-      if (d.provider) { localStorage.setItem('jarvis_last_provider', d.provider); setLastProvider(d.provider); }
-      if (d.model)    { localStorage.setItem('jarvis_last_model', d.model); }
+      // Track which provider responded + actual usage tracking
+      if (d.provider) {
+        localStorage.setItem('jarvis_last_provider', d.provider); setLastProvider(d.provider)
+        // trackCall so isNearLimit() works correctly (server can't access localStorage)
+        const prov = d.provider.toLowerCase()
+        if (prov.includes('groq'))     trackCall('groq')
+        else if (prov.includes('gemini')) trackCall('gemini')
+        else if (prov.includes('together')) trackCall('together')
+        else if (prov.includes('mistral'))  trackCall('mistral')
+        else if (prov.includes('cohere'))   trackCall('cohere')
+        else if (prov.includes('openrouter')) trackCall('openrouter')
+      }
+      if (d.model) { localStorage.setItem('jarvis_last_model', d.model); }
       const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: d.reply||d.text||'Error', timestamp: Date.now(), toolsUsed: d.toolsUsed, richData: d.richData, processingMs: d.processingMs, model: d.model, provider: d.provider }
       const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin)
       setFollowupChips(getFollowUpChips(d.reply||''))
@@ -635,7 +644,7 @@ export default function ChatPage() {
             {/* Slash command hint */}
             <div style={{ width:'100%', maxWidth:440, marginBottom:8, padding:'6px 12px', borderRadius:8, background:'rgba(0,229,255,.03)', border:'1px solid rgba(0,229,255,.06)', fontSize:10, color:'#2a5070', display:'flex', flexWrap:'wrap', gap:'4px 12px' }}>
               <span style={{ color:'#4a90b8', fontWeight:600 }}>Shortcuts:</span>
-              {['/w weather','/n news','/img image','/btc coins','/think reason','/clear reset'].map(s=>(
+              {['/w weather','/n news','/img image','/think reason','/clear reset'].map(s=>(
                 <span key={s} style={{ cursor:'pointer', color:'#3a7090' }} onClick={() => send(s.split(' ')[0], 'auto')}>{s}</span>
               ))}
             </div>

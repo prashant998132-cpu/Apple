@@ -11,7 +11,7 @@ import {
   detectQueryType, askLLM
 } from '../providers/llm'
 import { cacheGet, cacheSet, TTL } from './responseCache'
-import { trackCall, isNearLimit, pickProvider } from './usageTracker'
+import { trackCall, isNearLimit } from './usageTracker'
 import { pickModelTier, getModelForTier } from './agentDispatcher'
 
 export interface OrchestratorInput {
@@ -191,14 +191,18 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
       } catch {}
     }
 
-    // Groq for simple queries
+    // Groq for simple queries — use agentDispatcher to pick nano vs 70B
     if (!reply && decision.brain === 'groq' && groqKey) {
       try {
-        const r = await askGroq(simpleMsgs, simplePrompt, 'llama-3.3-70b-versatile')
+        const tier = pickModelTier(input.message, 'groq', decision.complexity, 'auto')
+        const autoGroqModel = getModelForTier(tier)
+        const r = await askGroq(simpleMsgs, simplePrompt, autoGroqModel)
         const ex = extractThinking(r.text)
         if (ex.thinking) thinking = ex.thinking
         reply = ex.answer || r.text
-        model = r.model; provider = r.provider; apiCallsMade++
+        model = r.model
+        provider = tier === 'nano' ? '⚡ Groq Llama 8B' : '🧠 Groq Llama 70B'
+        apiCallsMade++
       } catch(e: any) { errors.push('Auto/Groq: ' + e.message) }
     }
 

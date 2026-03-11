@@ -140,37 +140,14 @@ async function getVercel(q: string): Promise<ToolResult> {
 
 async function getCrypto(q: string): Promise<ToolResult> {
   try {
-    const coinMap:Record<string,string> = {
-      bitcoin:'bitcoin',btc:'bitcoin',ethereum:'ethereum',eth:'ethereum',
-      doge:'dogecoin',bnb:'binancecoin',sol:'solana',xrp:'ripple',
-      ada:'cardano',matic:'matic-network',shib:'shiba-inu',ltc:'litecoin',
-      avax:'avalanche-2',dot:'polkadot',link:'chainlink',trx:'tron'
-    }
+    const coinMap:Record<string,string> = { bitcoin:'bitcoin',btc:'bitcoin',ethereum:'ethereum',eth:'ethereum',doge:'dogecoin',bnb:'binancecoin',sol:'solana',xrp:'ripple',ada:'cardano' }
     const words = q.toLowerCase().split(/\s+/)
-    // Multi-coin: if query mentions 2+ coins, fetch all
-    const mentionedCoins = [...new Set(words.flatMap(w => coinMap[w] ? [coinMap[w]] : []))]
-    // "top", "sab", "sabhi", "list" → top 5
-    const wantsTop = /top|sab|sabhi|list|sabka|all coin|market/i.test(q)
-    const ids = wantsTop
-      ? 'bitcoin,ethereum,binancecoin,solana,ripple'
-      : mentionedCoins.length >= 2 ? mentionedCoins.slice(0,5).join(',')
-      : mentionedCoins[0] || 'bitcoin'
-    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,inr&include_24hr_change=true`, { signal:T(5000) })
+    const coin = words.reduce((found:string,w:string) => found || coinMap[w] || '', '') || 'bitcoin'
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coin}&vs_currencies=usd,inr&include_24hr_change=true`, { signal:T(5000) })
     const d = await r.json()
-    const coinIds = ids.split(',')
-    if (coinIds.length === 1) {
-      const c = d[coinIds[0]]
-      const name = coinIds[0].charAt(0).toUpperCase()+coinIds[0].slice(1)
-      const trend = (c?.usd_24h_change||0) >= 0 ? '📈' : '📉'
-      return { tool:'crypto', success:true, data:`💰 ${name}: $${c?.usd?.toLocaleString()} (₹${c?.inr?.toLocaleString()}) ${trend} ${c?.usd_24h_change?.toFixed(2)}%` }
-    }
-    const lines = coinIds.map(id => {
-      const c = d[id]; if (!c) return null
-      const name = id.split('-')[0].charAt(0).toUpperCase()+id.split('-')[0].slice(1)
-      const trend = (c.usd_24h_change||0) >= 0 ? '↑' : '↓'
-      return `${trend} ${name}: $${c.usd?.toLocaleString()} (${c.usd_24h_change?.toFixed(1)}%)`
-    }).filter(Boolean)
-    return { tool:'crypto', success:true, data:`💰 Crypto Prices:\n${lines.join('\n')}` }
+    const c = d[coin]
+    const trend = (c?.usd_24h_change||0) >= 0 ? '📈' : '📉'
+    return { tool:'crypto', success:true, data:`💰 ${coin.charAt(0).toUpperCase()+coin.slice(1)}: $${c?.usd?.toLocaleString()} (₹${c?.inr?.toLocaleString()}) ${trend} ${c?.usd_24h_change?.toFixed(2)}%` }
   } catch { return { tool:'crypto', success:false, data:'Crypto price unavailable' } }
 }
 
