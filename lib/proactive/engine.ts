@@ -404,6 +404,32 @@ async function runChecks(city: string, chatId: string) {
     await sendAlert(festival)
     markSent(festival.id)
   }
+
+  // Reminder check — fire due reminders
+  try {
+    const remStr = localStorage.getItem('jarvis_reminders_v2') || '[]'
+    const rems: any[] = JSON.parse(remStr)
+    const now = Date.now()
+    let changed = false
+    for (const r of rems) {
+      if (!r.done && r.triggerTime <= now) {
+        await sendAlert({
+          id: `rem_fire_${r.id}`,
+          type: 'morning',
+          title: '⏰ ' + (r.title || 'Reminder'),
+          body: r.title || r.text || 'Reminder time!',
+          witty: false,
+        })
+        if (!r.repeat || r.repeat === 'none') r.done = true
+        else {
+          const interval = r.repeat === 'daily' ? 86400000 : 604800000
+          r.triggerTime += interval
+        }
+        changed = true
+      }
+    }
+    if (changed) localStorage.setItem('jarvis_reminders_v2', JSON.stringify(rems))
+  } catch {}
 }
 
 // Festival data

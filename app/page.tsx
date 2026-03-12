@@ -13,6 +13,7 @@ import { getDeviceContext, deviceContextToPrompt, vibrate } from '../lib/core/de
 import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
+import { parseReminder, addReminder, getPendingReminders, formatReminderTime } from '../lib/automation/reminders';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
@@ -140,6 +141,8 @@ function getAutoTitle(text: string): string {
 export default function ChatPage() {
   const [msgs, setMsgs]   = useState<any[]>([]);
   const [loading, setLoad] = useState(false);
+  const [autoTTS, setAutoTTS]   = useState(false);      // Auto-speak every reply
+  const [situation, setSit]     = useState<'normal'|'night'|'focus'>('normal'); // Situation awareness
   const [locLbl, setLoc]   = useState('');
   const [online, setOnl]   = useState(true);
   const [mode, setMode]    = useState<ChatMode>('auto');
@@ -248,7 +251,19 @@ export default function ChatPage() {
     if (saved) setUserName(saved);
     else setOnboard(true);
 
-    load(chatId.current).then(msgs => { if(msgs.length) setMsgs(msgs) });
+    load(chatId.current).then(msgs => { if(msgs.length) setMsgs(msgs) })
+
+    // Auto TTS preference
+    setAutoTTS(localStorage.getItem('jarvis_auto_tts') === '1')
+
+    // Situation awareness — detect night mode
+    const updateSituation = () => {
+      const h = new Date().getHours()
+      if (h >= 22 || h < 7) setSit('night')
+      else setSit('normal')
+    }
+    updateSituation()
+    const sitTimer = setInterval(updateSituation, 5 * 60 * 1000);
     const cleanup = initProactiveEngine('', chatId.current)
     setupWakeLockPersist()
     requestWakeLock()
@@ -335,7 +350,7 @@ export default function ChatPage() {
     setSearchResults([...curResults, ...idbResults].slice(0,8));
   };
 
-  return () => { clearInterval(t); clearInterval(clockT); };
+  return () => { clearInterval(t); clearInterval(clockT); clearInterval(sitTimer); };
   }, [refreshLoc]);
 
   useEffect(() => {
@@ -357,6 +372,19 @@ export default function ChatPage() {
     if (slash.startsWith('/img '))              { return send(slash.slice(5) + ' ka image banao', 'auto') }
     if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
     if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
+
+    // ── SMART REMINDER DETECTION ────────────────────────────────
+    const reminderParsed = parseReminder(text)
+    if (reminderParsed) {
+      addReminder(reminderParsed)
+      const userMsg2 = { id: Date.now().toString()+'_u', role:'user' as const, content: text, timestamp: Date.now() }
+      const timeStr = formatReminderTime(reminderParsed.triggerTime)
+      const ackMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: '⏰ Reminder set! "' + reminderParsed.title + '" — ' + timeStr + ' mein yaad dilaaunga.' + (reminderParsed.repeat !== 'none' ? ' (' + reminderParsed.repeat + ')' : ''), timestamp: Date.now() }
+      setMsgs(cur => [...cur, userMsg2, ackMsg])
+      void save(chatId.current, [...msgs, userMsg2, ackMsg])
+      speakReply(ackMsg.content)
+      return
+    }
 
     // ── MACRODROID PHONE CONTROL ─────────────────────────────
     const macroUrl = localStorage.getItem('jarvis_macrodroid_url') || ''
@@ -405,7 +433,16 @@ export default function ChatPage() {
     setLoad(true); setToolProgress([]); setFollowupChips([]);
 
     try {
-      const memPrompt = (await buildMemoryPrompt(cur.slice(-5))) + (studyMode ? '\n\nSTUDY MODE: MCQ, flashcards, simple mein samjhao.' : '')
+      const h = new Date().getHours()
+      const timeGreeting = h < 12 ? 'Subah' : h < 17 ? 'Dopahar' : h < 21 ? 'Sham' : 'Raat'
+      const situationNote = situation === 'night' ? '\nNight mode: short aur quiet replies do. Long explanations avoid karo.' : ''
+      const personalityLayer = '\\n- Kabhi kabhi ' + userName + ' ke naam se bulao (har baar nahi)' +
+        '\n- Wit + dry humor occasionally — JARVIS ki tarah, over-the-top nahi' +
+        '\n- Situation: ' + timeGreeting + ' hai — tone match karo' +
+        situationNote
+      const memPrompt = (await buildMemoryPrompt(cur.slice(-5))) +
+        (studyMode ? '\n\nSTUDY MODE: MCQ, flashcards, simple mein samjhao.' : '') +
+        personalityLayer
       const userName = localStorage.getItem('jarvis_profile_name') || 'Boss'
 
       if (chatMode === 'deep') {
@@ -515,12 +552,29 @@ export default function ChatPage() {
       const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin)
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
+      // Auto TTS — speak reply if voice mode ON
+      if (autoTTS && situation !== 'night') speakReply(d.reply || '')
     } catch(e) {
       const errMsg = { id: Date.now().toString()+'_e', role:'assistant' as const, content: '❌ Kuch error aaya. Dobara try karo.', timestamp: Date.now() }
       setMsgs(fin => { const f=[...fin,errMsg]; void save(chatId.current,f); return f; })
     }
     setLoad(false);
   }, [loading, msgs, studyMode]);
+
+  // ── Auto TTS — speak AI reply ───────────────────────────────
+  const speakReply = (text: string) => {
+    if (!autoTTS || situation === 'night') return
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:\S+/g, 'link').slice(0, 300)
+    const utt = new SpeechSynthesisUtterance(clean)
+    utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
+    // Try Hindi voice, fall back to any
+    const voices = window.speechSynthesis.getVoices()
+    const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
+    if (hindiVoice) utt.voice = hindiVoice
+    window.speechSynthesis.speak(utt)
+  }
 
   const newChat = () => {
     chatId.current = 'chat_'+Date.now();
@@ -657,6 +711,16 @@ export default function ChatPage() {
           </div>
           {msgs.length > 0 && (
             <>
+              {/* Situation indicator */}
+              {situation === 'night' && (
+                <span title="Night mode — quiet" style={{ fontSize:13 }}>🌙</span>
+              )}
+              {/* Auto TTS toggle */}
+              <button
+                onClick={() => { const n = !autoTTS; setAutoTTS(n); localStorage.setItem('jarvis_auto_tts', n?'1':'0'); if(n) window.speechSynthesis?.cancel() }}
+                title={autoTTS ? 'Auto Voice ON — tap to turn off' : 'Auto Voice OFF — tap to enable'}
+                style={{ width:24, height:24, borderRadius:6, background: autoTTS ? 'rgba(0,229,255,.2)' : 'transparent', border:'1px solid rgba(255,255,255,.06)', color: autoTTS ? '#00e5ff' : '#5a7a8a', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow: autoTTS ? '0 0 8px rgba(0,229,255,.4)' : 'none' }}
+              >{autoTTS ? '🔊' : '🔇'}</button>
               {/* Web Share — native mobile share sheet */}
               <button onClick={() => {
                 const txt = msgs.map(m => (m.role==='user'?'You: ':'JARVIS: ') + m.content).join('\n\n')
