@@ -58,15 +58,35 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// Push notifications
+// Push notifications — show with action buttons
 self.addEventListener('push', e => {
   const d = e.data?.json() || {};
   e.waitUntil(
     self.registration.showNotification(d.title || 'JARVIS', {
-      body: d.body || '',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
-      tag: d.tag || 'jarvis',
+      body:    d.body || '',
+      icon:    '/icons/icon-192x192.png',
+      badge:   '/icons/icon-192x192.png',
+      tag:     d.tag || 'jarvis',
+      vibrate: [200, 100, 200],
+      data:    { url: d.url || '/' },
+      actions: [
+        { action: 'open',    title: '📱 Open JARVIS' },
+        { action: 'dismiss', title: '✕ Dismiss' },
+      ],
+    })
+  );
+});
+
+// Notification click — open app or dismiss
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  if (e.action === 'dismiss') return;
+  const url = e.notification.data?.url || '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return clients.openWindow(url);
     })
   );
 });

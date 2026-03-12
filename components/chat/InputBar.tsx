@@ -136,6 +136,8 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
   }
 
   const [sttLang, setSttLang]   = useState<'hi-IN'|'en-IN'|'en-US'>('hi-IN')
+  const [wakeActive, setWakeActive] = useState(false)
+  const wakeRef = useRef<any>(null)
 
   // Groq Whisper STT — sends audio blob to /api/tts for transcription
   const whisperTranscribe = async (blob: Blob) => {
@@ -191,6 +193,45 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
     rec.onend = () => setRec(false)
     rec.start(); recRef.current = rec; setRec(true)
   }
+
+  // Wake Word — passive background listener for "Hey JARVIS" / "JARVIS"
+  const toggleWakeWord = useCallback(() => {
+    if (wakeActive) {
+      wakeRef.current?.stop()
+      wakeRef.current = null
+      setWakeActive(false)
+      return
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { alert('Wake word: browser support nahi hai'); return }
+    const wake = new SR()
+    wake.lang = 'hi-IN'
+    wake.continuous = true
+    wake.interimResults = true
+    wake.onresult = (e: any) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript.toLowerCase().trim()
+        if (t.includes('jarvis') || t.includes('jarwis') || t.includes('jaaris')) {
+          // Wake word detected — activate mic
+          wake.stop()
+          wakeRef.current = null
+          setWakeActive(false)
+          setTimeout(() => toggleRecord(), 300)
+          return
+        }
+      }
+    }
+    wake.onerror = () => { setWakeActive(false); wakeRef.current = null }
+    wake.onend = () => {
+      // Auto restart if still active (browser stops after ~60s)
+      if (wakeRef.current) {
+        try { wake.start() } catch {}
+      }
+    }
+    wake.start()
+    wakeRef.current = wake
+    setWakeActive(true)
+  }, [wakeActive, toggleRecord])
 
   const curMode = MODES.find(m => m.id === mode)!
   const hasContent = !!(input.trim() || attachFile)
@@ -379,6 +420,22 @@ export default function InputBar({ onSend, isLoading, mode, onModeChange }: Prop
               {sttLang==='hi-IN'?'HI':'EN'}
             </button>
           )}
+          {/* Wake Word toggle — to the left of mic */}
+          <button
+            onClick={toggleWakeWord}
+            title={wakeActive ? 'Wake Word ON — say "JARVIS" to activate' : 'Wake Word OFF — tap to enable'}
+            style={{
+              position: 'absolute', right: 42, bottom: 5,
+              width: 28, height: 28, borderRadius: '50%',
+              border: 'none',
+              background: wakeActive ? 'rgba(0,229,255,.25)' : 'transparent',
+              cursor: 'pointer', fontSize: 13,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all .18s',
+              boxShadow: wakeActive ? '0 0 8px rgba(0,229,255,.5)' : 'none',
+            }}>
+            {wakeActive ? '👂' : '🔇'}
+          </button>
           {/* Mic — inside textarea, right side */}
           <button
             onClick={toggleRecord}

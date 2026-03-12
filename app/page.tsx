@@ -12,6 +12,7 @@ import PinLock, { isPINEnabled } from '../components/shared/PinLock';
 import { getDeviceContext, deviceContextToPrompt, vibrate } from '../lib/core/deviceContext';
 import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 import { smartHistory } from '../lib/core/contextCompressor';
+import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
@@ -256,7 +257,26 @@ export default function ChatPage() {
     setOnl(navigator.onLine);
     window.addEventListener('online',  () => setOnl(true));
     window.addEventListener('offline', () => setOnl(false));
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(async reg => {
+        // Push notification subscription
+        try {
+          const VAPID_PUBLIC = 'BCOKkUUNtTS31OidVojPqwYnYDcogR2LheEl__Ux9xVAYXncsthby6sfvO-7fsgwg-DblERS-VXFuvAHt9NWZHE'
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: VAPID_PUBLIC,
+          })
+          // Store locally
+          localStorage.setItem('jarvis_push_sub', JSON.stringify(sub))
+          // Save to Gist for server-side push
+          fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription: sub }),
+          }).catch(() => {})
+        } catch {}
+      }).catch(() => {})
+    }
     refreshLoc();
     const t = setInterval(refreshLoc, 3*60*1000);
 
@@ -337,6 +357,26 @@ export default function ChatPage() {
     if (slash.startsWith('/img '))              { return send(slash.slice(5) + ' ka image banao', 'auto') }
     if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
     if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
+
+    // ── MACRODROID PHONE CONTROL ─────────────────────────────
+    const macroUrl = localStorage.getItem('jarvis_macrodroid_url') || ''
+    if (macroUrl) {
+      const phoneAction = detectPhoneIntent(text)
+      if (phoneAction) {
+        const label = ACTION_LABELS[phoneAction.action] || phoneAction.action
+        const userMsg = { id: Date.now().toString()+'_u', role:'user' as const, content: text, timestamp: Date.now() }
+        setMsgs(cur => [...cur, userMsg])
+        setLoad(true)
+        const result = await triggerMacrodroid(macroUrl, phoneAction)
+        const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: result.success ? label + '...
+
+' + result.message : result.message, timestamp: Date.now() }
+        setMsgs(cur => [...cur, aMsg])
+        void save(chatId.current, [...msgs, userMsg, aMsg])
+        setLoad(false)
+        return
+      }
+    }
 
     // Auto session title on first message
     if (msgs.length === 0 && text.trim()) {

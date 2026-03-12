@@ -7,7 +7,7 @@ import { setPIN, clearPIN, isPINEnabled, verifyPIN } from '../../components/shar
 import MemoryTab from '../../components/settings/MemoryTab'
 import ConnectedApps from '../../components/settings/ConnectedApps'
 
-type MainTab = 'mode' | 'keys' | 'apps' | 'storage' | 'memory' | 'security'
+type MainTab = 'mode' | 'keys' | 'apps' | 'storage' | 'memory' | 'phone'
 type KeyTab  = 'llm' | 'tts' | 'image' | 'music' | 'social'
 
 // ── Provider options — best first ─────────────────────────
@@ -190,9 +190,9 @@ export default function SettingsPage() {
 
       {/* Main tabs */}
       <div style={s.mainTabs}>
-        {(['mode','keys','apps','storage','memory'] as MainTab[]).map(t => (
+        {(['mode','keys','apps','storage','memory','phone'] as MainTab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={s.mainTab(tab===t)}>
-            {t === 'mode' ? '⚡ Mode' : t === 'keys' ? '🔑 Keys' : t === 'apps' ? '🔌 Apps' : t === 'storage' ? '💾 Store' : '🧠 Memory'}
+            {t === 'mode' ? '⚡ Mode' : t === 'keys' ? '🔑 Keys' : t === 'apps' ? '🔌 Apps' : t === 'storage' ? '💾 Store' : t === 'phone' ? '📱 Phone' : '🧠 Memory'}
           </button>
         ))}
       </div>
@@ -509,6 +509,73 @@ export default function SettingsPage() {
         )}
         {tab === 'memory' && (
           <MemoryTab />
+        )}
+
+        {/* ═══ PHONE TAB — MacroDroid + Push ══════════════════ */}
+        {tab === 'phone' && (
+          <div>
+            {/* MacroDroid Bridge */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:'#00e5ff', fontWeight:700, marginBottom:6 }}>📱 MacroDroid Bridge</div>
+              <div style={{ fontSize:10, color:'#1a4060', marginBottom:10, lineHeight:1.6 }}>
+                MacroDroid app install karo → Webhook trigger macro banao → URL yahan paste karo.
+                JARVIS bolega "WiFi on karo" → apne aap ho jaayega.
+              </div>
+              <input
+                type="url"
+                placeholder="https://trigger.macrodroid.com/YOUR_DEVICE_ID/jarvis"
+                defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('jarvis_macrodroid_url')||'') : ''}
+                onChange={e => localStorage.setItem('jarvis_macrodroid_url', e.target.value)}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, background:'#071828', border:'1px solid rgba(0,229,255,.2)', color:'#c8e0f0', fontSize:12, boxSizing:'border-box' as const }}
+              />
+              <div style={{ fontSize:10, color:'#1a3050', marginTop:8, lineHeight:1.6 }}>
+                Supported commands: WiFi on/off, Bluetooth on/off, Torch on/off, Hotspot, Silent/Ringer, DND, Screen, Alarm, Volume, App open
+              </div>
+              <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(0,229,255,.04)', borderRadius:8, border:'1px solid rgba(0,229,255,.08)' }}>
+                <div style={{ fontSize:10, color:'#3a7090', fontWeight:700, marginBottom:6 }}>MacroDroid Setup:</div>
+                <div style={{ fontSize:10, color:'#1a3050', lineHeight:1.8 }}>
+                  1. MacroDroid app install karo (free)<br/>
+                  2. New Macro → Trigger: Webhook<br/>
+                  3. Action: WiFi toggle / App launch / etc.<br/>
+                  4. Webhook URL copy karo → yahan paste karo<br/>
+                  5. JARVIS se bolo: "WiFi on karo"
+                </div>
+              </div>
+            </div>
+
+            {/* MacroDroid Receive URL */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:'#00e5ff', fontWeight:700, marginBottom:6 }}>📡 MacroDroid → JARVIS Events</div>
+              <div style={{ fontSize:10, color:'#1a4060', marginBottom:8 }}>
+                MacroDroid se JARVIS ko event bhejne ke liye yeh URL use karo:
+              </div>
+              <div style={{ padding:'8px 12px', background:'#050d1a', borderRadius:8, border:'1px solid rgba(0,229,255,.15)', fontSize:10, color:'#00e5ff', fontFamily:'monospace', wordBreak:'break-all' as const }}>
+                https://apple-lemon-zeta.vercel.app/api/macrodroid?event=battery_low
+              </div>
+              <div style={{ fontSize:10, color:'#1a3050', marginTop:6 }}>
+                Events: battery_low, charging, arrived_home, left_home, call_missed, screen_on, wifi_connected
+              </div>
+            </div>
+
+            {/* Push Notifications */}
+            <div>
+              <div style={{ fontSize:11, color:'#00e5ff', fontWeight:700, marginBottom:6 }}>🔔 Push Notifications</div>
+              <div style={{ fontSize:10, color:'#1a4060', marginBottom:10 }}>
+                Background notifications — JARVIS tab band ho tab bhi notify karega.
+              </div>
+              <button onClick={async () => {
+                if (!('Notification' in window)) { alert('Browser support nahi hai'); return }
+                const perm = await Notification.requestPermission()
+                if (perm === 'granted') {
+                  new Notification('JARVIS', { body: 'Push notifications enabled!', icon: '/icons/icon-192x192.png' })
+                } else {
+                  alert('Notification permission denied. Browser settings mein allow karo.')
+                }
+              }} style={{ padding:'9px 16px', borderRadius:8, background:'rgba(0,229,255,.1)', border:'1px solid rgba(0,229,255,.3)', color:'#00e5ff', fontSize:12, cursor:'pointer' }}>
+                🔔 Enable Push Notifications
+              </button>
+            </div>
+          </div>
         )}
 
         <div style={{ height:70 }}/>
