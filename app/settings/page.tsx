@@ -7,7 +7,7 @@ import { setPIN, clearPIN, isPINEnabled, verifyPIN } from '../../components/shar
 import MemoryTab from '../../components/settings/MemoryTab'
 import ConnectedApps from '../../components/settings/ConnectedApps'
 
-type MainTab = 'mode' | 'keys' | 'apps' | 'storage' | 'memory' | 'phone'
+type MainTab = 'mode' | 'keys' | 'apps' | 'storage' | 'memory' | 'security' | 'phone'
 type KeyTab  = 'llm' | 'tts' | 'image' | 'music' | 'social'
 
 // ── Provider options — best first ─────────────────────────
