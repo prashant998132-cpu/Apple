@@ -368,9 +368,7 @@ export default function ChatPage() {
         setMsgs(cur => [...cur, userMsg])
         setLoad(true)
         const result = await triggerMacrodroid(macroUrl, phoneAction)
-        const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: result.success ? label + '...
-
-' + result.message : result.message, timestamp: Date.now() }
+        const aMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: result.success ? label + '...\n\n' + result.message : result.message, timestamp: Date.now() }
         setMsgs(cur => [...cur, aMsg])
         void save(chatId.current, [...msgs, userMsg, aMsg])
         setLoad(false)
