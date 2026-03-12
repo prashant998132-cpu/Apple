@@ -621,9 +621,7 @@ export default function ChatPage() {
             <>
               {/* Web Share — native mobile share sheet */}
               <button onClick={() => {
-                const txt = msgs.map(m => (m.role==='user'?'You: ':'JARVIS: ') + m.content).join('
-
-')
+                const txt = msgs.map(m => (m.role==='user'?'You: ':'JARVIS: ') + m.content).join('\n\n')
                 if (navigator.share) {
                   navigator.share({ title: chatTitle || 'JARVIS Chat', text: txt.slice(0,2000) }).catch(()=>{})
                 } else {
