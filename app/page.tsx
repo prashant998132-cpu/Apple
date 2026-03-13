@@ -357,6 +357,20 @@ export default function ChatPage() {
     bot.current?.scrollIntoView({ behavior: msgs.length > 4 ? 'smooth' : 'instant' });
   }, [msgs, loading]);
 
+  // ── Auto TTS — must be declared BEFORE send() ──────────────
+  const speakReply = (text: string) => {
+    if (!autoTTS || situation === 'night') return
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const clean = text.replace(/[#*\`_~>]/g, '').replace(/https?:\S+/g, '').slice(0, 300)
+    const utt = new SpeechSynthesisUtterance(clean)
+    utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
+    const voices = window.speechSynthesis.getVoices()
+    const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
+    if (hindiVoice) utt.voice = hindiVoice
+    window.speechSynthesis.speak(utt)
+  }
+
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
     if (!text.trim() && !file || loading) return;
 
@@ -433,17 +447,15 @@ export default function ChatPage() {
     setLoad(true); setToolProgress([]); setFollowupChips([]);
 
     try {
-      const h = new Date().getHours()
-      const timeGreeting = h < 12 ? 'Subah' : h < 17 ? 'Dopahar' : h < 21 ? 'Sham' : 'Raat'
-      const situationNote = situation === 'night' ? '\nNight mode: short aur quiet replies do. Long explanations avoid karo.' : ''
-      const personalityLayer = '\\n- Kabhi kabhi ' + userName + ' ke naam se bulao (har baar nahi)' +
-        '\n- Wit + dry humor occasionally — JARVIS ki tarah, over-the-top nahi' +
-        '\n- Situation: ' + timeGreeting + ' hai — tone match karo' +
-        situationNote
-      const memPrompt = (await buildMemoryPrompt(cur.slice(-5))) +
+      const nowH = new Date().getHours()
+      const timeCtx = nowH < 12 ? 'Subah' : nowH < 17 ? 'Dopahar' : nowH < 21 ? 'Sham' : 'Raat'
+      const isNight = situation === 'night'
+      const uName = userName || 'Boss'
+      const baseMemory = await buildMemoryPrompt(cur.slice(-5))
+      const memPrompt = baseMemory +
         (studyMode ? '\n\nSTUDY MODE: MCQ, flashcards, simple mein samjhao.' : '') +
-        personalityLayer
-      const userName = localStorage.getItem('jarvis_profile_name') || 'Boss'
+        '\nPersonality: ' + timeCtx + ' tone. ' + (isNight ? 'Night mode — concise replies. ' : '') +
+        'Kabhi kabhi "' + uName + '" naam se bulao. Dry wit occasionally.'
 
       if (chatMode === 'deep') {
         // Deep mode: tool-stream
@@ -560,21 +572,6 @@ export default function ChatPage() {
     }
     setLoad(false);
   }, [loading, msgs, studyMode]);
-
-  // ── Auto TTS — speak AI reply ───────────────────────────────
-  const speakReply = (text: string) => {
-    if (!autoTTS || situation === 'night') return
-    if (!('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:\S+/g, 'link').slice(0, 300)
-    const utt = new SpeechSynthesisUtterance(clean)
-    utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
-    // Try Hindi voice, fall back to any
-    const voices = window.speechSynthesis.getVoices()
-    const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
-    if (hindiVoice) utt.voice = hindiVoice
-    window.speechSynthesis.speak(utt)
-  }
 
   const newChat = () => {
     chatId.current = 'chat_'+Date.now();
