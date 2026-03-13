@@ -13,6 +13,7 @@ import {
 import { cacheGet, cacheSet, TTL } from './responseCache'
 import { trackCall, isNearLimit } from './usageTracker'
 import { pickModelTier, getModelForTier } from './agentDispatcher'
+import { classifyQuery, buildDynamicPrompt } from '../brain/queryClassifier'
 
 export interface OrchestratorInput {
   message: string
@@ -56,12 +57,21 @@ function buildUserProfile(input: OrchestratorInput) {
   }
 }
 
-function buildSimplePrompt(chatMode?: string, memoryPrompt?: string): string {
+function buildSimplePrompt(chatMode?: string, memoryPrompt?: string, message?: string, userName?: string, toolResults?: string): string {
   const modeNote =
     chatMode === 'think' ? '\nThink step by step. Show reasoning before answer.' :
     chatMode === 'deep'  ? '\nBe thorough. Use all knowledge. Comprehensive answer.' : ''
+
+  // Use dynamic classifier if we have a message
+  if (message) {
+    const meta = classifyQuery(message)
+    const dynamic = buildDynamicPrompt(meta, userName || 'Boss', memoryPrompt || '', toolResults)
+    return dynamic + modeNote
+  }
+
+  // Fallback static prompt
   const base = (memoryPrompt || 'You are JARVIS — a personal AI. Hinglish mein baat karo. Direct raho.') +
-    '\n- Math → seedha number/answer, koi explanation nahi jab tak na pucha jaye\n- Factual → 1-2 lines\n- Code → sirf code'
+    '\n- Math → seedha number/answer\n- Factual → 1-2 lines\n- Code → sirf code'
   return base + modeNote
 }
 
@@ -109,7 +119,15 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   const simpleMsgs = [...simpleHistory, { role: 'user', content: input.message }]
 
   const userProfile = buildUserProfile(input)
-  const simplePrompt = buildSimplePrompt(chatMode, input.memoryPrompt)
+  // ── Dynamic Prompt — query-type aware ────────────────────
+  const queryMeta = classifyQuery(input.message)
+  const dynamicPrompt = buildDynamicPrompt(
+    queryMeta,
+    input.userName || 'Boss',
+    input.memoryPrompt || '',
+  )
+  // Keep simplePrompt as alias for compatibility
+  const simplePrompt = dynamicPrompt
 
   // ── FLASH MODE — Groq Llama 8B, fastest ─────────────────
   if (chatMode === 'flash') {
@@ -167,10 +185,36 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   }
 
   // ── AUTO MODE — Smart routing ──────────────────────────────
-  let _routerCacheTTL = 0  // router's smart TTL for cache (weather=10m, crypto=30s...)
+  let _routerCacheTTL = 0
   if (!reply && chatMode === 'auto') {
     const decision = route(input.message)
     _routerCacheTTL = decision.cacheTTL || 0
+
+    // ── TOOL RESULTS PRE-FETCH — inject into AI context ──────
+    let injectedToolResults = ''
+    if (decision.tools.length > 0 && decision.brain !== 'direct') {
+      try {
+        const { routeTools } = await import('../tools/external-router')
+        const toolResults = await routeTools(input.message)
+        if (toolResults.length > 0) {
+          injectedToolResults = toolResults.map(t => t.tool.toUpperCase() + ':\n' + t.data).join('\n\n')
+          toolsUsed = toolResults.map(t => t.tool)
+          const firstResult = toolResults[0]
+          if (firstResult.tool.includes('weather') || firstResult.tool.includes('forecast'))
+            richData = { type: 'weather', data: firstResult.data }
+          else if (firstResult.tool.includes('news'))
+            richData = { type: 'news', data: firstResult.data }
+          else if (firstResult.tool.includes('crypto') || firstResult.tool.includes('stock'))
+            richData = { type: 'finance', data: firstResult.data }
+        }
+      } catch(e: any) { errors.push('ToolPrefetch: ' + (e as any).message) }
+    }
+
+    // Rebuild prompt WITH tool results injected so AI reads real data
+    const enrichedPrompt = injectedToolResults
+      ? buildDynamicPrompt(queryMeta, input.userName || 'Boss', input.memoryPrompt || '', injectedToolResults)
+      : simplePrompt
+    const enrichedMsgs = [...simpleHistory, { role: 'user', content: input.message }]
 
     // Direct tool (no LLM): datetime, calculate, etc
     if (decision.brain === 'direct' && decision.tools[0]) {
@@ -181,29 +225,27 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
         if (toolMap[toolName]) {
           const data = await toolMap[toolName]({})
           toolsUsed = [toolName]
-          if (toolName === 'get_datetime') {
-            reply = `🕐 ${data.time_hindi || data.time} | ${data.date_hindi || data.date}`
-          } else {
-            reply = JSON.stringify(data)
-          }
+          reply = toolName === 'get_datetime'
+            ? '🕐 ' + (data.time_hindi || data.time) + ' | ' + (data.date_hindi || data.date)
+            : JSON.stringify(data)
           model = 'direct'; provider = 'Direct Tool (no LLM)'; apiCallsMade++
         }
       } catch {}
     }
 
-    // Groq for simple queries — use agentDispatcher to pick nano vs 70B
+    // Groq — with tool results already injected into prompt
     if (!reply && decision.brain === 'groq' && groqKey) {
       try {
         const tier = pickModelTier(input.message, 'groq', decision.complexity, 'auto')
         const autoGroqModel = getModelForTier(tier)
-        const r = await askGroq(simpleMsgs, simplePrompt, autoGroqModel)
+        const r = await askGroq(enrichedMsgs, enrichedPrompt, autoGroqModel)
         const ex = extractThinking(r.text)
         if (ex.thinking) thinking = ex.thinking
         reply = ex.answer || r.text
         model = r.model
         provider = tier === 'nano' ? '⚡ Groq Llama 8B' : '🧠 Groq Llama 70B'
         apiCallsMade++
-      } catch(e: any) { errors.push('Auto/Groq: ' + e.message) }
+      } catch(e: any) { errors.push('Auto/Groq: ' + (e as any).message) }
     }
 
     // Gemini for complex + tool queries
@@ -218,6 +260,14 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
         reply = r.reply
         toolsUsed = r.toolsUsed
         model = r.model; provider = 'Gemini 2.0 Flash'; apiCallsMade++
+        // Tool result injection for auto mode
+        if (r.toolResults && Object.keys(r.toolResults).length > 0) {
+          const toolCtx = Object.entries(r.toolResults).map(([k,v]) => k + ': ' + JSON.stringify(v).slice(0, 400)).join('\n')
+          if (toolCtx && reply) {
+            // Enrich the prompt context for richData building
+            richData = { ...richData, toolContext: toolCtx }
+          }
+        }
         // Build richData from tool results
         if (r.toolResults && Object.keys(r.toolResults).length > 0) {
           const firstTool = Object.keys(r.toolResults)[0]
