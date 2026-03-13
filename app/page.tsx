@@ -14,6 +14,8 @@ import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
 import { parseReminder, addReminder, getPendingReminders, formatReminderTime } from '../lib/automation/reminders';
+import { isAgenticGoal, runAgentPlan, formatPlanAsMessage } from '../lib/core/agentRunner';
+import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
@@ -177,6 +179,12 @@ export default function ChatPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{id:string,preview:string,chatId:string}[]>([]);
+
+  // Agent Mode
+  const [agentPlan, setAgentPlan]   = useState<any>(null);
+  const [agentRunning, setAgentRunning] = useState(false);
+  // Focus mode
+  const [focusSession, setFocusSession] = useState<{task:string;durationMin:number;startTime:number}|null>(null);
 
   const chatId = useRef('chat_'+new Date().toDateString().replace(/ /g,'_'));
   const bot    = useRef<HTMLDivElement>(null);
@@ -387,6 +395,31 @@ export default function ChatPage() {
     if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
     if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
 
+    // ── Agent Mode — complex multi-step goals ───────────────
+    if (isAgenticGoal(text) && chatMode === 'auto') {
+      const agentMsgId = Date.now().toString()+'_a'
+      const agentUMsg = { id: Date.now().toString()+'_u', role:'user' as const, content: text, timestamp: Date.now() }
+      const agentAMsg = { id: agentMsgId, role:'assistant' as const, content: '🤖 Agent mode — goal analyze kar raha hoon...', timestamp: Date.now() }
+      setMsgs(p => [...p, agentUMsg, agentAMsg])
+      void save(chatId.current, [...msgs, agentUMsg, agentAMsg])
+      setAgentRunning(true)
+      runAgentPlan(text, { chatId: chatId.current, userName: userName || 'Boss' }, (plan) => {
+        setAgentPlan({...plan})
+        const formatted = formatPlanAsMessage(plan)
+        setMsgs(p => p.map(m => m.id === agentMsgId ? { ...m, content: formatted } : m))
+        plan.steps.forEach((step: any) => {
+          if (step.result?.startsWith('FOCUS_START:')) {
+            const parts = step.result.split(':')
+            const dur = parseInt(parts[1]) || 25
+            const task = parts[2] || text
+            startFocusMode(task, dur)
+            setFocusSession({ task, durationMin: dur, startTime: Date.now() })
+          }
+        })
+      }).finally(() => { setAgentRunning(false); setLoad(false) })
+      return
+    }
+
     // ── SMART REMINDER DETECTION ────────────────────────────────
     const reminderParsed = parseReminder(text)
     if (reminderParsed) {
@@ -564,6 +597,12 @@ export default function ChatPage() {
       const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin)
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
+      const importantHint = extractImportantInfo(text)
+      if (importantHint) {
+        setTimeout(() => {
+          setMsgs(p => [...p, { id: Date.now().toString()+'_hint', role:'assistant' as const, content: '💡 ' + importantHint, timestamp: Date.now() }])
+        }, 800)
+      }
       // Auto TTS — speak reply if voice mode ON
       if (autoTTS && situation !== 'night') speakReply(d.reply || '')
     } catch(e) {
@@ -685,6 +724,11 @@ export default function ChatPage() {
               )}
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
 
+          {/* Search button */}
+          <button onClick={() => setShowSearch(p=>!p)} title="Search chats"
+            style={{ width:26, height:26, borderRadius:7, background: showSearch ? 'rgba(0,229,255,.15)' : 'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color: showSearch ? '#00e5ff' : '#90b4c8' }}>
+            🔍
+          </button>
           {/* Theme picker */}
           <div style={{ position:'relative' }}>
             <button onClick={() => setShowTheme(p=>!p)}
