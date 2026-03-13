@@ -20,7 +20,7 @@ import { get_weather } from '../tools/no-key'
 // ════════════════════════════════════════════════════════
 export interface ProactiveAlert {
   id:    string
-  type:  'morning' | 'health' | 'weather' | 'habit' | 'summary' | 'festival' | 'battery' | 'focus'
+  type:  'morning' | 'health' | 'weather' | 'habit' | 'summary' | 'festival' | 'battery' | 'focus' | 'digest'
   title: string
   body:  string
   url?:  string
@@ -101,6 +101,153 @@ export async function buildDailySummary(chatId: string): Promise<ProactiveAlert 
     }
   } catch { return null }
 }
+
+
+// ════════════════════════════════════════════════════════
+// DAILY DIGEST — Subah 8 baje comprehensive morning brief
+// Weather + News headline + Today reminders + Quote
+// Zero LLM cost — pure tool calls
+// ════════════════════════════════════════════════════════
+export async function buildDailyDigest(city: string): Promise<ProactiveAlert | null> {
+  const h = getISTHour()
+  if (h !== 8) return null
+  const digestKey = `digest_${new Date().toDateString()}`
+  if (wasRecentlySent(digestKey)) return null
+
+  try {
+    const parts: string[] = []
+
+    // Weather
+    try {
+      const { get_weather } = await import('../tools/no-key')
+      const w = await get_weather({ location: city || 'Rewa', days: 1 })
+      if (w.current) {
+        parts.push('\uD83C\uDF24 ' + w.current.temperature + ', ' + (w.current.condition_hindi || w.current.condition))
+        const rain = parseInt(w.forecast?.[0]?.rain_chance || '0')
+        if (rain >= 60) parts.push('\uD83C\uDF27\uFE0F Baarish ' + rain + '% — chhata le jana')
+      }
+    } catch {}
+
+    // Today reminders count
+    try {
+      const remStr = typeof localStorage !== 'undefined' ? localStorage.getItem('jarvis_reminders_v2') || '[]' : '[]'
+      const rems: any[] = JSON.parse(remStr)
+      const today = new Date(); today.setHours(23,59,59,999)
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0)
+      const todayRems = rems.filter((r: any) => !r.done && r.triggerTime >= todayStart.getTime() && r.triggerTime <= today.getTime())
+      if (todayRems.length > 0) {
+        parts.push('\u23F0 Aaj ' + todayRems.length + ' reminder' + (todayRems.length > 1 ? 's' : '') + ' hain')
+      }
+    } catch {}
+
+    // Motivational line — rotate daily
+    const quotes = [
+      'Aaj bhi solid kaam kar — JARVIS saath hai.',
+      'Ek step aaj, ek kal — bas chalta reh.',
+      'Code ho ya padhai — brain warm-up se shuru kar.',
+      'Duniya ke liye nahi — apne liye productive ho.',
+      'Kal jo socha tha — aaj kar.',
+    ]
+    const dayIdx = new Date().getDate() % quotes.length
+    parts.push('\u2728 ' + quotes[dayIdx])
+
+    if (parts.length === 0) return null
+
+    return {
+      id: digestKey,
+      type: 'morning',
+      title: '\uD83C\uDF05 JARVIS Morning Digest',
+      body: parts.join(' | '),
+      url: '/',
+      witty: true,
+    }
+  } catch { return null }
+}
+
+// ════════════════════════════════════════════════════════
+// FOCUS MODE — Pomodoro-style JARVIS nudge
+// User asks JARVIS to focus → engine tracks + reminds
+// ════════════════════════════════════════════════════════
+const FOCUS_KEY = 'jarvis_focus_session'
+
+export interface FocusSession {
+  startTime: number
+  durationMin: number
+  task: string
+  breakAlertSent: boolean
+}
+
+export function startFocusMode(task: string, durationMin: number = 25): FocusSession {
+  const session: FocusSession = {
+    startTime: Date.now(),
+    durationMin,
+    task,
+    breakAlertSent: false,
+  }
+  try { localStorage.setItem(FOCUS_KEY, JSON.stringify(session)) } catch {}
+  return session
+}
+
+export function getFocusSession(): FocusSession | null {
+  try {
+    const s = localStorage.getItem(FOCUS_KEY)
+    return s ? JSON.parse(s) : null
+  } catch { return null }
+}
+
+export function clearFocusSession() {
+  try { localStorage.removeItem(FOCUS_KEY) } catch {}
+}
+
+async function checkFocusMode(): Promise<ProactiveAlert | null> {
+  try {
+    const session = getFocusSession()
+    if (!session) return null
+    const elapsed = Date.now() - session.startTime
+    const durationMs = session.durationMin * 60 * 1000
+    const halfMs = durationMs / 2
+
+    // Break alert at half time
+    if (elapsed >= halfMs && elapsed < durationMs && !session.breakAlertSent) {
+      session.breakAlertSent = true
+      try { localStorage.setItem(FOCUS_KEY, JSON.stringify(session)) } catch {}
+      return {
+        id: 'focus_half_' + session.startTime,
+        type: 'focus',
+        title: '\uD83C\uDFAF Focus Check',
+        body: (session.durationMin / 2) + ' min ho gaye — "' + session.task.slice(0, 40) + '" pe kaam jari hai? Solid reh!',
+        witty: true,
+      }
+    }
+
+    // Done alert
+    if (elapsed >= durationMs) {
+      clearFocusSession()
+      return {
+        id: 'focus_done_' + session.startTime,
+        type: 'focus',
+        title: '\u2705 Focus Session Complete!',
+        body: session.durationMin + ' min ka solid focus session done — "' + session.task.slice(0, 40) + '". Break le, chai pi! \u2615',
+        witty: true,
+      }
+    }
+    return null
+  } catch { return null }
+}
+
+// ════════════════════════════════════════════════════════
+// SMART AUTO-MEMORY — detect important info in chats
+// Phone, address, meeting, deadline → auto remind user
+// ════════════════════════════════════════════════════════
+export function extractImportantInfo(msg: string): string | null {
+  const m = msg.toLowerCase()
+  if (m.match(/\d{10}/)) return 'Phone number noted — memory mein save karna chahoge?'
+  if (m.match(/deadline|due date|submit by|kal tak|aaj tak/)) return 'Deadline detect hui — reminder set kar dun?'
+  if (m.match(/meeting|call at|baat karni|mil ke/)) return 'Meeting mention hui — calendar mein add kar dun?'
+  if (m.match(/birthday|janamdin|bday/)) return 'Birthday mention — reminder set karun?'
+  return null
+}
+
 
 // ════════════════════════════════════════════════════════
 // TIME-BASED PROACTIVE NUDGES
@@ -389,6 +536,20 @@ async function runChecks(city: string, chatId: string) {
       const summary = await buildDailySummary(chatId)
       if (summary) { await sendAlert(summary); markSent(summary.id) }
     }
+  }
+
+  // Daily Digest — 8 AM comprehensive morning brief
+  const digest = await buildDailyDigest(city)
+  if (digest && !wasRecentlySent(digest.id)) {
+    await sendAlert(digest)
+    markSent(digest.id)
+  }
+
+  // Focus mode check
+  const focusAlert = await checkFocusMode()
+  if (focusAlert && !wasRecentlySent(focusAlert.id)) {
+    await sendAlert(focusAlert)
+    markSent(focusAlert.id)
   }
 
   // Battery check
