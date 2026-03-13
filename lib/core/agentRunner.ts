@@ -99,10 +99,14 @@ export async function executeStep(
       try {
         const { addReminder } = await import('../automation/reminders')
         const triggerTime = extractTimeFromDescription(step.description)
-        await addReminder({
+        addReminder({
+          id: 'agent_' + Date.now(),
+          text: goal,
           title: step.description,
           triggerTime,
           repeat: 'none',
+          done: false,
+          createdAt: Date.now(),
         })
         return 'Reminder set: ' + step.description
       } catch(e: any) {
