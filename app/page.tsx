@@ -409,18 +409,23 @@ export default function ChatPage() {
     } catch { return null }
   }
 
-  // ── Auto TTS — must be declared BEFORE send() ──────────────
-  const speakReply = (text: string) => {
+  // ── Auto TTS — Puter OpenAI TTS (quality) → Web Speech fallback ──
+  const speakReply = async (text: string) => {
     if (!autoTTS || situation === 'night') return
-    if (!('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const clean = text.replace(/[#*\`_~>]/g, '').replace(/https?:\S+/g, '').slice(0, 300)
-    const utt = new SpeechSynthesisUtterance(clean)
-    utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
-    const voices = window.speechSynthesis.getVoices()
-    const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
-    if (hindiVoice) utt.voice = hindiVoice
-    window.speechSynthesis.speak(utt)
+    const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:[^\s]+/g, '').slice(0, 300)
+    try {
+      const audio = await puterTTS(clean)
+      if (audio) { audio.play(); return }
+    } catch {}
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const utt = new SpeechSynthesisUtterance(clean)
+      utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
+      const voices = window.speechSynthesis.getVoices()
+      const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
+      if (hindiVoice) utt.voice = hindiVoice
+      window.speechSynthesis.speak(utt)
+    }
   }
 
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
