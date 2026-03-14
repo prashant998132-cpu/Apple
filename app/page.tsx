@@ -19,11 +19,7 @@ import {
   pickContacts, isContactPickerSupported,
   makeCall, sendSMSIntent,
   keepScreenOn, getSharedContent,
-  checkGeoFences, addGeoFence,
-  capturePhoto, pickFile,
-  nativeShare, startVoiceInput,
-  getNetworkInfo, readClipboard,
-  isNFCSupported, isBluetoothSupported,
+  checkGeoFences, capturePhoto,
 } from '../lib/client/androidBridge';
 import { detectMood, logMood, getDominantMood, getMoodPromptHint } from '../lib/core/moodTracker';
 import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
