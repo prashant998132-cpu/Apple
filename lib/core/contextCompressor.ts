@@ -19,43 +19,44 @@ const estimateTokens = (text: string) => Math.ceil(text.length / 4)
 function summarizeOldMessages(messages: Message[]): string {
   if (messages.length === 0) return ''
   
-  const topics: string[] = []
-  const userMsgs = messages.filter(m => m.role === 'user')
+  const userMsgs    = messages.filter(m => m.role === 'user')
   const assistantMsgs = messages.filter(m => m.role === 'assistant')
   
-  // Extract key topics from user messages
-  userMsgs.slice(0, 8).forEach(m => {
-    const content = m.content.trim()
-    if (content.length > 10) {
-      // Get first meaningful line
-      const firstLine = content.split('\n')[0].slice(0, 60)
-      topics.push(firstLine)
-    }
+  // ── Topic extraction — what user asked about ──
+  const topics: string[] = []
+  userMsgs.forEach(m => {
+    const line = m.content.trim().split('\n')[0].slice(0, 70)
+    if (line.length > 8) topics.push(line)
   })
 
-  // Extract any key facts AI mentioned (numbers, names, dates)
+  // ── Key facts — numbers, decisions, names from AI replies ──
   const keyFacts: string[] = []
-  assistantMsgs.slice(-3).forEach(m => {
-    const content = m.content
-    // Extract lines with numbers/dates/names (likely important facts)
-    const lines = content.split('\n')
-    lines.forEach(line => {
-      if (line.match(/\d{4}|\b[A-Z][a-z]+\b.*\b[A-Z][a-z]+\b|\b\d+%|\₹\d+|\$\d+/) && line.length < 80) {
-        keyFacts.push(line.trim().slice(0, 70))
+  assistantMsgs.forEach(m => {
+    m.content.split('\n').forEach(line => {
+      // Numbers, currency, percentages, dates, capitalized proper nouns
+      if (line.match(/\d{4}|\b\d+(\.\d+)?%|[₹$€]\d+|\b[A-Z][a-z]{2,}\s[A-Z][a-z]{2,}/) && line.length < 100) {
+        keyFacts.push(line.trim().slice(0, 80))
       }
     })
   })
 
-  let summary = `[Earlier conversation summary — ${messages.length} messages]:\n`
-  if (topics.length > 0) {
-    summary += `User discussed: ${topics.slice(0, 5).join(' | ')}\n`
-  }
-  if (keyFacts.length > 0) {
-    summary += `Key facts: ${keyFacts.slice(0, 3).join(' | ')}\n`
-  }
-  summary += `[End of summary — continue from recent messages below]`
-  
-  return summary
+  // ── Decision/intent extraction — what user decided/confirmed ──
+  const decisions: string[] = []
+  userMsgs.forEach(m => {
+    const c = m.content.toLowerCase()
+    if (c.match(/\b(haan|yes|theek hai|okay|sure|done|kar do|set karo|remind|remember|save)\b/)) {
+      decisions.push(m.content.trim().slice(0, 60))
+    }
+  })
+
+  // ── Build compact summary ──
+  const parts: string[] = ['[Conv summary — ' + messages.length + ' msgs]']
+  if (topics.length)    parts.push('Topics: ' + topics.slice(0, 4).join(' | '))
+  if (keyFacts.length)  parts.push('Facts: ' + keyFacts.slice(0, 3).join(' | '))
+  if (decisions.length) parts.push('User decided: ' + decisions.slice(0, 2).join(' | '))
+  parts.push('[/summary]')
+
+  return parts.join('\n')
 }
 
 // ── Main compression function ──────────────────────────────
