@@ -1,33 +1,42 @@
 'use client'
-// lib/client/puterClient.ts — JARVIS Puter.js Full Integration
-// Puter.js = Free unlimited: Chat(500+ models) + Image(DALL-E3/FLUX/Imagen) + TTS + STT + Video
-// User-Pays model: developer ka zero cost, user apna Puter account use karta hai
-// MUST run client-side only (browser)
+// lib/client/puterClient.ts — JARVIS Puter.js Correct Integration
+// Based on actual Puter.js docs: https://docs.puter.com/AI/
+// User-Pays model — developer zero cost
+// APIs confirmed from docs:
+//   txt2img(prompt, testMode|options)
+//   txt2speech(text, { provider })
+//   speech2txt(audioUrl) → { text }
+//   txt2vid(prompt, testMode)
+//   img2txt(imageUrl) → text
+//   speech2speech(url, { voice, model, output_format })
+//   chat(messages, options) → response
+//   KV store: puter.kv.set/get/del
 
-// ── Load Puter.js once ────────────────────────────────────
-let puterLoaded = false
 let puterLoading: Promise<void> | null = null
 
 export async function loadPuter(): Promise<any> {
-  if (typeof window === 'undefined') throw new Error('Puter client-side only')
-  if ((window as any).puter) return (window as any).puter
+  if (typeof window === 'undefined') throw new Error('Browser only')
+  if ((window as any).puter?.ai) return (window as any).puter
 
   if (!puterLoading) {
     puterLoading = new Promise<void>((resolve, reject) => {
       const s = document.createElement('script')
       s.src = 'https://js.puter.com/v2/'
-      s.onload = () => { puterLoaded = true; resolve() }
+      s.onload = () => resolve()
       s.onerror = () => reject(new Error('Puter.js load failed'))
       document.head.appendChild(s)
     })
   }
-
   await puterLoading
+  // Wait for puter.ai to be ready
+  await new Promise(r => setTimeout(r, 500))
   return (window as any).puter
 }
 
 // ══════════════════════════════════════════════════════════
-// IMAGE GENERATION — DALL-E 3, FLUX, Gemini, Imagen FREE
+// IMAGE GENERATION — gpt-image-1.5, DALL-E 3, etc FREE
+// API: puter.ai.txt2img(prompt, testMode|{model})
+// Returns: HTMLImageElement
 // ══════════════════════════════════════════════════════════
 
 export interface PuterImageResult {
@@ -36,55 +45,37 @@ export interface PuterImageResult {
   model: string
 }
 
-// Image model cascade — try best quality first, fallback on error
 const IMAGE_MODELS = [
-  { model: 'dall-e-3', label: 'DALL-E 3' },
-  { model: 'black-forest-labs/flux.1-dev', label: 'FLUX.1 Dev' },
-  { model: 'google/imagen-4.0-fast', label: 'Imagen 4 Fast' },
-  { model: 'stabilityai/stable-diffusion-xl-base-1.0', label: 'SDXL' },
+  'gpt-image-1.5',
+  'dall-e-3',
+  'gpt-image-1',
+  'dall-e-2',
 ]
 
-export async function puterGenerateImage(
-  prompt: string,
-  preferredModel?: string
-): Promise<PuterImageResult> {
+export async function puterGenerateImage(prompt: string): Promise<PuterImageResult> {
   const puter = await loadPuter()
 
-  const models = preferredModel
-    ? [{ model: preferredModel, label: preferredModel }, ...IMAGE_MODELS]
-    : IMAGE_MODELS
-
-  for (const { model, label } of models) {
+  for (const model of IMAGE_MODELS) {
     try {
-      const imgEl = await puter.ai.txt2img(prompt, {
-        model,
-        disable_safety_checker: true,
-      })
-
-      // Puter returns HTMLImageElement — extract src
+      // Correct API: txt2img(prompt, { model }) OR txt2img(prompt, false) for real generation
+      const imgEl = await puter.ai.txt2img(prompt, { model })
       let url = ''
       if (imgEl instanceof HTMLImageElement) url = imgEl.src
       else if (typeof imgEl === 'string') url = imgEl
       else if (imgEl?.src) url = imgEl.src
-
-      if (url) {
-        return { url, prompt, model: label }
-      }
-    } catch (e: any) {
-      // Try next model
-      console.warn('Puter image model failed:', model, e?.message)
-      continue
-    }
+      if (url) return { url, prompt, model }
+    } catch { continue }
   }
 
-  // Final fallback: Pollinations
+  // Pollinations fallback
   const seed = Math.floor(Math.random() * 99999)
-  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt + ', high quality, detailed') + '?width=512&height=512&nologo=true&seed=' + seed
+  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt + ', high quality') + '?width=512&height=512&nologo=true&seed=' + seed
   return { url, prompt, model: 'Pollinations AI' }
 }
 
 // ══════════════════════════════════════════════════════════
-// CHAT — GPT-5, Claude 3.7, Gemini, 500+ models FREE
+// CHAT — Claude, GPT-5, Gemini, 500+ models FREE
+// API: puter.ai.chat(messages_or_string, options)
 // ══════════════════════════════════════════════════════════
 
 export interface PuterChatResult {
@@ -92,17 +83,16 @@ export interface PuterChatResult {
   model: string
 }
 
-// Chat model cascade — best free models
 const CHAT_MODELS = [
   'claude-3-7-sonnet',
   'gpt-4o',
-  'gemini-2-0-flash',
+  'gpt-5-nano',
   'meta-llama/Llama-3.3-70B-Instruct-Turbo',
   'deepseek-chat',
 ]
 
 export async function puterChat(
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+  messages: Array<{ role: string; content: string }>,
   systemPrompt?: string,
   preferredModel?: string
 ): Promise<PuterChatResult> {
@@ -112,9 +102,7 @@ export async function puterChat(
     ? [{ role: 'system', content: systemPrompt }, ...messages]
     : messages
 
-  const models = preferredModel
-    ? [preferredModel, ...CHAT_MODELS]
-    : CHAT_MODELS
+  const models = preferredModel ? [preferredModel, ...CHAT_MODELS] : CHAT_MODELS
 
   for (const model of models) {
     try {
@@ -123,51 +111,48 @@ export async function puterChat(
       if (typeof resp === 'string') text = resp
       else if (resp?.message?.content) text = resp.message.content
       else if (resp?.text) text = resp.text
-      else if (resp?.content) text = resp.content
-      else text = String(resp)
-      if (text.length > 0) return { text, model }
-    } catch {
-      continue
-    }
+      else if (resp?.content?.[0]?.text) text = resp.content[0].text
+      else text = String(resp || '')
+      if (text.length > 2) return { text, model }
+    } catch { continue }
   }
   throw new Error('All Puter chat models failed')
 }
 
 // ══════════════════════════════════════════════════════════
-// TTS — OpenAI quality text-to-speech FREE
+// TTS — OpenAI quality FREE
+// API: puter.ai.txt2speech(text, { provider: 'openai' })
+// Returns: HTMLAudioElement
 // ══════════════════════════════════════════════════════════
 
 export async function puterTTS(text: string): Promise<HTMLAudioElement | null> {
   try {
     const puter = await loadPuter()
-    const audio = await puter.ai.txt2speech(text.slice(0, 500), {
-      provider: 'openai',
-    })
+    // Confirmed from docs: provider: 'openai' for OpenAI TTS
+    const audio = await puter.ai.txt2speech(text.slice(0, 500), { provider: 'openai' })
     return audio as HTMLAudioElement
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 // ══════════════════════════════════════════════════════════
-// STT — Whisper transcription FREE
+// STT — OpenAI Whisper FREE
+// API: puter.ai.speech2txt(audioUrl) → { text } or string
 // ══════════════════════════════════════════════════════════
 
 export async function puterSTT(audioBlob: Blob): Promise<string> {
   try {
     const puter = await loadPuter()
-    // Convert blob to URL for Puter
     const url = URL.createObjectURL(audioBlob)
     const result = await puter.ai.speech2txt(url)
     URL.revokeObjectURL(url)
-    return result?.text || result || ''
-  } catch {
-    return ''
-  }
+    // Docs: transcript.text ?? transcript
+    return result?.text ?? String(result ?? '')
+  } catch { return '' }
 }
 
 // ══════════════════════════════════════════════════════════
-// OCR / Image Analysis — img2txt FREE
+// OCR — AWS Textract / Mistral OCR FREE
+// API: puter.ai.img2txt(imageUrl) → string
 // ══════════════════════════════════════════════════════════
 
 export async function puterOCR(imageUrl: string): Promise<string> {
@@ -175,57 +160,74 @@ export async function puterOCR(imageUrl: string): Promise<string> {
     const puter = await loadPuter()
     const result = await puter.ai.img2txt(imageUrl)
     return String(result || '')
-  } catch {
-    return ''
-  }
+  } catch { return '' }
 }
 
 // ══════════════════════════════════════════════════════════
-// VIDEO GENERATION — Sora FREE
+// VIDEO — OpenAI Sora FREE
+// API: puter.ai.txt2vid(prompt, testMode) → HTMLVideoElement
+// testMode=false for real, testMode=true for sample
 // ══════════════════════════════════════════════════════════
 
-export interface PuterVideoResult {
-  element: HTMLVideoElement | null
-  prompt: string
-}
-
-export async function puterGenerateVideo(prompt: string): Promise<PuterVideoResult> {
+export async function puterGenerateVideo(prompt: string): Promise<string | null> {
   try {
     const puter = await loadPuter()
-    // testMode: false = real generation, true = sample video for testing
+    // testMode=false = real Sora generation
     const videoEl = await puter.ai.txt2vid(prompt, false)
-    return { element: videoEl as HTMLVideoElement, prompt }
-  } catch (e) {
-    console.warn('Puter video gen failed:', e)
-    return { element: null, prompt }
-  }
+    if (videoEl instanceof HTMLVideoElement) return videoEl.src
+    if (videoEl?.src) return videoEl.src
+    return null
+  } catch { return null }
 }
 
 // ══════════════════════════════════════════════════════════
-// VISION / IMAGE ANALYSIS — describe what's in an image
+// VISION — Analyze image with GPT-4o FREE
+// API: puter.ai.chat(question, imageUrl, { model })
 // ══════════════════════════════════════════════════════════
 
-export async function puterVision(imageUrl: string, question = 'What do you see in this image? Describe in detail.'): Promise<string> {
+export async function puterVision(imageUrl: string, question = 'Describe this image in detail.'): Promise<string> {
   try {
     const puter = await loadPuter()
     const result = await puter.ai.chat(question, imageUrl, { model: 'gpt-4o' })
     if (typeof result === 'string') return result
     return result?.message?.content || result?.text || String(result)
-  } catch {
-    return ''
-  }
+  } catch { return '' }
 }
 
 // ══════════════════════════════════════════════════════════
-// LIST MODELS — what's available right now
+// KV STORE — Puter's free cloud KV (replaces localStorage for sync)
+// puter.kv.set(key, value) / get(key) / del(key) / list()
+// Data persists across sessions per user account
 // ══════════════════════════════════════════════════════════
 
-export async function puterListModels(): Promise<string[]> {
+export async function puterKVSet(key: string, value: string): Promise<boolean> {
   try {
     const puter = await loadPuter()
-    const models = await puter.ai.listModels()
-    return Array.isArray(models) ? models.map((m: any) => m?.id || String(m)) : []
-  } catch {
-    return []
-  }
+    await puter.kv.set(key, value)
+    return true
+  } catch { return false }
+}
+
+export async function puterKVGet(key: string): Promise<string | null> {
+  try {
+    const puter = await loadPuter()
+    return await puter.kv.get(key) || null
+  } catch { return null }
+}
+
+// ══════════════════════════════════════════════════════════
+// SPEECH-TO-SPEECH — ElevenLabs voice conversion FREE
+// API: puter.ai.speech2speech(url, { voice, model, output_format })
+// ══════════════════════════════════════════════════════════
+
+export async function puterSpeech2Speech(audioUrl: string, voice = '21m00Tcm4TlvDq8ikWAM'): Promise<string | null> {
+  try {
+    const puter = await loadPuter()
+    const result = await puter.ai.speech2speech(audioUrl, {
+      voice,
+      model: 'eleven_multilingual_sts_v2',
+      output_format: 'mp3_44100_128',
+    })
+    return typeof result === 'string' ? result : (result?.url || null)
+  } catch { return null }
 }
