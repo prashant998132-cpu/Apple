@@ -3,11 +3,9 @@
 // Mobile Chrome compatible — no browser APIs
 
 import { askGemini as askGeminiBrain } from '../brain/gemini'
-import { askGroq as askGroqBrain } from '../brain/groq'
 import { route } from '../brain/router'
-// storage: client-side only (saveChat in lib/storage)
 import {
-  askGroq, askDeepSeek, askMistral, askOpenRouter,
+  askGroq, askDeepSeek,
   detectQueryType, askLLM
 } from '../providers/llm'
 import { cacheGet, cacheSet, TTL } from './responseCache'
