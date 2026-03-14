@@ -122,7 +122,7 @@ export async function buildDailyDigest(city: string): Promise<ProactiveAlert | n
       const { get_weather } = await import('../tools/no-key')
       const w = await get_weather({ location: city || 'Rewa', days: 1 })
       if (w.current) {
-        parts.push('\uD83C\uDF24 ' + w.current.temperature + ', ' + (w.current.condition_hindi || w.current.condition))
+        parts.push('\uD83C\uDF24 ' + w.current.temperature + ', ' + (w.current.condition_hindi || w.current.condition_english || ''))
         const rain = parseInt(w.forecast?.[0]?.rain_chance || '0')
         if (rain >= 60) parts.push('\uD83C\uDF27\uFE0F Baarish ' + rain + '% — chhata le jana')
       }
