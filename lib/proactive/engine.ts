@@ -552,6 +552,13 @@ async function runChecks(city: string, chatId: string) {
     markSent(focusAlert.id)
   }
 
+  // Weekly report — Sunday only
+  const weeklyRep = await buildWeeklyReport()
+  if (weeklyRep && !wasRecentlySent(weeklyRep.id)) {
+    await sendAlert(weeklyRep)
+    markSent(weeklyRep.id)
+  }
+
   // Battery check
   const battAlert = await checkBattery()
   if (battAlert && !wasRecentlySent(battAlert.id)) {
@@ -612,6 +619,85 @@ function getUpcomingFestival(): ProactiveAlert | null {
     }
   }
   return null
+}
+
+
+// ════════════════════════════════════════════════════════
+// WEEKLY REPORT — Har Sunday ek summary push
+// Pure IndexedDB data — zero API cost
+// ════════════════════════════════════════════════════════
+async function buildWeeklyReport(): Promise<ProactiveAlert | null> {
+  const today = new Date()
+  if (today.getDay() !== 0) return null  // Sunday only
+  const reportKey = 'weekly_report_' + today.toDateString()
+  if (wasRecentlySent(reportKey)) return null
+
+  try {
+    // Read all chats from IndexedDB
+    const allData: any[] = await new Promise(resolve => {
+      try {
+        const req = indexedDB.open('jarvis_v10', 1)
+        req.onsuccess = () => {
+          const db = req.result
+          if (!db.objectStoreNames.contains('chats')) { resolve([]); return }
+          const allReq = db.transaction('chats','readonly').objectStore('chats').getAll()
+          allReq.onsuccess = () => resolve(allReq.result || [])
+          allReq.onerror = () => resolve([])
+        }
+        req.onerror = () => resolve([])
+      } catch { resolve([]) }
+    })
+
+    // Last 7 days
+    const weekAgo = Date.now() - 7 * 86400000
+    let totalMsgs = 0
+    let userMsgs = 0
+    const topicCount: Record<string,number> = {}
+
+    allData.forEach((chat: any) => {
+      if (!chat.id?.startsWith('chat_')) return
+      const msgs: any[] = chat.data || []
+      msgs.forEach((m: any) => {
+        const ts = m.timestamp || m.ts || 0
+        if (ts < weekAgo) return
+        totalMsgs++
+        if (m.role === 'user') {
+          userMsgs++
+          const text = (m.content || '').toLowerCase()
+          if (text.match(/code|bug|function|react/)) topicCount['coding'] = (topicCount['coding']||0)+1
+          if (text.match(/study|padhai|exam|mcq/))   topicCount['study'] = (topicCount['study']||0)+1
+          if (text.match(/weather|mausam/))           topicCount['weather'] = (topicCount['weather']||0)+1
+          if (text.match(/image|banao|generate/))     topicCount['images'] = (topicCount['images']||0)+1
+          if (text.match(/remind|alarm|set/))         topicCount['reminders'] = (topicCount['reminders']||0)+1
+        }
+      })
+    })
+
+    if (userMsgs < 3) return null
+
+    const topTopics = Object.entries(topicCount)
+      .sort((a,b) => b[1]-a[1])
+      .slice(0,3)
+      .map(([t]) => t)
+      .join(', ')
+
+    const remCount = (() => {
+      try {
+        const rems: any[] = JSON.parse(localStorage.getItem('jarvis_reminders_v2') || '[]')
+        return rems.filter((r: any) => r.createdAt > weekAgo).length
+      } catch { return 0 }
+    })()
+
+    const name = await getProfileName()
+    return {
+      id: reportKey,
+      type: 'summary',
+      title: '📊 ' + name + ' bhai — Weekly Report',
+      body: 'Is hafte: ' + userMsgs + ' messages · ' + remCount + ' reminders · Focus: ' + (topTopics || 'general') + '. Solid week!',
+      url: '/',
+      witty: true,
+    }
+  } catch { return null }
 }
 
 export function initProactiveEngine(city: string, chatId: string) {
