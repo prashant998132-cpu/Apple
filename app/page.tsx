@@ -15,6 +15,16 @@ import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
 import { parseReminder, addReminder, formatReminderTime } from '../lib/automation/reminders';
 import { isAgenticGoal, runAgentPlan, formatPlanAsMessage } from '../lib/core/agentRunner';
+import {
+  pickContacts, isContactPickerSupported,
+  makeCall, sendSMSIntent,
+  keepScreenOn, getSharedContent,
+  checkGeoFences, addGeoFence,
+  capturePhoto, pickFile,
+  nativeShare, startVoiceInput,
+  getNetworkInfo, readClipboard,
+  isNFCSupported, isBluetoothSupported,
+} from '../lib/client/androidBridge';
 import { detectMood, logMood, getDominantMood, getMoodPromptHint } from '../lib/core/moodTracker';
 import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
 
@@ -287,6 +297,25 @@ export default function ChatPage() {
     updateSituation()
     const sitTimer = setInterval(updateSituation, 5 * 60 * 1000);
     const cleanup = initProactiveEngine('', chatId.current)
+    // Check if opened via Web Share Target (another app shared to JARVIS)
+    const shared = getSharedContent()
+    if (shared && (shared.text || shared.url)) {
+      const sharedText = [shared.title, shared.text, shared.url].filter(Boolean).join(' ')
+      setTimeout(() => send(sharedText + ' -- yeh share kiya hai, analyze karo', 'auto'), 1500)
+    }
+    // Keep screen on when voice active
+    keepScreenOn().catch(() => {})
+    // Location-based reminder check
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const triggered = checkGeoFences(pos.coords.latitude, pos.coords.longitude)
+        triggered.forEach(fence => {
+          window.dispatchEvent(new CustomEvent('jarvis-alert', {
+            detail: { id: 'geo_' + fence.id, type: 'morning', title: '📍 ' + fence.label, body: fence.action }
+          }))
+        })
+      }, () => {})
+    }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(reg => {
         if ('sync' in reg) { (reg as any).sync.register('jarvis-queue').catch(() => {}) }
@@ -413,6 +442,36 @@ export default function ChatPage() {
     if (slash.startsWith('/img '))              { return send(slash.slice(5) + ' ka image banao', 'auto') }
     if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
     if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
+    // ── Android Bridge Slash Commands ────────────────────
+    if (slash === '/contacts') {
+      try {
+        if (!isContactPickerSupported()) { setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'Contact Picker is hamare browser mein support nahi karta.',timestamp:Date.now()}]); return }
+        const contacts = await pickContacts()
+        if (contacts.length > 0) {
+          const list = contacts.map(c => (c.name?.[0]||'Unknown') + (c.tel?.[0] ? ' (' + c.tel[0] + ')' : '')).join(', ')
+          return send('Mujhe ' + list + ' ke baare mein kuch batao — yeh mere contacts hain', 'auto')
+        }
+      } catch(e: any) { setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'Contacts: ' + e.message, timestamp:Date.now()}]) }
+      return
+    }
+    if (slash.startsWith('/call ')) {
+      const num = slash.slice(6).trim()
+      makeCall(num)
+      setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'📞 Calling ' + num + '...',timestamp:Date.now()}])
+      return
+    }
+    if (slash.startsWith('/sms ')) {
+      const parts = slash.slice(5).split('|')
+      sendSMSIntent(parts[0].trim(), parts[1]?.trim())
+      setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'💬 SMS app khul raha hai...',timestamp:Date.now()}])
+      return
+    }
+    if (slash === '/photo') {
+      capturePhoto().then(dataUrl => {
+        if (dataUrl) return send('Is photo mein kya hai? Describe karo', 'auto')
+      }).catch(() => {})
+      return
+    }
 
     // ── Agent Mode — complex multi-step goals ───────────────
     if (isAgenticGoal(text) && chatMode === 'auto') {
@@ -437,6 +496,16 @@ export default function ChatPage() {
         })
       }).finally(() => { setAgentRunning(false); setLoad(false) })
       return
+    }
+
+    // ── Android Bridge intents ───────────────────────────────────
+    const callMatch = text.match(/\b(?:call|phone|ring|call karo|phone karo)\s+([\d+\s\-]{7,15})/i)
+    if (callMatch) {
+      makeCall(callMatch[1])
+      const uMsg2 = { id:Date.now()+'_u', role:'user' as const, content:text, timestamp:Date.now() }
+      setMsgs(p=>[...p,uMsg2,{id:Date.now()+'_a',role:'assistant' as const,content:'📞 ' + callMatch[1] + ' pe call kar raha hoon...', timestamp:Date.now()}])
+      void save(chatId.current, [...msgs, uMsg2])
+      setLoad(false); return
     }
 
     // ── SMART REMINDER DETECTION ────────────────────────────────
@@ -838,7 +907,7 @@ export default function ChatPage() {
             {/* Slash command hint */}
             <div style={{ width:'100%', maxWidth:440, marginBottom:8, padding:'6px 12px', borderRadius:8, background:'rgba(0,229,255,.03)', border:'1px solid rgba(0,229,255,.06)', fontSize:10, color:'#2a5070', display:'flex', flexWrap:'wrap', gap:'4px 12px' }}>
               <span style={{ color:'#4a90b8', fontWeight:600 }}>Shortcuts:</span>
-              {['/w weather','/n news','/img image','/think reason','/clear reset'].map(s=>(
+              {['/w weather','/n news','/img image','/think reason','/contacts', '/photo','/clear reset'].map(s=>(
                 <span key={s} style={{ cursor:'pointer', color:'#3a7090' }} onClick={() => send(s.split(' ')[0], 'auto')}>{s}</span>
               ))}
             </div>
