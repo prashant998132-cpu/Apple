@@ -14,6 +14,9 @@ import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
 import { parseReminder, addReminder, getPendingReminders, formatReminderTime } from '../lib/automation/reminders';
+import { isAgenticGoal, runAgentPlan, formatPlanAsMessage } from '../lib/core/agentRunner';
+import { detectMood, logMood, getDominantMood, getMoodPromptHint } from '../lib/core/moodTracker';
+import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
@@ -178,6 +181,25 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{id:string,preview:string,chatId:string}[]>([]);
 
+  // Agent Mode
+  const [_agentPlan, setAgentPlan]   = useState<any>(null);
+  const [agentRunning, setAgentRunning] = useState(false); // used in InputBar disabled
+  // Focus mode
+  const [focusBanner, setFocusBanner] = useState<{task:string;durationMin:number;startTime:number}|null>(null);
+  // Reactions handler
+  const handleReact = (msgId: string, emoji: string) => {
+    setMsgs(prev => {
+      const updated = prev.map(m => {
+        if (m.id !== msgId) return m
+        const reactions = { ...(m.reactions || {}) }
+        reactions[emoji] = (reactions[emoji] || 0) + 1
+        return { ...m, reactions }
+      })
+      void save(chatId.current, updated)
+      return updated
+    })
+  }
+
   const chatId = useRef('chat_'+new Date().toDateString().replace(/ /g,'_'));
   const bot    = useRef<HTMLDivElement>(null);
 
@@ -265,6 +287,11 @@ export default function ChatPage() {
     updateSituation()
     const sitTimer = setInterval(updateSituation, 5 * 60 * 1000);
     const cleanup = initProactiveEngine('', chatId.current)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        if ('sync' in reg) { (reg as any).sync.register('jarvis-queue').catch(() => {}) }
+      }).catch(() => {})
+    }
     setupWakeLockPersist()
     requestWakeLock()
     const onAlert = (e: any) => setToast({ msg: e.detail?.body || e.detail?.title, type: 'info' })
@@ -387,6 +414,31 @@ export default function ChatPage() {
     if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
     if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
 
+    // ── Agent Mode — complex multi-step goals ───────────────
+    if (isAgenticGoal(text) && chatMode === 'auto') {
+      const agentMsgId = Date.now().toString()+'_a'
+      const agentUMsg = { id: Date.now().toString()+'_u', role:'user' as const, content: text, timestamp: Date.now() }
+      const agentAMsg = { id: agentMsgId, role:'assistant' as const, content: '🤖 Agent mode — goal analyze kar raha hoon...', timestamp: Date.now() }
+      setMsgs(p => [...p, agentUMsg, agentAMsg])
+      void save(chatId.current, [...msgs, agentUMsg, agentAMsg])
+      setAgentRunning(true)
+      runAgentPlan(text, { chatId: chatId.current, userName: userName || 'Boss' }, (plan) => {
+        setAgentPlan({...plan})
+        const formatted = formatPlanAsMessage(plan)
+        setMsgs(p => p.map(m => m.id === agentMsgId ? { ...m, content: formatted } : m))
+        plan.steps.forEach((step: any) => {
+          if (step.result?.startsWith('FOCUS_START:')) {
+            const parts = step.result.split(':')
+            const dur = parseInt(parts[1]) || 25
+            const task = parts[2] || text
+            startFocusMode(task, dur)
+            setFocusBanner({ task, durationMin: dur, startTime: Date.now() })
+          }
+        })
+      }).finally(() => { setAgentRunning(false); setLoad(false) })
+      return
+    }
+
     // ── SMART REMINDER DETECTION ────────────────────────────────
     const reminderParsed = parseReminder(text)
     if (reminderParsed) {
@@ -437,6 +489,8 @@ export default function ChatPage() {
       }).catch(()=>{});
     }
 
+    const moodEntry = detectMood(text)
+    if (moodEntry) logMood(moodEntry)
     const url = extractURL(text)
     const uMsg = {
       id: Date.now().toString(), role:'user' as const,
@@ -452,8 +506,11 @@ export default function ChatPage() {
       const isNight = situation === 'night'
       const uName = userName || 'Boss'
       const baseMemory = await buildMemoryPrompt(cur.slice(-5))
+      const dominantMood = getDominantMood(6)
+      const moodHint = getMoodPromptHint(dominantMood)
       const memPrompt = baseMemory +
         (studyMode ? '\n\nSTUDY MODE: MCQ, flashcards, simple mein samjhao.' : '') +
+        (moodHint ? '\n' + moodHint : '') +
         '\nPersonality: ' + timeCtx + ' tone. ' + (isNight ? 'Night mode — concise replies. ' : '') +
         'Kabhi kabhi "' + uName + '" naam se bulao. Dry wit occasionally.'
 
@@ -564,6 +621,12 @@ export default function ChatPage() {
       const fin  = [...cur, aMsg]; setMsgs(fin); void save(chatId.current, fin)
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
+      const importantHint = extractImportantInfo(text)
+      if (importantHint) {
+        setTimeout(() => {
+          setMsgs(p => [...p, { id: Date.now().toString()+'_hint', role:'assistant' as const, content: '💡 ' + importantHint, timestamp: Date.now() }])
+        }, 800)
+      }
       // Auto TTS — speak reply if voice mode ON
       if (autoTTS && situation !== 'night') speakReply(d.reply || '')
     } catch(e) {
@@ -685,6 +748,11 @@ export default function ChatPage() {
               )}
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
 
+          {/* Search button */}
+          <button onClick={() => setShowSearch(p=>!p)} title="Search chats"
+            style={{ width:26, height:26, borderRadius:7, background: showSearch ? 'rgba(0,229,255,.15)' : 'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color: showSearch ? '#00e5ff' : '#90b4c8' }}>
+            🔍
+          </button>
           {/* Theme picker */}
           <div style={{ position:'relative' }}>
             <button onClick={() => setShowTheme(p=>!p)}
@@ -732,6 +800,21 @@ export default function ChatPage() {
           )}
         </div>
       </header>
+
+      {/* Focus Mode Banner */}
+      {focusBanner && (
+        <div style={{ background:'linear-gradient(90deg,rgba(0,229,255,.1),rgba(109,40,217,.1))', borderBottom:'1px solid rgba(0,229,255,.15)', padding:'6px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11 }}>
+          <span style={{ color:'#00e5ff' }}>🎯 Focus: {focusBanner.task.slice(0,40)} — {focusBanner.durationMin} min</span>
+          <button onClick={() => setFocusBanner(null)} style={{ background:'none', border:'none', color:'#5a7a8a', cursor:'pointer', fontSize:11 }}>✕</button>
+        </div>
+      )}
+      {/* Agent Running indicator */}
+      {agentRunning && (
+        <div style={{ background:'rgba(109,40,217,.1)', borderBottom:'1px solid rgba(109,40,217,.2)', padding:'4px 16px', fontSize:10, color:'#b39ddb', display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ width:6, height:6, borderRadius:'50%', background:'#b39ddb', display:'inline-block', animation:'pulse 1s infinite' }}/>
+          JARVIS Agent Mode running...
+        </div>
+      )}
 
       {/* Messages */}
       <main style={{ flex:1, overflowY:'auto', position:'relative', zIndex:1 }}>
@@ -796,7 +879,7 @@ export default function ChatPage() {
         ) : (
           msgs.map((m, i) => (
             <div key={m.id} className="msg-enter">
-              <MessageRow msg={m}/>
+              <MessageRow msg={m} onReact={handleReact}/>
               {m.status && <div style={{ fontSize:11, color:'#4a90a4', padding:'4px 14px', fontStyle:'italic' }}>{m.status}</div>}
               {i === msgs.length-1 && m.role === 'assistant' && !loading && (
                 <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:4, paddingLeft:10 }}>
