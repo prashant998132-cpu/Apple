@@ -292,6 +292,23 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
     } catch(e: any) { errors.push('Cascade: ' + e.message) }
   }
 
+  // ── SELF-CORRECTION LOOP — complex queries pe verify ─────
+  // Math/code/factual mein AI kabhi kabhi galat hota hai
+  // Ek quick verify pass — zero extra latency for simple queries
+  if (reply && queryMeta.type === 'math' && queryMeta.complexity === 'complex' && groqKey && !isNearLimit('groq')) {
+    try {
+      const verifyPrompt = 'You are a math verifier. Check this answer is correct:\nQuestion: ' + input.message + '\nAnswer: ' + reply.slice(0, 500) + '\n\nIf correct, reply ONLY "OK". If wrong, reply the corrected answer only. Be concise.'
+      const verifyMsgs = [{ role: 'user' as const, content: verifyPrompt }]
+      const vr = await askGroq(verifyMsgs, 'You are a math checker. Reply OK or give corrected answer.', 'llama-3.1-8b-instant')
+      trackCall('groq')
+      const vText = vr.text.trim()
+      if (!vText.startsWith('OK') && !vText.startsWith('ok') && vText.length > 3 && vText.length < reply.length * 2) {
+        reply = vText
+        provider = provider + ' [verified]'
+      }
+    } catch {}
+  }
+
   if (!reply) {
     // NOTE: Puter.js emergency fallback is client-side only
     // Frontend (app/page.tsx) handles this via window.puter
