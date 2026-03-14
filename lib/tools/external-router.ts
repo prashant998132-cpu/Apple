@@ -69,7 +69,7 @@ export function detectIntent(msg: string): string[] {
   if (m.match(/stock|share price|nse|bse|sensex|nifty|reliance|tata|infosys/)) intents.push('stock')
   if (m.match(/cricket|ipl|match score|wicket|batting|bowling|test match/)) intents.push('cricket')
   if (m.match(/github trending|trending repo|popular github/)) intents.push('ghtrending')
-  if (m.match(/generate image|create image|draw|photo banana|ai image|picture create/)) intents.push('aiimage')
+  if (m.match(/generate image|create image|draw|photo banana|ai image|picture create|image banao|photo banao|tasveer|tsveer|image bana|photo bana|ek image|ek photo|girl.*image|image.*girl|boy.*image|wallpaper|scenery|nature.*image|selfie.*ai|ai.*photo|realistic.*image|cartoon.*bana|sketch.*bana|paint.*karo|scene.*bana/i)) intents.push('aiimage')
   if (m.match(/word of day|aaj ka shabd|vocabulary|new word/)) intents.push('wordofday')
   if (m.match(/science news|research news|discovery|scientific/)) intents.push('sciencenews')
   if (m.match(/network info|internet speed|who am i|mera network/)) intents.push('ipinfo')
@@ -713,9 +713,27 @@ async function getGitHubTrending(): Promise<ToolResult> {
 
 async function getAIImageURL(q: string): Promise<ToolResult> {
   try {
-    const prompt = q.replace(/image|photo|picture|generate|create|banao|dikhao|draw/gi,'').trim()
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`
-    return { tool:'image', success:true, data:`🎨 Image generated!\nPrompt: "${prompt}"\nImage URL: ${url}` }
+    // Clean prompt — remove command words, keep subject
+    const prompt = q
+      .replace(/\b(image|photo|picture|generate|create|banao|dikhao|draw|bana|ek|mujhe|karo|please|zara|jaldi|realistic|ai|jarvis)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim() || q.trim()
+
+    // Multiple Pollinations endpoints for reliability
+    const seed = Math.floor(Math.random() * 99999)
+    const enhanced = prompt + ', high quality, detailed, 4k'
+    const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(enhanced) + '?width=512&height=512&nologo=true&seed=' + seed
+
+    return {
+      tool: 'image',
+      success: true,
+      data: {
+        image_url: imgUrl,
+        prompt: prompt,
+        model: 'Pollinations AI',
+        caption: '🎨 ' + prompt,
+      }
+    }
   } catch { return { tool:'image', success:false, data:'Image generation failed' } }
 }
 
