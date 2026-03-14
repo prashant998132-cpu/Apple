@@ -56,7 +56,7 @@ function detectTone(text: string): 'casual' | 'formal' | 'emotional' | 'technica
 
 // ─── Special Detections ───────────────────────────────────
 function needsImage(text: string): boolean {
-  return /image|तस्वीर|photo|फोटो|generate|बनाओ picture|draw|art|design|create.*image|visual/i.test(text);
+  return /image banao|photo banao|tasveer|image bana|photo bana|girl.*image|image.*girl|scenery|wallpaper|image|तस्वीर|photo|फोटो|generate|बनाओ picture|draw|art|design|create.*image|visual|picture|sketch/i.test(text);
 }
 
 function needsVideo(text: string): boolean {
