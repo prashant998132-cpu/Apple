@@ -1,7 +1,7 @@
 // JARVIS Service Worker v3 — Bandwidth Optimized
 // Strategy: Cache static assets aggressively, never cache API/media
 
-const CACHE = 'jarvis-v3';
+const CACHE = 'jarvis-v4';
 const STATIC = [
   '/',
   '/offline.html',
@@ -90,3 +90,74 @@ self.addEventListener('notificationclick', e => {
     })
   );
 });
+
+// ════════════════════════════════════════════════════════
+// OFFLINE QUEUE — net nahi toh queue, aane pe auto-send
+// ════════════════════════════════════════════════════════
+const QUEUE_DB = 'jarvis_offline_queue'
+const QUEUE_STORE = 'pending'
+
+function openQueueDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(QUEUE_DB, 1)
+    req.onupgradeneeded = () => req.result.createObjectStore(QUEUE_STORE, { keyPath: 'id' })
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+// When fetch fails for API — queue it
+self.addEventListener('fetch', e => {
+  if (!e.request.url.includes('/api/jarvis')) return
+  if (e.request.method !== 'POST') return
+
+  e.waitUntil(
+    e.request.clone().text().then(async body => {
+      try {
+        const resp = await fetch(e.request.clone())
+        return resp
+      } catch {
+        // Offline — queue the request
+        const db = await openQueueDB()
+        const tx = db.transaction(QUEUE_STORE, 'readwrite')
+        tx.objectStore(QUEUE_STORE).put({
+          id: Date.now().toString(),
+          url: e.request.url,
+          body,
+          timestamp: Date.now(),
+        })
+        // Notify user
+        self.registration.showNotification('JARVIS — Offline', {
+          body: 'Message queued — net aane pe automatically send ho jaayega.',
+          icon: '/icons/icon-192x192.png',
+        })
+      }
+    }).catch(() => {})
+  )
+})
+
+// Background sync — process queue when back online
+self.addEventListener('sync', e => {
+  if (e.tag !== 'jarvis-queue') return
+  e.waitUntil(
+    openQueueDB().then(async (db) => {
+      const tx = (db as IDBDatabase).transaction(QUEUE_STORE, 'readwrite')
+      const store = tx.objectStore(QUEUE_STORE)
+      const all = await new Promise<any[]>(res => {
+        const req = store.getAll()
+        req.onsuccess = () => res(req.result)
+        req.onerror = () => res([])
+      })
+      for (const item of all) {
+        try {
+          await fetch(item.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: item.body,
+          })
+          store.delete(item.id)
+        } catch {}
+      }
+    }).catch(() => {})
+  )
+})
