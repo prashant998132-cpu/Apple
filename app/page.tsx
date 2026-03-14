@@ -652,23 +652,18 @@ export default function ChatPage() {
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
 
-      // If image was requested but no richData — try Puter.js client-side
-      const isImgQuery = /image banao|photo banao|tasveer|image bana|photo bana|girl.*image|image.*girl|scenery|wallpaper|draw|generate.*image/i.test(text)
+      // Image generation — Pollinations FREE (no credits, unlimited)
+      const isImgQuery = /image banao|photo banao|tasveer|image bana|photo bana|girl|boy.*image|scenery|wallpaper|draw|generate.*image|ek.*image|photo bana/i.test(text)
       if (isImgQuery && !d.richData) {
-        const cleanPrompt = text.replace(/\b(image|photo|banao|bana|ek|mujhe|karo|generate|create|draw|jarvis|please)\b/gi,'').trim() || text
-        const puterImgUrl = await generateImagePuter(cleanPrompt).catch(() => null)
-        if (puterImgUrl) {
-          const puterMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Puter AI se bani image — "' + cleanPrompt.slice(0,40) + '"', timestamp: Date.now(), richData: { type:'image', data:{ image_url: puterImgUrl, prompt: cleanPrompt, model:'Puter.js AI' } } }
-          setMsgs(p => [...p, puterMsg])
-          void save(chatId.current, [...fin, puterMsg])
-        } else {
-          // Final fallback: Pollinations URL directly
-          const seed = Math.floor(Math.random()*99999)
-          const polUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanPrompt + ', high quality') + '?width=512&height=512&nologo=true&seed=' + seed
-          const polMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Image ready!', timestamp: Date.now(), richData: { type:'image', data:{ image_url: polUrl, prompt: cleanPrompt, model:'Pollinations AI' } } }
-          setMsgs(p => [...p, polMsg])
-          void save(chatId.current, [...fin, polMsg])
-        }
+        const cleanPrompt = text.replace(/\b(image|photo|banao|bana|ek|mujhe|karo|generate|create|draw|jarvis|please|tasveer|ki|ka|ke|aur|ek)\b/gi,' ').replace(/\s+/g,' ').trim() || text
+        const seed = Math.floor(Math.random()*999999)
+        // Use flux-realism for realistic, flux-anime for anime/cartoon
+        const isAnime = /anime|cartoon|sketch|chibi|manga/i.test(text)
+        const model = isAnime ? 'flux-anime' : 'flux-realism'
+        const polUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanPrompt + ', high quality, 4k, detailed') + '?width=768&height=768&nologo=true&seed=' + seed + '&model=' + model
+        const imgMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Image generating... (' + model + ')', timestamp: Date.now(), richData: { type:'image', data:{ image_url: polUrl, prompt: cleanPrompt, model: 'Pollinations ' + model } } }
+        setMsgs(p => [...p, imgMsg])
+        void save(chatId.current, [...fin, imgMsg])
       }
       const importantHint = extractImportantInfo(text)
       if (importantHint) {
