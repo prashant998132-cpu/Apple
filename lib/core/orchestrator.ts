@@ -200,7 +200,11 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
           injectedToolResults = toolResults.map(t => t.tool.toUpperCase() + ':\n' + t.data).join('\n\n')
           toolsUsed = toolResults.map(t => t.tool)
           const firstResult = toolResults[0]
-          if (firstResult.tool.includes('weather') || firstResult.tool.includes('forecast'))
+          if (firstResult.tool === 'image' && firstResult.data && typeof firstResult.data === 'object') {
+            richData = { type: 'image', data: firstResult.data }
+            // For image, also set reply so AI doesn't ignore it
+            if (!reply) reply = '🎨 Image ready! Dekho neeche — prompt: "' + (firstResult.data as any).prompt + '"'
+          } else if (firstResult.tool.includes('weather') || firstResult.tool.includes('forecast'))
             richData = { type: 'weather', data: firstResult.data }
           else if (firstResult.tool.includes('news'))
             richData = { type: 'news', data: firstResult.data }
@@ -231,6 +235,11 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
           model = 'direct'; provider = 'Direct Tool (no LLM)'; apiCallsMade++
         }
       } catch {}
+    }
+
+    // If image already generated — skip LLM
+    if (richData?.type === 'image') {
+      if (!reply) reply = '🎨 Yeh rahi image! Prompt: "' + richData.data?.prompt + '"'
     }
 
     // Groq — with tool results already injected into prompt
@@ -290,6 +299,23 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
       reply = ex.answer || r.text
       model = r.model; provider = r.provider; apiCallsMade++
     } catch(e: any) { errors.push('Cascade: ' + e.message) }
+  }
+
+  // ── SELF-CORRECTION LOOP — complex queries pe verify ─────
+  // Math/code/factual mein AI kabhi kabhi galat hota hai
+  // Ek quick verify pass — zero extra latency for simple queries
+  if (reply && queryMeta.type === 'math' && queryMeta.complexity === 'complex' && groqKey && !isNearLimit('groq')) {
+    try {
+      const verifyPrompt = 'You are a math verifier. Check this answer is correct:\nQuestion: ' + input.message + '\nAnswer: ' + reply.slice(0, 500) + '\n\nIf correct, reply ONLY "OK". If wrong, reply the corrected answer only. Be concise.'
+      const verifyMsgs = [{ role: 'user' as const, content: verifyPrompt }]
+      const vr = await askGroq(verifyMsgs, 'You are a math checker. Reply OK or give corrected answer.', 'llama-3.1-8b-instant')
+      trackCall('groq')
+      const vText = vr.text.trim()
+      if (!vText.startsWith('OK') && !vText.startsWith('ok') && vText.length > 3 && vText.length < reply.length * 2) {
+        reply = vText
+        provider = provider + ' [verified]'
+      }
+    } catch {}
   }
 
   if (!reply) {
