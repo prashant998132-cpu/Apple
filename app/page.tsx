@@ -13,7 +13,7 @@ import { getDeviceContext, deviceContextToPrompt, vibrate } from '../lib/core/de
 import { trackCall, resetDailyUsage } from '../lib/core/usageTracker';
 import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
-import { parseReminder, addReminder, getPendingReminders, formatReminderTime } from '../lib/automation/reminders';
+import { parseReminder, addReminder, formatReminderTime } from '../lib/automation/reminders';
 import { isAgenticGoal, runAgentPlan, formatPlanAsMessage } from '../lib/core/agentRunner';
 import { detectMood, logMood, getDominantMood, getMoodPromptHint } from '../lib/core/moodTracker';
 import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
@@ -384,48 +384,18 @@ export default function ChatPage() {
     bot.current?.scrollIntoView({ behavior: msgs.length > 4 ? 'smooth' : 'instant' });
   }, [msgs, loading]);
 
-  // ── Puter.js Image Generation — client-side unlimited free ──
-  const generateImagePuter = async (prompt: string): Promise<string | null> => {
-    try {
-      if (typeof window === 'undefined') return null
-      // Load Puter.js dynamically if not loaded
-      if (!(window as any).puter) {
-        await new Promise<void>((resolve, reject) => {
-          const s = document.createElement('script')
-          s.src = 'https://js.puter.com/v2/'
-          s.onload = () => resolve()
-          s.onerror = () => reject()
-          document.head.appendChild(s)
-        })
-      }
-      const puter = (window as any).puter
-      if (!puter?.ai?.txt2img) return null
-      const img = await puter.ai.txt2img(prompt)
-      // Returns blob or URL
-      if (img instanceof Blob) return URL.createObjectURL(img)
-      if (typeof img === 'string') return img
-      if (img?.src) return img.src
-      return null
-    } catch { return null }
-  }
-
-  // ── Auto TTS — Puter OpenAI TTS (quality) → Web Speech fallback ──
-  const speakReply = async (text: string) => {
+  // ── Auto TTS — Web Speech API (FREE, zero credits) ──────────
+  const speakReply = (text: string) => {
     if (!autoTTS || situation === 'night') return
+    if (!('speechSynthesis' in window)) return
     const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:[^\s]+/g, '').slice(0, 300)
-    try {
-      const audio = await puterTTS(clean)
-      if (audio) { audio.play(); return }
-    } catch {}
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-      const utt = new SpeechSynthesisUtterance(clean)
-      utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
-      const voices = window.speechSynthesis.getVoices()
-      const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
-      if (hindiVoice) utt.voice = hindiVoice
-      window.speechSynthesis.speak(utt)
-    }
+    window.speechSynthesis.cancel()
+    const utt = new SpeechSynthesisUtterance(clean)
+    utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
+    const voices = window.speechSynthesis.getVoices()
+    const hindiVoice = voices.find(v => v.lang.startsWith('hi'))
+    if (hindiVoice) utt.voice = hindiVoice
+    window.speechSynthesis.speak(utt)
   }
 
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
@@ -652,23 +622,18 @@ export default function ChatPage() {
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
 
-      // If image was requested but no richData — try Puter.js client-side
-      const isImgQuery = /image banao|photo banao|tasveer|image bana|photo bana|girl.*image|image.*girl|scenery|wallpaper|draw|generate.*image/i.test(text)
+      // Image generation — Pollinations FREE (no credits, unlimited)
+      const isImgQuery = /image banao|photo banao|tasveer|image bana|photo bana|girl|boy.*image|scenery|wallpaper|draw|generate.*image|ek.*image|photo bana/i.test(text)
       if (isImgQuery && !d.richData) {
-        const cleanPrompt = text.replace(/\b(image|photo|banao|bana|ek|mujhe|karo|generate|create|draw|jarvis|please)\b/gi,'').trim() || text
-        const puterImgUrl = await generateImagePuter(cleanPrompt).catch(() => null)
-        if (puterImgUrl) {
-          const puterMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Puter AI se bani image — "' + cleanPrompt.slice(0,40) + '"', timestamp: Date.now(), richData: { type:'image', data:{ image_url: puterImgUrl, prompt: cleanPrompt, model:'Puter.js AI' } } }
-          setMsgs(p => [...p, puterMsg])
-          void save(chatId.current, [...fin, puterMsg])
-        } else {
-          // Final fallback: Pollinations URL directly
-          const seed = Math.floor(Math.random()*99999)
-          const polUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanPrompt + ', high quality') + '?width=512&height=512&nologo=true&seed=' + seed
-          const polMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Image ready!', timestamp: Date.now(), richData: { type:'image', data:{ image_url: polUrl, prompt: cleanPrompt, model:'Pollinations AI' } } }
-          setMsgs(p => [...p, polMsg])
-          void save(chatId.current, [...fin, polMsg])
-        }
+        const cleanPrompt = text.replace(/\b(image|photo|banao|bana|ek|mujhe|karo|generate|create|draw|jarvis|please|tasveer|ki|ka|ke|aur|ek)\b/gi,' ').replace(/\s+/g,' ').trim() || text
+        const seed = Math.floor(Math.random()*999999)
+        // Use flux-realism for realistic, flux-anime for anime/cartoon
+        const isAnime = /anime|cartoon|sketch|chibi|manga/i.test(text)
+        const model = isAnime ? 'flux-anime' : 'flux-realism'
+        const polUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanPrompt + ', high quality, 4k, detailed') + '?width=768&height=768&nologo=true&seed=' + seed + '&model=' + model
+        const imgMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Image generating... (' + model + ')', timestamp: Date.now(), richData: { type:'image', data:{ image_url: polUrl, prompt: cleanPrompt, model: 'Pollinations ' + model } } }
+        setMsgs(p => [...p, imgMsg])
+        void save(chatId.current, [...fin, imgMsg])
       }
       const importantHint = extractImportantInfo(text)
       if (importantHint) {
