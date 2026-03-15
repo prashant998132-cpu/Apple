@@ -243,7 +243,7 @@ export async function askPollinations(messages: any[], systemPrompt: string): Pr
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'openai', messages: allMsgs, max_tokens: 500,
+      model: 'openai-large', messages: allMsgs, max_tokens: 800,
       seed: Math.floor(Math.random() * 9999)
     }),
     signal: AbortSignal.timeout(25000)
@@ -253,6 +253,23 @@ export async function askPollinations(messages: any[], systemPrompt: string): Pr
   const text = d.choices?.[0]?.message?.content || ''
   if (!text) throw new Error('empty')
   return { text, provider: 'Pollinations AI (free)', model: 'openai', ms: Date.now() - start }
+}
+
+// ── Pollinations Alt models (mistral, llama, etc) ────────
+export async function askPollinationsAlt(messages: any[], systemPrompt: string, model = 'mistral'): Promise<LLMResult> {
+  const start = Date.now()
+  const allMsgs = [{ role: 'system', content: systemPrompt }, ...messages]
+  const res = await fetch('https://text.pollinations.ai/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, messages: allMsgs, max_tokens: 600 }),
+    signal: AbortSignal.timeout(20000)
+  })
+  if (!res.ok) throw new Error('pol_alt_fail')
+  const d = await res.json()
+  const text = d.choices?.[0]?.message?.content || ''
+  if (!text) throw new Error('empty')
+  return { text, provider: 'Pollinations (' + model + ')', model, ms: Date.now() - start }
 }
 
 export async function askLLM(
@@ -277,7 +294,8 @@ export async function askLLM(
   // Provider cascade — ordered by quality for each query type
   const cascades: Record<QueryType, Fn[]> = {
     simple: [
-      () => askGroq(messages, systemPrompt, 'llama-3.1-8b-instant'),   // fastest
+      () => askGroq(messages, systemPrompt, 'llama-3.1-8b-instant'),
+      () => askGroq(messages, systemPrompt, 'gemma2-9b-it'),
       () => askGemini(messages, systemPrompt),
       () => askMistral(messages, systemPrompt),
       () => askOpenRouter(messages, systemPrompt),
@@ -323,8 +341,13 @@ export async function askLLM(
     ],
   }
 
-  // Add Pollinations as universal last resort (no key needed)
-  const allProviders = [...cascades[queryType], () => askPollinations(messages, systemPrompt)]
+  // Add Pollinations models as universal fallbacks (no key needed)
+  const allProviders = [
+    ...cascades[queryType],
+    () => askPollinations(messages, systemPrompt),
+    () => askPollinationsAlt(messages, systemPrompt, 'mistral'),
+    () => askPollinationsAlt(messages, systemPrompt, 'llama'),
+  ]
 
   // Smart skip: providers near 85% daily limit go to back of queue
   const providerNames = ['gemini','groq','deepseek','mistral','grok','openrouter','together','cohere','aimlapi']
