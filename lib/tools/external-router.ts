@@ -5,7 +5,7 @@ import { isMediaSafe, buildImageCDNUrl } from '../core/mediaGuard';
 
 export interface ToolResult {
   tool: string
-  data: string
+  data: string | Record<string, any>
   success: boolean
 }
 
