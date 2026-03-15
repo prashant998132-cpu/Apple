@@ -26,11 +26,13 @@ import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
 
 const STARTERS = [
   { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
-  { icon:'📚', t:'Mujhe aaj ke liye koi interesting cheez batao' },
-  { icon:'🖼️', t:'Ek realistic jungle image banao' },
-  { icon:'🚂', t:'Nearest station se Delhi train kab hai?' },
-  { icon:'🧠', t:'Ek concept samjhao — simple language mein' },
-  { icon:'🎯', t:'Mera weekly goal set karo aur track karo' },
+  { icon:'🖼️', t:'Ek beautiful realistic girl ki image banao' },
+  { icon:'🧠', t:'Mera NEET/exam schedule banao' },
+  { icon:'📱', t:'WiFi band karo' },
+  { icon:'🎯', t:'Mera aaj ka plan banao — productive day' },
+  { icon:'🔍', t:'Aaj ki top India news kya hai?' },
+  { icon:'💡', t:'Koi interesting science fact batao' },
+  { icon:'🎵', t:'Gaana chala do' },
 ];
 
 const STUDY_PROMPTS = [
@@ -903,7 +905,7 @@ export default function ChatPage() {
             {/* Slash command hint */}
             <div style={{ width:'100%', maxWidth:440, marginBottom:8, padding:'6px 12px', borderRadius:8, background:'rgba(0,229,255,.03)', border:'1px solid rgba(0,229,255,.06)', fontSize:10, color:'#2a5070', display:'flex', flexWrap:'wrap', gap:'4px 12px' }}>
               <span style={{ color:'#4a90b8', fontWeight:600 }}>Shortcuts:</span>
-              {['/w weather','/n news','/img image','/think reason','/contacts', '/photo','/clear reset'].map(s=>(
+              {['/w weather','/n news','/img image','/think reason','/contacts','/photo','/call number','/clear reset'].map(s=>(
                 <span key={s} style={{ cursor:'pointer', color:'#3a7090' }} onClick={() => send(s.split(' ')[0], 'auto')}>{s}</span>
               ))}
             </div>
