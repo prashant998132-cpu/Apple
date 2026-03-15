@@ -1,4 +1,4 @@
-// lib/core/orchestrator.ts — v9.4 FIXED
+// lib/core/orchestrator.ts — v10.31 MAXIMUM POWER
 // Properly uses brain/gemini.ts (46 tools) + brain/groq.ts + llm.ts cascade
 // Mobile Chrome compatible — no browser APIs
 
@@ -158,7 +158,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
     // Think fallback: DeepSeek direct
     if (!reply) {
       try {
-        const r = await askDeepSeek(simpleMsgs, simplePrompt + '\nThink step by step.')
+        const r = await askDeepSeek(simpleMsgs, simplePrompt + '\nThink step by step. Use <think> tags for reasoning.')
         const ex = extractThinking(r.text)
         thinking = ex.thinking
         reply = ex.answer || r.text
