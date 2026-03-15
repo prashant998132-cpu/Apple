@@ -12,8 +12,6 @@ import { cacheGet, cacheSet, TTL } from './responseCache'
 import { trackCall, isNearLimit } from './usageTracker'
 import { pickModelTier, getModelForTier } from './agentDispatcher'
 import { classifyQuery, buildDynamicPrompt } from '../brain/queryClassifier'
-import { smartRoute } from '../core/smartRouter'
-import { planTask } from '../agents/planner'
 
 export interface OrchestratorInput {
   message: string
@@ -27,8 +25,6 @@ export interface OrchestratorInput {
   forcedProvider?: string
   memoryPrompt?: string
   userName?: string
-  fileData?: any       // base64 image/PDF for vision analysis
-  url?: string         // URL to fetch + analyze
 }
 
 export interface OrchestratorOutput {
@@ -95,34 +91,6 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   let reply = ''
 
   const chatMode = input.chatMode || 'auto'
-
-  // ── PLANNER + SMART ROUTE CHECK ─────────────────────────
-  if (chatMode === 'auto') {
-    try {
-      // Plan the task first — understand intent deeply
-      const plan = planTask(input.message)
-      // Single-step direct tools — no LLM needed
-      if (!plan.isMultiStep && plan.confidence > 0.7) {
-        const { smartRoute: smRoute } = await import('../core/smartRouter')
-        const routeDecision = smRoute(input.message)
-      if (routeDecision.skipLLM && routeDecision.directTool) {
-        // Direct tool — zero LLM cost
-        const { routeTools } = await import('../tools/external-router')
-        const toolResults = await routeTools(input.message)
-        if (toolResults.length > 0 && toolResults[0].success) {
-          const t = toolResults[0]
-          const richD = (typeof t.data === 'object') ? { type: t.tool, data: t.data } : null
-          return {
-            reply: typeof t.data === 'string' ? t.data : '✅ Done',
-            thinking: '', richData: richD, toolsUsed: [t.tool],
-            model: 'direct', provider: '⚡ Direct Tool (zero LLM)',
-            processingMs: Date.now() - start, safeMode: false,
-            errors: [], routeReason: 'smart_direct_' + t.tool, apiCallsMade: 0,
-          }
-        }
-      }
-    } catch {}
-  }
 
   // ── CACHE CHECK — skip all API calls if we have fresh response ──
   const cacheCategory = chatMode === 'flash' ? 'flash' : chatMode === 'auto' ? 'auto' : chatMode
@@ -215,7 +183,6 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   }
 
   // ── AUTO MODE — Smart routing ──────────────────────────────
-  // Use planner agent for complex multi-step queries
   let _routerCacheTTL = 0
   if (!reply && chatMode === 'auto') {
     const decision = route(input.message)
