@@ -15,7 +15,6 @@ import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
 import { parseReminder, addReminder, formatReminderTime } from '../lib/automation/reminders';
 import { isAgenticGoal, runAgentPlan, formatPlanAsMessage } from '../lib/core/agentRunner';
-import { generateSpeech } from '../lib/providers/tts';
 import {
   pickContacts, isContactPickerSupported,
   makeCall, sendSMSIntent,
@@ -413,21 +412,10 @@ export default function ChatPage() {
   }, [msgs, loading]);
 
   // ── Auto TTS — Web Speech API (FREE, zero credits) ──────────
-  const speakReply = async (text: string) => {
+  const speakReply = (text: string) => {
     if (!autoTTS || situation === 'night') return
-    const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:[^\s]+/g, '').slice(0, 300)
-    // Try Edge TTS (Microsoft Hindi — free, no key) → fallback to Web Speech
-    try {
-      const result = await generateSpeech({ text: clean, lang: 'hi', quality: 'fast' })
-      if (!result.useBrowser) {
-        if (result.audioUrl) { new Audio(result.audioUrl).play(); return }
-        if (result.audioBase64) {
-          new Audio('data:' + (result.mimeType||'audio/mpeg') + ';base64,' + result.audioBase64).play()
-          return
-        }
-      }
-    } catch {}
     if (!('speechSynthesis' in window)) return
+    const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:[^\s]+/g, '').slice(0, 300)
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(clean)
     utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
