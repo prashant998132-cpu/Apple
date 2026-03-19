@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import MessageRow from '../components/chat/MessageRow';
+import MessageRow from '../components/chat/MessageRow'
+import TypingIndicator from '../components/chat/TypingIndicator';
 import Sidebar from '../components/shared/Sidebar';
 import InputBar, { ChatMode } from '../components/chat/InputBar';
 import Toast from '../components/shared/Toast';
@@ -15,6 +16,7 @@ import { smartHistory } from '../lib/core/contextCompressor';
 import { detectPhoneIntent, triggerMacrodroid, ACTION_LABELS } from '../lib/automation/macrodroid';
 import { parseReminder, addReminder, formatReminderTime } from '../lib/automation/reminders';
 import { isAgenticGoal, runAgentPlan, formatPlanAsMessage } from '../lib/core/agentRunner';
+import { generateSpeech } from '../lib/providers/tts';
 import {
   pickContacts, isContactPickerSupported,
   makeCall, sendSMSIntent,
@@ -412,10 +414,21 @@ export default function ChatPage() {
   }, [msgs, loading]);
 
   // ── Auto TTS — Web Speech API (FREE, zero credits) ──────────
-  const speakReply = (text: string) => {
+  const speakReply = async (text: string) => {
     if (!autoTTS || situation === 'night') return
-    if (!('speechSynthesis' in window)) return
     const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:[^\s]+/g, '').slice(0, 300)
+    // Try Edge TTS (Microsoft Hindi — free, no key) → fallback to Web Speech
+    try {
+      const result = await generateSpeech({ text: clean, lang: 'hi', quality: 'fast' })
+      if (!result.useBrowser) {
+        if (result.audioUrl) { new Audio(result.audioUrl).play(); return }
+        if (result.audioBase64) {
+          new Audio('data:' + (result.mimeType||'audio/mpeg') + ';base64,' + result.audioBase64).play()
+          return
+        }
+      }
+    } catch {}
+    if (!('speechSynthesis' in window)) return
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(clean)
     utt.lang = 'hi-IN'; utt.rate = 1.05; utt.pitch = 1
@@ -854,7 +867,6 @@ export default function ChatPage() {
                 </div>
               </>
             )}
-          </div>
           {msgs.length > 0 && (
             <>
               {/* Situation indicator */}
@@ -998,6 +1010,12 @@ export default function ChatPage() {
           </div>
         )}
 
+        {loading && (
+          <div style={{display:'flex',padding:'8px 16px',gap:8,alignItems:'center'}}>
+            <div style={{width:28,height:28,borderRadius:'50%',background:'#00e5ff15',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>🤖</div>
+            <TypingIndicator />
+          </div>
+        )}
         <div ref={bot} style={{ height:1 }}/>
         </div>
       </main>
