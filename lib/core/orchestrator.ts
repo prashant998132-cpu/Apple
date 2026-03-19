@@ -12,7 +12,7 @@ import { cacheGet, cacheSet, TTL } from './responseCache'
 import { trackCall, isNearLimit } from './usageTracker'
 import { pickModelTier, getModelForTier } from './agentDispatcher'
 import { classifyQuery, buildDynamicPrompt } from '../brain/queryClassifier'
-import { smartRoute } from '../core/smartRouter'
+import { smartRoute } from './smartRouter'
 import { planTask } from '../agents/planner'
 
 export interface OrchestratorInput {
@@ -99,25 +99,23 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   // ── PLANNER + SMART ROUTE CHECK ─────────────────────────
   if (chatMode === 'auto') {
     try {
-      // Plan the task first — understand intent deeply
       const plan = planTask(input.message)
-      // Single-step direct tools — no LLM needed
       if (!plan.isMultiStep && plan.confidence > 0.7) {
-        const { smartRoute: smRoute } = await import('../core/smartRouter')
+        const { smartRoute: smRoute } = await import('./smartRouter')
         const routeDecision = smRoute(input.message)
-      if (routeDecision.skipLLM && routeDecision.directTool) {
-        // Direct tool — zero LLM cost
-        const { routeTools } = await import('../tools/external-router')
-        const toolResults = await routeTools(input.message)
-        if (toolResults.length > 0 && toolResults[0].success) {
-          const t = toolResults[0]
-          const richD = (typeof t.data === 'object') ? { type: t.tool, data: t.data } : null
-          return {
-            reply: typeof t.data === 'string' ? t.data : '✅ Done',
-            thinking: '', richData: richD, toolsUsed: [t.tool],
-            model: 'direct', provider: '⚡ Direct Tool (zero LLM)',
-            processingMs: Date.now() - start, safeMode: false,
-            errors: [], routeReason: 'smart_direct_' + t.tool, apiCallsMade: 0,
+        if (routeDecision.skipLLM && routeDecision.directTool) {
+          const { routeTools } = await import('../tools/external-router')
+          const toolResults = await routeTools(input.message)
+          if (toolResults.length > 0 && toolResults[0].success) {
+            const t = toolResults[0]
+            const richD = (typeof t.data === 'object') ? { type: t.tool, data: t.data } : null
+            return {
+              reply: typeof t.data === 'string' ? t.data : '✅ Done',
+              thinking: '', richData: richD, toolsUsed: [t.tool],
+              model: 'direct', provider: '⚡ Direct Tool (zero LLM)',
+              processingMs: Date.now() - start, safeMode: false,
+              errors: [], routeReason: 'smart_direct_' + t.tool, apiCallsMade: 0,
+            }
           }
         }
       }
