@@ -184,8 +184,12 @@ export function saveProviderPrefs(prefs: UserProviderPrefs) {
 
 export function loadProviderPrefs(): UserProviderPrefs {
   try {
+    if (typeof localStorage === 'undefined') return { mode: 'smart' }
     return JSON.parse(localStorage.getItem('jarvis_provider_prefs') || '{}')
   } catch {
     return { mode: 'smart' }
   }
 }
+
+// Alias for backward compat — orchestrator calls smartRoute
+export const smartRoute = decideRoute
