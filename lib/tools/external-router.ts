@@ -88,6 +88,8 @@ export function detectIntent(msg: string): string[] {
   if (m.match(/search|google|find|look up|dhundo/)) intents.push('serper')
   if (m.match(/https?:\/\//)) intents.push('jina')
   if (m.match(/youtube.*transcript|youtu\.be|youtube\.com\/watch/)) intents.push('youtube_transcript')
+  if (m.match(/\b(translate|anuvad|hindi mein kaho|english mein|urdu mein|french|spanish|german mein)\b/i)) intents.push('translate')
+  if (m.match(/https?:\/\/[^\s]{10,}/)) intents.push('jina')
   return [...new Set(intents)]
 }
 
@@ -386,6 +388,20 @@ async function getNews(q: string): Promise<ToolResult> {
 }
 
 // ── MAIN ROUTER ────────────────────────────────────────────
+// ── Translate — MyMemory API (FREE, no key) ──────────────
+async function getTranslation(text: string): Promise<ToolResult> {
+  const m = text.match(/(.+?)\s+(?:translate|anuvad|karo|mein kaho)\s*(?:to|in|mein)?\s*(hindi|english|urdu|french|spanish|german|japanese|arabic|chinese)?/i)
+  const srcText = m?.[1] || text.replace(/translate|anuvad karo|hindi mein|english mein/gi,'').trim()
+  const toLang = m?.[2]?.toLowerCase() || 'hi'
+  const langMap: Record<string,string> = { hindi:'hi', english:'en', urdu:'ur', french:'fr', spanish:'es', german:'de', japanese:'ja', arabic:'ar', chinese:'zh' }
+  const target = langMap[toLang] || toLang
+  const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(srcText)}&langpair=auto|${target}`, { signal: AbortSignal.timeout(8000) })
+  if (!res.ok) throw new Error('translate_fail')
+  const data = await res.json()
+  const translated = data.responseData?.translatedText || 'Translation failed'
+  return { tool: 'translate', data: `🌐 Translation:\n"${srcText}" → "${translated}"`, success: true }
+}
+
 export async function routeTools(message: string): Promise<ToolResult[]> {
   const intents = detectIntent(message)
   if (intents.length === 0) return []
@@ -462,6 +478,7 @@ export async function routeTools(message: string): Promise<ToolResult[]> {
     serper:            () => getSerperSearch(message),
     jina:              () => getJinaReader(message),
     youtube_transcript:() => getYouTubeTranscript(message),
+    translate:  () => getTranslation(message),
   }
 
   const toRun = intents.slice(0, 2).filter(i => toolMap[i])
