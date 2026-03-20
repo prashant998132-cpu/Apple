@@ -1,15 +1,25 @@
 {
   "name": "JARVIS AI Assistant",
   "short_name": "JARVIS",
-  "description": "Personal AI Assistant — Voice, Image, Automation, Smart Reminders",
+  "description": "Personal AI — Voice, Phone Control, Smart Tools, MacroDroid",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#040e1a",
   "theme_color": "#00e5ff",
-  "orientation": "portrait",
   "icons": [
-    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
   ],
   "share_target": {
     "action": "/",
@@ -21,11 +31,42 @@
     }
   },
   "shortcuts": [
-    { "name": "Voice Chat", "url": "/?voice=1", "description": "Open JARVIS with voice input" },
-    { "name": "Quick Photo", "url": "/?action=photo", "description": "Take photo and analyze" },
-    { "name": "Today Weather", "url": "/?q=weather", "description": "Check today's weather" }
+    {
+      "name": "Voice Chat",
+      "url": "/?voice=1",
+      "description": "Voice se JARVIS kholo"
+    },
+    {
+      "name": "Photo Analyze",
+      "url": "/?action=photo",
+      "description": "Photo lo aur analyze karo"
+    },
+    {
+      "name": "Weather",
+      "url": "/?q=weather",
+      "description": "Aaj ka mausam"
+    },
+    {
+      "name": "News",
+      "url": "/?q=news today",
+      "description": "Aaj ki khabar"
+    }
   ],
-  "categories": ["productivity", "utilities", "personalization"],
+  "categories": [
+    "productivity",
+    "utilities",
+    "personalization"
+  ],
   "lang": "hi",
-  "dir": "auto"
+  "dir": "auto",
+  "prefer_related_applications": false,
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "id": "jarvis-ai-assistant"
 }
