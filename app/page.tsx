@@ -741,12 +741,6 @@ export default function ChatPage() {
     setMsgs(msgs);
   
   }
-  }
-  }
-  }
-  }
-  }
-  }
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', flexDirection:'column', background:theme.bg, color:theme.text }}>
       {/* PIN Lock */}
