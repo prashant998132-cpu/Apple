@@ -402,6 +402,76 @@ async function getTranslation(text: string): Promise<ToolResult> {
   return { tool: 'translate', data: `🌐 Translation:\n"${srcText}" → "${translated}"`, success: true }
 }
 
+
+// ── Image Generation v2: Pollinations with referral (priority access) ──
+async function generateImageV2(text: string): Promise<ToolResult> {
+  const clean = text.replace(/\b(image|photo|picture|banao|generate|create|draw|dikhao|tasveer)\b/gi,'').trim() || text
+  const prompt = encodeURIComponent(clean)
+  const referrer = 'apple-lemon-zeta.vercel.app'
+  
+  // Primary: Pollinations FLUX with referral header (gets priority)
+  const models = ['flux','flux-schnell','flux-pro','turbo']
+  const model = clean.length > 100 ? 'flux-pro' : 'flux-schnell'
+  const imgUrl = 'https://image.pollinations.ai/prompt/'+prompt+'?width=768&height=768&model='+model+'&enhance=true&nologo=true&referrer='+referrer+'&seed='+Math.floor(Math.random()*9999)
+  
+  // Alternative: Pollinations pollinations-large
+  const altUrl = 'https://image.pollinations.ai/prompt/'+prompt+'?width=512&height=512&model=flux&nologo=true&referrer='+referrer
+  
+  return {
+    tool:'image',
+    data:'🎨 Image generated!\n\nPrompt: '+clean,
+    richData:{type:'image', url:imgUrl, altUrl:altUrl, prompt:clean},
+    success:true
+  }
+}
+
+
+// ── Video Search: YouTube embed (no expiry, free) ───────────────────
+async function searchVideo(text: string): Promise<ToolResult> {
+  const query = text.replace(/\b(video|dekho|dikhao|search video|find video|play)\b/gi,'').trim()
+  // Use YouTube's oEmbed to get video info, then embed
+  const searchUrl = 'https://www.youtube.com/results?search_query='+encodeURIComponent(query)
+  
+  // Use Invidious (open-source YouTube frontend) for search results  
+  try {
+    const res = await fetch('https://inv.nadeko.net/api/v1/search?q='+encodeURIComponent(query)+'&type=video&fields=videoId,title,author,lengthSeconds', {signal:AbortSignal.timeout(8000)})
+    if(res.ok){
+      const videos = await res.json()
+      if(videos?.[0]){
+        const v = videos[0]
+        const embedUrl = 'https://www.youtube.com/embed/'+v.videoId+'?autoplay=0&rel=0'
+        const watchUrl = 'https://youtu.be/'+v.videoId
+        return {
+          tool:'video',
+          data:'🎬 Video found: '+v.title+'\nChannel: '+(v.author||'')+'\n\nWatch: '+watchUrl,
+          richData:{type:'video', videoId:v.videoId, embedUrl:embedUrl, title:v.title, channel:v.author},
+          success:true
+        }
+      }
+    }
+  } catch {}
+  
+  // Fallback: direct YouTube search link
+  return {tool:'video', data:'🎬 Search on YouTube:\nhttps://www.youtube.com/results?search_query='+encodeURIComponent(query), success:true}
+}
+
+
+// ── Text to Visual: Enhanced prompt → Pollinations image ────────────
+async function textToVisual(text: string): Promise<ToolResult> {
+  // Strip command words
+  const clean = text.replace(/\b(text to visual|text2image|visualize|imagine|picture banao|scene banao|scenery)\b/gi,'').trim()
+  // Add quality keywords for better image
+  const enhanced = clean+', highly detailed, cinematic, 4k, vibrant colors, realistic'
+  const prompt = encodeURIComponent(enhanced)
+  const imgUrl = 'https://image.pollinations.ai/prompt/'+prompt+'?width=896&height=512&model=flux-pro&enhance=true&nologo=true&referrer=apple-lemon-zeta.vercel.app&seed='+Math.floor(Math.random()*9999)
+  return {
+    tool:'text_to_visual',
+    data:'🖼️ Visual created from text!\nPrompt: '+clean,
+    richData:{type:'image', url:imgUrl, prompt:enhanced},
+    success:true
+  }
+}
+
 export async function routeTools(message: string): Promise<ToolResult[]> {
   const intents = detectIntent(message)
   if (intents.length === 0) return []
