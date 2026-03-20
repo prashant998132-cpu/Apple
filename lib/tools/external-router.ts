@@ -420,7 +420,7 @@ async function generateImageV2(text: string): Promise<ToolResult> {
   return {
     tool:'image',
     data:'🎨 Image generated!\n\nPrompt: '+clean,
-    richData:{type:'image', url:imgUrl, altUrl:altUrl, prompt:clean},
+    // imgUrl: "" stored in data below
     success:true
   }
 }
@@ -444,7 +444,7 @@ async function searchVideo(text: string): Promise<ToolResult> {
         return {
           tool:'video',
           data:'🎬 Video found: '+v.title+'\nChannel: '+(v.author||'')+'\n\nWatch: '+watchUrl,
-          richData:{type:'video', videoId:v.videoId, embedUrl:embedUrl, title:v.title, channel:v.author},
+          
           success:true
         }
       }
@@ -467,7 +467,7 @@ async function textToVisual(text: string): Promise<ToolResult> {
   return {
     tool:'text_to_visual',
     data:'🖼️ Visual created from text!\nPrompt: '+clean,
-    richData:{type:'image', url:imgUrl, prompt:enhanced},
+    
     success:true
   }
 }
