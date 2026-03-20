@@ -1,0 +1,54 @@
+name: JARVIS APK Build
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci --legacy-peer-deps
+      - name: Install Capacitor
+        run: npm install @capacitor/core @capacitor/android @capacitor/cli @capacitor/splash-screen @capacitor/status-bar @capacitor/keyboard --save --legacy-peer-deps
+      - name: Patch next.config for static export
+        run: |
+          node -e "
+            const fs=require('fs');
+            let c=fs.readFileSync('next.config.js','utf8');
+            if(!c.includes(\"output: 'export'\")) {
+              c=c.replace('const nextConfig = {','const nextConfig = {\n  output: \'export\',\n  trailingSlash: true,\n  images: { unoptimized: true },');
+              fs.writeFileSync('next.config.js',c);
+            }
+          "
+      - name: Build Next.js
+        run: npx next build
+        env:
+          NEXT_PUBLIC_GEMINI_API_KEY: ${{ secrets.NEXT_PUBLIC_GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      - name: Cap add android
+        run: npx cap add android || true
+      - name: Cap sync
+        run: npx cap sync android
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Accept licenses
+        run: yes | sdkmanager --licenses || true
+      - name: Build APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
