@@ -1,10 +1,11 @@
 {
   "name": "JARVIS AI Assistant",
   "short_name": "JARVIS",
-  "description": "Personal AI — Voice, Phone Control, Smart Tools, MacroDroid",
+  "description": "Personal AI — Voice, Phone Control, Smart Tools",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "background_color": "#040e1a",
   "theme_color": "#00e5ff",
   "icons": [
@@ -32,24 +33,24 @@
   },
   "shortcuts": [
     {
-      "name": "Voice Chat",
+      "name": "🎤 Voice Chat",
       "url": "/?voice=1",
-      "description": "Voice se JARVIS kholo"
+      "description": "Voice se JARVIS"
     },
     {
-      "name": "Photo Analyze",
+      "name": "📷 Photo",
       "url": "/?action=photo",
-      "description": "Photo lo aur analyze karo"
+      "description": "Photo analyze karo"
     },
     {
-      "name": "Weather",
+      "name": "🌤️ Weather",
       "url": "/?q=weather",
       "description": "Aaj ka mausam"
     },
     {
-      "name": "News",
-      "url": "/?q=news today",
-      "description": "Aaj ki khabar"
+      "name": "📰 News",
+      "url": "/?q=aaj ki khabar",
+      "description": "Latest news"
     }
   ],
   "categories": [
@@ -68,5 +69,5 @@
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
-  "id": "jarvis-ai-assistant"
+  "id": "jarvis-ai-v10"
 }
