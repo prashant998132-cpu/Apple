@@ -27,23 +27,23 @@ import { detectMood, logMood, getDominantMood, getMoodPromptHint } from '../lib/
 import { startFocusMode, extractImportantInfo } from '../lib/proactive/engine';
 
 const STARTERS = [
-  { icon:'🌤️', t:'Aaj ka mausam kaisa hai?' },
-  { icon:'🖼️', t:'Ek beautiful realistic girl ki image banao' },
-  { icon:'🧠', t:'Mera NEET/exam schedule banao' },
-  { icon:'📱', t:'WiFi band karo' },
-  { icon:'🎯', t:'Mera aaj ka plan banao — productive day' },
-  { icon:'🔍', t:'Aaj ki top India news kya hai?' },
-  { icon:'💡', t:'Koi interesting science fact batao' },
-  { icon:'🎵', t:'Gaana chala do' },
+  { icon:'ð¤ï¸', t:'Aaj ka mausam kaisa hai?' },
+  { icon:'ð¼ï¸', t:'Ek beautiful realistic girl ki image banao' },
+  { icon:'ð§ ', t:'Mera NEET/exam schedule banao' },
+  { icon:'ð±', t:'WiFi band karo' },
+  { icon:'ð¯', t:'Mera aaj ka plan banao â productive day' },
+  { icon:'ð', t:'Aaj ki top India news kya hai?' },
+  { icon:'ð¡', t:'Koi interesting science fact batao' },
+  { icon:'ðµ', t:'Gaana chala do' },
 ];
 
 const STUDY_PROMPTS = [
-  { icon:'📖', t:'Aaj ka topic kya padhna chahiye?' },
-  { icon:'❓', t:'MCQ banao is topic pe: ' },
-  { icon:'🗂️', t:'Flashcards banao: ' },
-  { icon:'📝', t:'Short notes banao: ' },
-  { icon:'🔄', t:'Revision plan banao — exam 7 din mein' },
-  { icon:'💡', t:'Ye concept simple language mein samjhao: ' },
+  { icon:'ð', t:'Aaj ka topic kya padhna chahiye?' },
+  { icon:'â', t:'MCQ banao is topic pe: ' },
+  { icon:'ðï¸', t:'Flashcards banao: ' },
+  { icon:'ð', t:'Short notes banao: ' },
+  { icon:'ð', t:'Revision plan banao â exam 7 din mein' },
+  { icon:'ð¡', t:'Ye concept simple language mein samjhao: ' },
 ];
 
 async function save(id:string, m:any[]) { await saveChat(id, m) }
@@ -73,21 +73,21 @@ function getFollowUpChips(reply: string): string[] {
   return chips.slice(0, 3)
 }
 
-// ── Indian Festivals ───────────────────────────────────────
+// ââ Indian Festivals âââââââââââââââââââââââââââââââââââââââ
 function getTodayFestival(): string | null {
   const now = new Date();
   const md = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const f: Record<string,string> = {
-    '01-01':'🎆 Naya Saal Mubarak!', '01-14':'🪁 Makar Sankranti aaj hai!',
-    '01-26':'🇮🇳 Aaj Republic Day hai!', '02-14':'❤️ Valentine\'s Day aaj hai!',
-    '03-08':'🌸 Aaj Holi hai — Rang barse!', '03-25':'🎂 Gudi Padwa aaj hai!',
-    '03-31':'☪️ Aaj Eid ul-Fitr hai!', '04-14':'🌟 Aaj Baisakhi hai!',
-    '04-18':'✝️ Aaj Good Friday hai!', '05-12':'💐 Aaj Mother\'s Day hai!',
-    '06-16':'👔 Aaj Father\'s Day hai!', '08-15':'🇮🇳 Aaj Independence Day hai!',
-    '08-26':'🐘 Aaj Ganesh Chaturthi hai!', '10-02':'🕊️ Gandhi Jayanti aaj hai!',
-    '10-13':'💥 Aaj Dussehra hai!', '10-24':'🪔 Aaj Diwali hai!',
-    '11-05':'🪔 Aaj Bhai Dooj hai!', '11-15':'💡 Aaj Guru Nanak Jayanti hai!',
-    '12-25':'🎄 Merry Christmas!', '12-31':'🎉 Aaj saal ka aakhri din hai!',
+    '01-01':'ð Naya Saal Mubarak!', '01-14':'ðª Makar Sankranti aaj hai!',
+    '01-26':'ð®ð³ Aaj Republic Day hai!', '02-14':'â¤ï¸ Valentine\'s Day aaj hai!',
+    '03-08':'ð¸ Aaj Holi hai â Rang barse!', '03-25':'ð Gudi Padwa aaj hai!',
+    '03-31':'âªï¸ Aaj Eid ul-Fitr hai!', '04-14':'ð Aaj Baisakhi hai!',
+    '04-18':'âï¸ Aaj Good Friday hai!', '05-12':'ð Aaj Mother\'s Day hai!',
+    '06-16':'ð Aaj Father\'s Day hai!', '08-15':'ð®ð³ Aaj Independence Day hai!',
+    '08-26':'ð Aaj Ganesh Chaturthi hai!', '10-02':'ðï¸ Gandhi Jayanti aaj hai!',
+    '10-13':'ð¥ Aaj Dussehra hai!', '10-24':'ðª Aaj Diwali hai!',
+    '11-05':'ðª Aaj Bhai Dooj hai!', '11-15':'ð¡ Aaj Guru Nanak Jayanti hai!',
+    '12-25':'ð Merry Christmas!', '12-31':'ð Aaj saal ka aakhri din hai!',
   };
   return f[md] || null;
 }
@@ -95,38 +95,38 @@ function getTodayFestival(): string | null {
 function getLiveTime(): { time: string; greeting: string; date: string } {
   const now = new Date();
   const h = now.getHours();
-  const greeting = h < 5 ? 'Shubb Ratri 🌙' : h < 12 ? 'Subah ki Salaam ☀️' : h < 17 ? 'Dopahar ki Salaam 🌞' : h < 20 ? 'Shaam ki Salaam 🌆' : 'Raat ki Salaam 🌙';
+  const greeting = h < 5 ? 'Shubb Ratri ð' : h < 12 ? 'Subah ki Salaam âï¸' : h < 17 ? 'Dopahar ki Salaam ð' : h < 20 ? 'Shaam ki Salaam ð' : 'Raat ki Salaam ð';
   const time = now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   const date = now.toLocaleDateString('hi-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   return { time, greeting, date };
 }
 
 
-// ── Themes ────────────────────────────────────────────────
+// ââ Themes ââââââââââââââââââââââââââââââââââââââââââââââââ
 const THEMES = {
   dark: {
-    name:'Dark', icon:'🌑',
+    name:'Dark', icon:'ð',
     bg:'#090d18', surface:'rgba(0,229,255,.04)', border:'rgba(0,229,255,.15)',
     text:'#e8f4ff', subtext:'#4a90b8', muted:'#1e3a50', accent:'#00e5ff',
     inputBg:'rgba(255,255,255,.07)', headerBg:'rgba(9,13,24,.96)',
     msgUser:'rgba(0,180,216,.12)', msgAI:'rgba(255,255,255,.03)',
   },
   black: {
-    name:'Black', icon:'⚫',
+    name:'Black', icon:'â«',
     bg:'#000000', surface:'rgba(255,255,255,.03)', border:'rgba(255,255,255,.08)',
     text:'#ffffff', subtext:'#4a6070', muted:'#1a1a1a', accent:'#00e5ff',
     inputBg:'rgba(255,255,255,.05)', headerBg:'rgba(0,0,0,.98)',
     msgUser:'rgba(0,180,216,.1)', msgAI:'rgba(255,255,255,.02)',
   },
   white: {
-    name:'White', icon:'☀️',
+    name:'White', icon:'âï¸',
     bg:'#f0f4f8', surface:'rgba(0,0,0,.04)', border:'rgba(0,0,0,.1)',
     text:'#0d1b2a', subtext:'#2a5070', muted:'#90a4ae', accent:'#0077b6',
     inputBg:'rgba(255,255,255,.9)', headerBg:'rgba(240,244,248,.97)',
     msgUser:'rgba(0,119,182,.1)', msgAI:'rgba(255,255,255,.8)',
   },
   navy: {
-    name:'Navy', icon:'🔵',
+    name:'Navy', icon:'ðµ',
     bg:'#0a1628', surface:'rgba(30,80,140,.12)', border:'rgba(30,80,140,.3)',
     text:'#cce0ff', subtext:'#5a8aaa', muted:'#0f2040', accent:'#4fc3f7',
     inputBg:'rgba(30,80,140,.15)', headerBg:'rgba(10,22,40,.97)',
@@ -135,18 +135,18 @@ const THEMES = {
 }
 type ThemeKey = keyof typeof THEMES;
 
-// ── Auto Session Title (pure, no state) ──────────────────
+// ââ Auto Session Title (pure, no state) ââââââââââââââââââ
 function getAutoTitle(text: string): string {
   const t = text.trim().toLowerCase();
-  if (t.match(/weather|mausam|baarish/)) return '🌤️ Weather Chat';
-  if (t.match(/image|photo|picture|banao/)) return '🎨 Image Generation';
-  if (t.match(/news|khabar|today/)) return '📰 News Discussion';
-  if (t.match(/code|function|program|script/)) return '💻 Coding Help';
-  if (t.match(/study|physics|chemistry|math|science/)) return '📚 Study Session';
-  if (t.match(/recipe|food|khana|cook/)) return '🍛 Recipe Chat';
-  if (t.match(/cricket|ipl|score|match/)) return '🏏 Cricket';
-  if (t.match(/song|music|gana/)) return '🎵 Music';
-  if (t.match(/joke|funny|meme/)) return '😄 Fun Chat';
+  if (t.match(/weather|mausam|baarish/)) return 'ð¤ï¸ Weather Chat';
+  if (t.match(/image|photo|picture|banao/)) return 'ð¨ Image Generation';
+  if (t.match(/news|khabar|today/)) return 'ð° News Discussion';
+  if (t.match(/code|function|program|script/)) return 'ð» Coding Help';
+  if (t.match(/study|physics|chemistry|math|science/)) return 'ð Study Session';
+  if (t.match(/recipe|food|khana|cook/)) return 'ð Recipe Chat';
+  if (t.match(/cricket|ipl|score|match/)) return 'ð Cricket';
+  if (t.match(/song|music|gana/)) return 'ðµ Music';
+  if (t.match(/joke|funny|meme/)) return 'ð Fun Chat';
   const clean = text.replace(/[^a-zA-Z0-9 \u0900-\u097F]/g, '').trim();
   return clean.slice(0, 30) || 'Chat Session';
 }
@@ -222,15 +222,15 @@ export default function ChatPage() {
       const home   = places.find((p:any) => p.id === 'home');
       if (home) {
         const d = distanceKm(loc.lat, loc.lon, home.lat, home.lon);
-        setLoc(d < 0.2 ? '🏠 Ghar' : `📍 ${loc.city||loc.area||'?'} · ${d.toFixed(1)}km`);
+        setLoc(d < 0.2 ? 'ð  Ghar' : `ð ${loc.city||loc.area||'?'} Â· ${d.toFixed(1)}km`);
       } else {
-        setLoc(`📍 ${loc.city||loc.area||`${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}`}`);
+        setLoc(`ð ${loc.city||loc.area||`${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}`}`);
       }
-    } catch { setLoc('📍 off'); }
+    } catch { setLoc('ð off'); }
   }, []);
 
   useEffect(() => {
-    // Device context init — battery, network, etc.
+    // Device context init â battery, network, etc.
     getDeviceContext().then(ctx => {
       deviceCtxRef.current = deviceContextToPrompt(ctx);
       if (ctx.battery) {
@@ -245,13 +245,13 @@ export default function ChatPage() {
             deviceCtxRef.current = deviceContextToPrompt({ ...ctx, battery: { level: pct, charging: bat.charging, chargingTime: bat.chargingTime, dischargingTime: bat.dischargingTime } });
             // Low battery warning
             if (pct === 20 && !bat.charging) {
-              setToast({ msg: '🔋 Battery 20% — charge karo!', type: 'info' });
+              setToast({ msg: 'ð Battery 20% â charge karo!', type: 'info' });
               vibrate([200, 100, 200]);
             }
           });
           bat.addEventListener('chargingchange', () => {
             setBatteryCharging(bat.charging);
-            setToast({ msg: bat.charging ? '⚡ Charging shuru' : '🔋 Charging band', type: 'info' });
+            setToast({ msg: bat.charging ? 'â¡ Charging shuru' : 'ð Charging band', type: 'info' });
           });
         }).catch(() => {});
       }
@@ -278,7 +278,7 @@ export default function ChatPage() {
     const savedTheme = localStorage.getItem('jarvis_theme') as ThemeKey | null;
     if (savedTheme && (savedTheme in THEMES)) setThemeKey(savedTheme);
 
-    // Load saved name — show onboarding if first visit
+    // Load saved name â show onboarding if first visit
     const saved = localStorage.getItem('jarvis_profile_name') || '';
     if (saved) setUserName(saved);
     else setOnboard(true);
@@ -288,7 +288,7 @@ export default function ChatPage() {
     // Auto TTS preference
     setAutoTTS(localStorage.getItem('jarvis_auto_tts') === '1')
 
-    // Situation awareness — detect night mode
+    // Situation awareness â detect night mode
     const updateSituation = () => {
       const h = new Date().getHours()
       if (h >= 22 || h < 7) setSit('night')
@@ -311,7 +311,7 @@ export default function ChatPage() {
         const triggered = checkGeoFences(pos.coords.latitude, pos.coords.longitude)
         triggered.forEach(fence => {
           window.dispatchEvent(new CustomEvent('jarvis-alert', {
-            detail: { id: 'geo_' + fence.id, type: 'morning', title: '📍 ' + fence.label, body: fence.action }
+            detail: { id: 'geo_' + fence.id, type: 'morning', title: 'ð ' + fence.label, body: fence.action }
           }))
         })
       }, () => {})
@@ -351,7 +351,7 @@ export default function ChatPage() {
     refreshLoc();
     const t = setInterval(refreshLoc, 3*60*1000);
 
-    // Live clock — update every 30s
+    // Live clock â update every 30s
     const clockT = setInterval(() => setLiveTime(getLiveTime()), 30000);
 
     // Silent background weather fetch
@@ -361,16 +361,16 @@ export default function ChatPage() {
       body: JSON.stringify({ message: 'current weather brief 1 line', history: [], userId: 'welcome', chatId: 'welcome_wx', chatMode: 'flash' })
     }).then(r => r.json()).then(d => {
       const reply = d.reply || d.text || '';
-      const tempMatch = reply.match(/(\d+)\s*[°℃C]/);
-      const iconMatch = reply.match(/[☀️🌤️⛅🌧️🌩️❄️🌫️🌦️🌨️]/u);
+      const tempMatch = reply.match(/(\d+)\s*[Â°âC]/);
+      const iconMatch = reply.match(/[âï¸ð¤ï¸âð§ï¸ð©ï¸âï¸ð«ï¸ð¦ï¸ð¨ï¸]/u);
       if (tempMatch) {
-        setWeatherInfo({ temp: tempMatch[0], icon: iconMatch?.[0] || '🌤️', city: 'Rewa' });
+        setWeatherInfo({ temp: tempMatch[0], icon: iconMatch?.[0] || 'ð¤ï¸', city: 'Rewa' });
       }
     }).catch(() => {});
 
 
 
-  // ── Chat Search ───────────────────────────────────────────
+  // ââ Chat Search âââââââââââââââââââââââââââââââââââââââââââ
   const searchChats = async (q: string) => {
     if (!q.trim()) { setSearchResults([]); return; }
     const query = q.toLowerCase();
@@ -413,11 +413,11 @@ export default function ChatPage() {
     bot.current?.scrollIntoView({ behavior: msgs.length > 4 ? 'smooth' : 'instant' });
   }, [msgs, loading]);
 
-  // ── Auto TTS — Web Speech API (FREE, zero credits) ──────────
+  // ââ Auto TTS â Web Speech API (FREE, zero credits) ââââââââââ
   const speakReply = async (text: string) => {
     if (!autoTTS || situation === 'night') return
     const clean = text.replace(/[#*`_~>]/g, '').replace(/https?:[^\s]+/g, '').slice(0, 300)
-    // Try Edge TTS (Microsoft Hindi — free, no key) → fallback to Web Speech
+    // Try Edge TTS (Microsoft Hindi â free, no key) â fallback to Web Speech
     try {
       const result = await generateSpeech({ text: clean, lang: 'hi', quality: 'fast' })
       if (!result.useBrowser) {
@@ -441,7 +441,7 @@ export default function ChatPage() {
   const send = useCallback(async (text: string, chatMode: ChatMode, file?: File) => {
     if (!text.trim() && !file || loading) return;
 
-    // ── SLASH COMMANDS — instant shortcuts, zero API cost ──
+    // ââ SLASH COMMANDS â instant shortcuts, zero API cost ââ
     const slash = text.trim()
     if (slash === '/clear') { chatId.current = 'chat_'+Date.now(); setMsgs([]); setChatTitle(''); return }
     if (slash === '/w' || slash === '/weather') { return send('Aaj ka mausam kya hai?', 'auto') }
@@ -453,14 +453,14 @@ export default function ChatPage() {
     if (slash.startsWith('/img '))              { return send(slash.slice(5) + ' ka image banao', 'auto') }
     if (slash.startsWith('/w '))                { return send(slash.slice(3) + ' ka mausam batao', 'auto') }
     if (slash.startsWith('/think '))            { return send(slash.slice(7), 'think') }
-    // ── Android Bridge Slash Commands ────────────────────
+    // ââ Android Bridge Slash Commands ââââââââââââââââââââ
     if (slash === '/contacts') {
       try {
         if (!isContactPickerSupported()) { setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'Contact Picker is hamare browser mein support nahi karta.',timestamp:Date.now()}]); return }
         const contacts = await pickContacts()
         if (contacts.length > 0) {
           const list = contacts.map(c => (c.name?.[0]||'Unknown') + (c.tel?.[0] ? ' (' + c.tel[0] + ')' : '')).join(', ')
-          return send('Mujhe ' + list + ' ke baare mein kuch batao — yeh mere contacts hain', 'auto')
+          return send('Mujhe ' + list + ' ke baare mein kuch batao â yeh mere contacts hain', 'auto')
         }
       } catch(e: any) { setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'Contacts: ' + e.message, timestamp:Date.now()}]) }
       return
@@ -468,13 +468,13 @@ export default function ChatPage() {
     if (slash.startsWith('/call ')) {
       const num = slash.slice(6).trim()
       makeCall(num)
-      setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'📞 Calling ' + num + '...',timestamp:Date.now()}])
+      setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'ð Calling ' + num + '...',timestamp:Date.now()}])
       return
     }
     if (slash.startsWith('/sms ')) {
       const parts = slash.slice(5).split('|')
       sendSMSIntent(parts[0].trim(), parts[1]?.trim())
-      setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'💬 SMS app khul raha hai...',timestamp:Date.now()}])
+      setMsgs(p=>[...p,{id:Date.now()+'_a',role:'assistant' as const,content:'ð¬ SMS app khul raha hai...',timestamp:Date.now()}])
       return
     }
     if (slash === '/photo') {
@@ -484,11 +484,11 @@ export default function ChatPage() {
       return
     }
 
-    // ── Agent Mode — complex multi-step goals ───────────────
+    // ââ Agent Mode â complex multi-step goals âââââââââââââââ
     if (isAgenticGoal(text) && chatMode === 'auto') {
       const agentMsgId = Date.now().toString()+'_a'
       const agentUMsg = { id: Date.now().toString()+'_u', role:'user' as const, content: text, timestamp: Date.now() }
-      const agentAMsg = { id: agentMsgId, role:'assistant' as const, content: '🤖 Agent mode — goal analyze kar raha hoon...', timestamp: Date.now() }
+      const agentAMsg = { id: agentMsgId, role:'assistant' as const, content: 'ð¤ Agent mode â goal analyze kar raha hoon...', timestamp: Date.now() }
       setMsgs(p => [...p, agentUMsg, agentAMsg])
       void save(chatId.current, [...msgs, agentUMsg, agentAMsg])
       setAgentRunning(true)
@@ -509,30 +509,30 @@ export default function ChatPage() {
       return
     }
 
-    // ── Android Bridge intents ───────────────────────────────────
+    // ââ Android Bridge intents âââââââââââââââââââââââââââââââââââ
     const callMatch = text.match(/\b(?:call|phone|ring|call karo|phone karo)\s+([\d+\s\-]{7,15})/i)
     if (callMatch) {
       makeCall(callMatch[1])
       const uMsg2 = { id:Date.now()+'_u', role:'user' as const, content:text, timestamp:Date.now() }
-      setMsgs(p=>[...p,uMsg2,{id:Date.now()+'_a',role:'assistant' as const,content:'📞 ' + callMatch[1] + ' pe call kar raha hoon...', timestamp:Date.now()}])
+      setMsgs(p=>[...p,uMsg2,{id:Date.now()+'_a',role:'assistant' as const,content:'ð ' + callMatch[1] + ' pe call kar raha hoon...', timestamp:Date.now()}])
       void save(chatId.current, [...msgs, uMsg2])
       setLoad(false); return
     }
 
-    // ── SMART REMINDER DETECTION ────────────────────────────────
+    // ââ SMART REMINDER DETECTION ââââââââââââââââââââââââââââââââ
     const reminderParsed = parseReminder(text)
     if (reminderParsed) {
       addReminder(reminderParsed)
       const userMsg2 = { id: Date.now().toString()+'_u', role:'user' as const, content: text, timestamp: Date.now() }
       const timeStr = formatReminderTime(reminderParsed.triggerTime)
-      const ackMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: '⏰ Reminder set! "' + reminderParsed.title + '" — ' + timeStr + ' mein yaad dilaaunga.' + (reminderParsed.repeat !== 'none' ? ' (' + reminderParsed.repeat + ')' : ''), timestamp: Date.now() }
+      const ackMsg = { id: Date.now().toString()+'_a', role:'assistant' as const, content: 'â° Reminder set! "' + reminderParsed.title + '" â ' + timeStr + ' mein yaad dilaaunga.' + (reminderParsed.repeat !== 'none' ? ' (' + reminderParsed.repeat + ')' : ''), timestamp: Date.now() }
       setMsgs(cur => [...cur, userMsg2, ackMsg])
       void save(chatId.current, [...msgs, userMsg2, ackMsg])
       speakReply(ackMsg.content)
       return
     }
 
-    // ── MACRODROID PHONE CONTROL ─────────────────────────────
+    // ââ MACRODROID PHONE CONTROL âââââââââââââââââââââââââââââ
     const macroUrl = localStorage.getItem('jarvis_macrodroid_url') || ''
     if (macroUrl) {
       const phoneAction = detectPhoneIntent(text)
@@ -556,7 +556,7 @@ export default function ChatPage() {
       const quickTitle = getAutoTitle(text);
       setChatTitle(quickTitle);
       try { localStorage.setItem(`jarvis_title_${chatId.current}`, quickTitle); } catch {}
-      // Async AI title — Groq nano, 1 call, upgrades title silently
+      // Async AI title â Groq nano, 1 call, upgrades title silently
       fetch('/api/jarvis', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ message: 'Give a 4-6 word chat title for: "' + text.slice(0,80) + '". Reply ONLY the title, no quotes.', chatId:'title', userId:'system', chatMode:'flash', history:[] })
@@ -591,7 +591,7 @@ export default function ChatPage() {
       const memPrompt = baseMemory +
         (studyMode ? '\n\nSTUDY MODE: MCQ, flashcards, simple mein samjhao.' : '') +
         (moodHint ? '\n' + moodHint : '') +
-        '\nPersonality: ' + timeCtx + ' tone. ' + (isNight ? 'Night mode — concise replies. ' : '') +
+        '\nPersonality: ' + timeCtx + ' tone. ' + (isNight ? 'Night mode â concise replies. ' : '') +
         'Kabhi kabhi "' + uName + '" naam se bulao. Dry wit occasionally.'
 
       if (chatMode === 'deep') {
@@ -622,8 +622,8 @@ export default function ChatPage() {
             if (!line.startsWith('data:')) continue
             try {
               const ev = JSON.parse(line.slice(5))
-              if (ev.type === 'tool_start') setToolProgress(p => [...p, `🔧 ${ev.tool}...`])
-              if (ev.type === 'tool_end')   setToolProgress(p => [...p, `✅ ${ev.tool}`])
+              if (ev.type === 'tool_start') setToolProgress(p => [...p, `ð§ ${ev.tool}...`])
+              if (ev.type === 'tool_end')   setToolProgress(p => [...p, `â ${ev.tool}`])
               if (ev.type === 'chunk') { finalReply += ev.text; setMsgs(p => p.map(m => m.id===streamId ? {...m, content:finalReply} : m)) }
               if (ev.type === 'reply') {
                 finalReply = ev.reply || finalReply
@@ -702,7 +702,7 @@ export default function ChatPage() {
       setFollowupChips(getFollowUpChips(d.reply||''))
       autoExtractMemory(text, d.reply||'').catch(()=>{})
 
-      // Image generation — Pollinations FREE (no credits, unlimited)
+      // Image generation â Pollinations FREE (no credits, unlimited)
       const isImgQuery = /image banao|photo banao|tasveer|image bana|photo bana|girl|boy.*image|scenery|wallpaper|draw|generate.*image|ek.*image|photo bana/i.test(text)
       if (isImgQuery && !d.richData) {
         const cleanPrompt = text.replace(/\b(image|photo|banao|bana|ek|mujhe|karo|generate|create|draw|jarvis|please|tasveer|ki|ka|ke|aur|ek)\b/gi,' ').replace(/\s+/g,' ').trim() || text
@@ -711,20 +711,20 @@ export default function ChatPage() {
         const isAnime = /anime|cartoon|sketch|chibi|manga/i.test(text)
         const model = isAnime ? 'flux-anime' : 'flux-realism'
         const polUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(cleanPrompt + ', high quality, 4k, detailed') + '?width=768&height=768&nologo=true&seed=' + seed + '&model=' + model
-        const imgMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: '🎨 Image generating... (' + model + ')', timestamp: Date.now(), richData: { type:'image', data:{ image_url: polUrl, prompt: cleanPrompt, model: 'Pollinations ' + model } } }
+        const imgMsg = { id: Date.now().toString()+'_img', role:'assistant' as const, content: 'ð¨ Image generating... (' + model + ')', timestamp: Date.now(), richData: { type:'image', data:{ image_url: polUrl, prompt: cleanPrompt, model: 'Pollinations ' + model } } }
         setMsgs(p => [...p, imgMsg])
         void save(chatId.current, [...fin, imgMsg])
       }
       const importantHint = extractImportantInfo(text)
       if (importantHint) {
         setTimeout(() => {
-          setMsgs(p => [...p, { id: Date.now().toString()+'_hint', role:'assistant' as const, content: '💡 ' + importantHint, timestamp: Date.now() }])
+          setMsgs(p => [...p, { id: Date.now().toString()+'_hint', role:'assistant' as const, content: 'ð¡ ' + importantHint, timestamp: Date.now() }])
         }, 800)
       }
-      // Auto TTS — speak reply if voice mode ON
+      // Auto TTS â speak reply if voice mode ON
       if (autoTTS && situation !== 'night') speakReply(d.reply || '')
     } catch(e) {
-      const errMsg = { id: Date.now().toString()+'_e', role:'assistant' as const, content: '❌ Kuch error aaya. Dobara try karo.', timestamp: Date.now() }
+      const errMsg = { id: Date.now().toString()+'_e', role:'assistant' as const, content: 'â Kuch error aaya. Dobara try karo.', timestamp: Date.now() }
       setMsgs(fin => { const f=[...fin,errMsg]; void save(chatId.current,f); return f; })
     }
     setLoad(false);
@@ -739,8 +739,7 @@ export default function ChatPage() {
     chatId.current = id;
     const msgs = await loadChat(id);
     setMsgs(msgs);
-  };
-
+  
   return (
     <div style={{ position:'fixed', inset:0, display:'flex', flexDirection:'column', background:theme.bg, color:theme.text }}>
       {/* PIN Lock */}
@@ -750,15 +749,15 @@ export default function ChatPage() {
       <div className="bg-grid"/>
       <Sidebar onNewChat={newChat} onLoadChat={loadOldChat} currentChatId={chatId.current}/>
 
-      {/* ── ONBOARDING (first visit) ───────────── */}
+      {/* ââ ONBOARDING (first visit) âââââââââââââ */}
       {showOnboard && (
         <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(5,10,20,.97)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24 }}>
           <div style={{ maxWidth:340, width:'100%', textAlign:'center' }}>
-            <div style={{ fontSize:54, marginBottom:10 }}>🤖</div>
+            <div style={{ fontSize:54, marginBottom:10 }}>ð¤</div>
             <div style={{ fontSize:24, fontWeight:800, color:theme.text, letterSpacing:4, marginBottom:6 }}>JARVIS</div>
             <div style={{ fontSize:13, color:theme.subtext, marginBottom:28, lineHeight:1.7 }}>
               Tumhara personal AI assistant.<br/>
-              Pehle bata do — tumhara naam kya hai?
+              Pehle bata do â tumhara naam kya hai?
             </div>
             <input
               autoFocus
@@ -782,7 +781,7 @@ export default function ChatPage() {
               }}
               style={{ width:'100%', padding:'13px', borderRadius:12, background: nameInput.trim() ? 'linear-gradient(135deg,#00b4d8,#0077b6)' : 'rgba(0,229,255,.08)', border:'none', color: nameInput.trim() ? '#fff' : '#37474f', fontSize:15, fontWeight:700, cursor:'pointer' }}
             >
-              {nameInput.trim() ? `Namaste, ${nameInput.trim()}! 👋` : 'Shuru karo →'}
+              {nameInput.trim() ? `Namaste, ${nameInput.trim()}! ð` : 'Shuru karo â'}
             </button>
             <div style={{ marginTop:12, fontSize:10, color:'#1a3040' }}>Naam sirf tumhare device pe store hoga</div>
           </div>
@@ -801,12 +800,12 @@ export default function ChatPage() {
             )}
             <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:1 }}>
               {userName && <div style={{ fontSize:9, color:theme.subtext }}>{userName}</div>}
-              {locLbl && <div style={{ fontSize:9, color:theme.muted }}>· {locLbl}</div>}
+              {locLbl && <div style={{ fontSize:9, color:theme.muted }}>Â· {locLbl}</div>}
               {/* Loading: "Thinking with Groq..." */}
               {loading ? (
                 <div style={{ display:'flex', alignItems:'center', gap:3 }}>
                   <span style={{ width:5, height:5, borderRadius:'50%', background:'#00e5ff', display:'inline-block', animation:'pulse 1s infinite' }}/>
-                  <span style={{ fontSize:8, color:'#00e5ff' }}>Thinking{lastProvider ? ` · ${lastProvider}` : ''}...</span>
+                  <span style={{ fontSize:8, color:'#00e5ff' }}>Thinking{lastProvider ? ` Â· ${lastProvider}` : ''}...</span>
                 </div>
               ) : (
                 <>
@@ -831,13 +830,13 @@ export default function ChatPage() {
           {/* Battery indicator */}
           {batteryPct !== null && (
             <div style={{ display:'flex', alignItems:'center', gap:2 }}>
-              <span style={{ fontSize:10 }}>{batteryCharging ? '⚡' : batteryPct <= 20 ? '🔴' : batteryPct <= 50 ? '🟡' : '🟢'}</span>
+              <span style={{ fontSize:10 }}>{batteryCharging ? 'â¡' : batteryPct <= 20 ? 'ð´' : batteryPct <= 50 ? 'ð¡' : 'ð¢'}</span>
               <span style={{ fontSize:9, color: batteryPct<=20?'#ef5350':batteryPct<=50?'#ffd700':'#00e676', fontFamily:'monospace' }}>{batteryPct}%</span>
             </div>
           )}
 {installPrompt && (
                 <button onClick={() => { installPrompt.prompt(); setInstallPrompt(null); }} style={{ background:'none', border:'1px solid #00e5ff44', borderRadius:8, padding:'2px 8px', color:'#00e5ff', fontSize:10, cursor:'pointer', marginLeft:4 }}>
-                  📲 Install
+                  ð² Install
                 </button>
               )}
           <span style={{ width:5, height:5, borderRadius:'50%', background: online ? '#00e676' : '#ff4444', display:'block' }}/>
@@ -845,7 +844,7 @@ export default function ChatPage() {
           {/* Search button */}
           <button onClick={() => setShowSearch(p=>!p)} title="Search chats"
             style={{ width:26, height:26, borderRadius:7, background: showSearch ? 'rgba(0,229,255,.15)' : 'transparent', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', color: showSearch ? '#00e5ff' : '#90b4c8' }}>
-            🔍
+            ð
           </button>
           {/* Theme picker */}
           <div style={{ position:'relative' }}>
@@ -861,7 +860,7 @@ export default function ChatPage() {
                     <button key={k} onClick={() => { setThemeKey(k); localStorage.setItem('jarvis_theme',k); setShowTheme(false); }}
                       style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'7px 10px', borderRadius:8, background: themeKey===k ? 'rgba(0,229,255,.1)' : 'transparent', border:'none', cursor:'pointer', color: themeKey===k ? '#00e5ff' : '#90b4c8', fontSize:12 }}>
                       <span>{THEMES[k].icon}</span><span>{THEMES[k].name}</span>
-                      {themeKey===k && <span style={{ marginLeft:'auto' }}>✓</span>}
+                      {themeKey===k && <span style={{ marginLeft:'auto' }}>â</span>}
                     </button>
                   ))}
                 </div>
@@ -871,15 +870,15 @@ export default function ChatPage() {
             <>
               {/* Situation indicator */}
               {situation === 'night' && (
-                <span title="Night mode — quiet" style={{ fontSize:13 }}>🌙</span>
+                <span title="Night mode â quiet" style={{ fontSize:13 }}>ð</span>
               )}
               {/* Auto TTS toggle */}
               <button
                 onClick={() => { const n = !autoTTS; setAutoTTS(n); localStorage.setItem('jarvis_auto_tts', n?'1':'0'); if(n) window.speechSynthesis?.cancel() }}
-                title={autoTTS ? 'Auto Voice ON — tap to turn off' : 'Auto Voice OFF — tap to enable'}
+                title={autoTTS ? 'Auto Voice ON â tap to turn off' : 'Auto Voice OFF â tap to enable'}
                 style={{ width:24, height:24, borderRadius:6, background: autoTTS ? 'rgba(0,229,255,.2)' : 'transparent', border:'1px solid rgba(255,255,255,.06)', color: autoTTS ? '#00e5ff' : '#5a7a8a', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow: autoTTS ? '0 0 8px rgba(0,229,255,.4)' : 'none' }}
-              >{autoTTS ? '🔊' : '🔇'}</button>
-              {/* Web Share — native mobile share sheet */}
+              >{autoTTS ? 'ð' : 'ð'}</button>
+              {/* Web Share â native mobile share sheet */}
               <button onClick={() => {
                 const txt = msgs.map(m => (m.role==='user'?'You: ':'JARVIS: ') + m.content).join('\n\n')
                 if (navigator.share) {
@@ -887,8 +886,8 @@ export default function ChatPage() {
                 } else {
                   navigator.clipboard?.writeText(txt).then(() => alert('Chat copied!')).catch(()=>{})
                 }
-              }} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }} title="Share chat">⬆</button>
-              <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>⊘</button>
+              }} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }} title="Share chat">â¬</button>
+              <button onClick={newChat} style={{ width:24, height:24, borderRadius:6, background:'transparent', border:'1px solid rgba(255,255,255,.06)', color:'#90caf9', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>â</button>
             </>
           )}
         </div>
@@ -897,8 +896,8 @@ export default function ChatPage() {
       {/* Focus Mode Banner */}
       {focusBanner && (
         <div style={{ background:'linear-gradient(90deg,rgba(0,229,255,.1),rgba(109,40,217,.1))', borderBottom:'1px solid rgba(0,229,255,.15)', padding:'6px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11 }}>
-          <span style={{ color:'#00e5ff' }}>🎯 Focus: {focusBanner.task.slice(0,40)} — {focusBanner.durationMin} min</span>
-          <button onClick={() => setFocusBanner(null)} style={{ background:'none', border:'none', color:'#5a7a8a', cursor:'pointer', fontSize:11 }}>✕</button>
+          <span style={{ color:'#00e5ff' }}>ð¯ Focus: {focusBanner.task.slice(0,40)} â {focusBanner.durationMin} min</span>
+          <button onClick={() => setFocusBanner(null)} style={{ background:'none', border:'none', color:'#5a7a8a', cursor:'pointer', fontSize:11 }}>â</button>
         </div>
       )}
       {/* Agent Running indicator */}
@@ -927,7 +926,7 @@ export default function ChatPage() {
               <div style={{ textAlign:'center', marginBottom:12 }}>
                 <div style={{ fontSize:11, color:'#4a90b8', marginBottom:2 }}>{liveTime.greeting}</div>
                 <div style={{ fontSize:20, fontWeight:800, color:'#e8f4ff' }}>
-                  {userName ? `${userName} 👋` : 'Boss 👋'}
+                  {userName ? `${userName} ð` : 'Boss ð'}
                 </div>
               </div>
               <div style={{ display:'flex', gap:8, marginBottom:10 }}>
@@ -939,11 +938,11 @@ export default function ChatPage() {
                   {weatherInfo ? (
                     <>
                       <div style={{ fontSize:16, fontWeight:700, color:'#e8f4ff', lineHeight:1 }}>{weatherInfo.icon} {weatherInfo.temp}</div>
-                      <div style={{ fontSize:9, color:'#3a6080', marginTop:3 }}>{weatherInfo.city} · Abhi</div>
+                      <div style={{ fontSize:9, color:'#3a6080', marginTop:3 }}>{weatherInfo.city} Â· Abhi</div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize:16, color:'#1e3a50', lineHeight:1 }}>🌤️ —</div>
+                      <div style={{ fontSize:16, color:'#1e3a50', lineHeight:1 }}>ð¤ï¸ â</div>
                       <div style={{ fontSize:9, color:'#1e3040', marginTop:3 }}>Loading...</div>
                     </>
                   )}
@@ -958,8 +957,8 @@ export default function ChatPage() {
 
             {/* Mode tabs */}
             <div style={{ display:'flex', gap:6, marginBottom:10, width:'100%', maxWidth:440 }}>
-              <button onClick={() => setStudyMode(false)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: !studyMode ? 'rgba(0,229,255,.1)' : 'transparent', border:`1px solid ${!studyMode?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)'}`, color: !studyMode?'#00e5ff':'#2a4060' }}>💬 General</button>
-              <button onClick={() => setStudyMode(true)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: studyMode ? 'rgba(167,139,250,.1)' : 'transparent', border:`1px solid ${studyMode?'rgba(167,139,250,.3)':'rgba(255,255,255,.06)'}`, color: studyMode?'#a78bfa':'#2a4060' }}>📚 Study Mode</button>
+              <button onClick={() => setStudyMode(false)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: !studyMode ? 'rgba(0,229,255,.1)' : 'transparent', border:`1px solid ${!studyMode?'rgba(0,229,255,.25)':'rgba(255,255,255,.06)'}`, color: !studyMode?'#00e5ff':'#2a4060' }}>ð¬ General</button>
+              <button onClick={() => setStudyMode(true)} style={{ flex:1, padding:'7px', borderRadius:20, fontSize:11, cursor:'pointer', background: studyMode ? 'rgba(167,139,250,.1)' : 'transparent', border:`1px solid ${studyMode?'rgba(167,139,250,.3)':'rgba(255,255,255,.06)'}`, color: studyMode?'#a78bfa':'#2a4060' }}>ð Study Mode</button>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, width:'100%', maxWidth:440 }}>
               {(studyMode ? STUDY_PROMPTS : STARTERS).map(s => (
@@ -1012,7 +1011,7 @@ export default function ChatPage() {
 
         {loading && (
           <div style={{display:'flex',padding:'8px 16px',gap:8,alignItems:'center'}}>
-            <div style={{width:28,height:28,borderRadius:'50%',background:'#00e5ff15',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>🤖</div>
+            <div style={{width:28,height:28,borderRadius:'50%',background:'#00e5ff15',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>ð¤</div>
             <TypingIndicator />
           </div>
         )}
