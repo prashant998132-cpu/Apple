@@ -140,6 +140,17 @@ export function detectPhoneIntent(msg: string): MacroAction | null {
     return { action: 'screen_blink', scrnblink: blinkMatch[1] || '3' }
   }
 
+
+  // Extra smart context patterns
+  if(m.match(/(andhera|andhere|dark ho|roshni nahi|light chahiye)/i)) return MACRO_COMMANDS.torch_on
+  if(m.match(/(roshni aa gayi|light aa gayi|ujala ho gaya)/i)) return MACRO_COMMANDS.torch_off
+  if(m.match(/(ghar aa gaya|ghar pahunch|home pe hu|ghar wapas)/i)) return MACRO_COMMANDS.wifi_on
+  if(m.match(/(office|college|bahar|travel|safar)/i)) return MACRO_COMMANDS.data_on
+  if(m.match(/(so raha|neend|good night|shubh ratri|raat ko)/i)) return MACRO_COMMANDS.dnd_on
+  if(m.match(/(uth gaya|subah|good morning|safar khatam)/i)) return MACRO_COMMANDS.dnd_off
+  if(m.match(/(kitni battery|battery check|charge|low battery)/i)) return MACRO_COMMANDS.device_info
+  if(m.match(/(network slow|net slow|signal check|speed test)/i)) return MACRO_COMMANDS.device_info
+
   return null
 }
 
