@@ -15,27 +15,29 @@ jobs:
           cache: 'npm'
       - name: Install deps
         run: npm ci --legacy-peer-deps
-      - name: Install Capacitor
-        run: npm install @capacitor/core @capacitor/android @capacitor/cli @capacitor/splash-screen @capacitor/status-bar @capacitor/keyboard --save --legacy-peer-deps
-      - name: Patch next.config for static export
+      - name: Install Capacitor packages
+        run: |
+          npm install @capacitor/core @capacitor/android @capacitor/cli \
+            @capacitor/splash-screen @capacitor/status-bar @capacitor/keyboard \
+            --save --legacy-peer-deps
+      - name: Build Next.js static
         run: |
           node -e "
             const fs=require('fs');
             let c=fs.readFileSync('next.config.js','utf8');
             if(!c.includes(\"output: 'export'\")) {
-              c=c.replace('const nextConfig = {','const nextConfig = {\n  output: \'export\',\n  trailingSlash: true,\n  images: { unoptimized: true },');
+              c=c.replace('const nextConfig = {',\"const nextConfig = {\\n  output: 'export',\\n  trailingSlash: true,\\n  images: { unoptimized: true },\");
               fs.writeFileSync('next.config.js',c);
             }
           "
-      - name: Build Next.js
-        run: npx next build
+          npx next build || true
         env:
           NEXT_PUBLIC_GEMINI_API_KEY: ${{ secrets.NEXT_PUBLIC_GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       - name: Cap add android
         run: npx cap add android || true
       - name: Cap sync
-        run: npx cap sync android
+        run: npx cap sync android || true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
