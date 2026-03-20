@@ -1,187 +1,124 @@
-// JARVIS Service Worker v5 — Maximum Power
-// Features: Smart caching + Push notifications + Background sync
-// + Offline queue + MacroDroid background trigger + Periodic updates
+// public/sw.js — JARVIS Service Worker v6
+// Better offline, background sync, Pomodoro notifications
 
-const CACHE = 'jarvis-v5';
-const STATIC = ['/', '/offline.html', '/manifest.json'];
+const CACHE = 'jarvis-v6';
+const OFFLINE_URLS = ['/', '/offline.html'];
+const API_CACHE_TTL = { weather: 900000, news: 300000, default: 60000 };
 
-// ── Install ──────────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
+    caches.open(CACHE).then(c => c.addAll(OFFLINE_URLS).catch(() => {}))
   );
+  self.skipWaiting();
 });
 
-// ── Activate ─────────────────────────────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-// ── Fetch Strategy ────────────────────────────────────────
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
-  // Skip non-GET and API calls
-  if (e.request.method !== 'GET' || url.pathname.startsWith('/api/')) return;
-  if (url.hostname !== location.hostname) return;
-
-  // Next.js static — cache first
-  if (url.pathname.startsWith('/_next/static/')) {
-    e.respondWith(
-      caches.open(CACHE).then(async cache => {
-        const hit = await cache.match(e.request);
-        if (hit) return hit;
-        const res = await fetch(e.request);
-        if (res.ok) cache.put(e.request, res.clone());
-        return res;
-      })
-    );
-    return;
-  }
-
-  // HTML — network first, cache fallback
-  e.respondWith(
-    fetch(e.request).catch(() =>
-      caches.match(e.request).then(hit => hit || caches.match('/offline.html'))
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     )
   );
+  self.clients.claim();
 });
 
-// ── Push Notifications ────────────────────────────────────
-self.addEventListener('push', e => {
-  const d = e.data?.json() || {};
-  e.waitUntil(
-    self.registration.showNotification(d.title || 'JARVIS', {
-      body:    d.body || '',
-      icon:    '/icons/icon-192x192.png',
-      badge:   '/icons/icon-192x192.png',
-      tag:     d.tag || 'jarvis',
-      vibrate: [200, 100, 200],
-      data:    { url: d.url || '/', action: d.action, webhook: d.webhook },
-      actions: [
-        { action: 'open',    title: '📱 Open JARVIS' },
-        { action: 'execute', title: '⚡ Execute' },
-        { action: 'dismiss', title: '✕ Dismiss' },
-      ],
-    })
-  );
-});
-
-// ── Notification Click ────────────────────────────────────
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  if (e.action === 'dismiss') return;
-
-  // Execute action from notification (e.g. MacroDroid webhook)
-  if (e.action === 'execute' && e.notification.data?.webhook) {
-    e.waitUntil(fetch(e.notification.data.webhook).catch(() => {}));
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  
+  // API calls — network first, cache fallback
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith(
+      fetch(e.request).then(r => {
+        if (r.ok) {
+          const clone = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return r;
+      }).catch(() => caches.match(e.request))
+    );
     return;
   }
+  
+  // Static assets — cache first
+  if (e.request.destination === 'image' || url.pathname.match(/\.(js|css|woff2?)$/)) {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(r => {
+        caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+        return r;
+      }))
+    );
+    return;
+  }
+  
+  // Pages — network first, offline fallback
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() =>
+        caches.match('/') || new Response('<h1>JARVIS Offline</h1>', { headers: { 'Content-Type': 'text/html' } })
+      )
+    );
+  }
+});
 
-  const url = e.notification.data?.url || '/';
+// Push notifications
+self.addEventListener('push', e => {
+  const data = e.data?.json() || {};
   e.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      const existing = list.find(c => c.url.includes(self.location.origin));
-      if (existing) { existing.focus(); return; }
-      return clients.openWindow(url);
+    self.registration.showNotification(data.title || 'JARVIS', {
+      body: data.body || 'Notification',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: data.tag || 'jarvis',
+      data: data.url || '/',
+      vibrate: [100, 50, 100],
+      actions: data.actions || [{ action: 'open', title: 'Open JARVIS' }]
     })
   );
 });
 
-// ── Offline Queue ─────────────────────────────────────────
-const QUEUE_DB = 'jarvis_offline_q';
-const QUEUE_STORE = 'msgs';
-
-function openQueueDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(QUEUE_DB, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(QUEUE_STORE, { keyPath: 'id' });
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-// Background Sync — flush queue when back online
-self.addEventListener('sync', e => {
-  if (e.tag !== 'jarvis-queue') return;
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
   e.waitUntil(
-    openQueueDB().then(async db => {
-      const tx = db.transaction(QUEUE_STORE, 'readwrite');
-      const store = tx.objectStore(QUEUE_STORE);
-      const items = await new Promise(res => {
-        const r = store.getAll();
-        r.onsuccess = () => res(r.result);
-        r.onerror = () => res([]);
-      });
-      for (const item of items) {
-        try {
-          const ok = await fetch(item.url, {
-            method: item.method || 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: item.body,
-          });
-          if (ok.ok) {
-            store.delete(item.id);
-            // Notify success
-            self.registration.showNotification('JARVIS — Sent ✅', {
-              body: 'Queued message delivered!',
-              icon: '/icons/icon-192x192.png',
-              tag: 'sync-done',
-            });
-          }
-        } catch {}
+    clients.matchAll({ type: 'window' }).then(list => {
+      const url = e.notification.data || '/';
+      for (const c of list) {
+        if (c.url === url && 'focus' in c) return c.focus();
       }
-    }).catch(() => {})
+      if (clients.openWindow) return clients.openWindow(url);
+    })
   );
 });
 
-// Periodic Background Sync — proactive checks every 30 min
-self.addEventListener('periodicsync', e => {
-  if (e.tag === 'jarvis-heartbeat') {
+// Background sync — MacroDroid triggers
+self.addEventListener('sync', e => {
+  if (e.tag === 'jarvis-bg-sync') {
     e.waitUntil(
       clients.matchAll().then(list => {
-        if (list.length > 0) return; // App open, no need
-        // Send heartbeat to all clients via message
-        return self.registration.showNotification('JARVIS Active', {
-          body: 'JARVIS is running in background',
-          icon: '/icons/icon-192x192.png',
-          tag: 'heartbeat',
-          silent: true,
-        });
+        list.forEach(c => c.postMessage({ type: 'bg_sync' }));
       })
     );
   }
 });
 
-// ── Message from page — execute commands background ───────
+// Message handler — Pomodoro timer, reminders
 self.addEventListener('message', e => {
-  const { type, payload } = e.data || {};
-
-  // Trigger MacroDroid from background
-  if (type === 'MACRODROID_TRIGGER' && payload?.url) {
-    fetch(payload.url, { method: 'GET', signal: AbortSignal.timeout(8000) })
-      .then(() => e.source?.postMessage({ type: 'MACRO_OK', action: payload.action }))
-      .catch(() => e.source?.postMessage({ type: 'MACRO_FAIL', action: payload.action }));
+  const { type, data } = e.data || {};
+  
+  if (type === 'POMODORO_DONE') {
+    self.registration.showNotification('Pomodoro Complete! 🎉', {
+      body: data?.message || '25 min khatam! 5 min break lo.',
+      icon: '/icons/icon-192x192.png',
+      vibrate: [200, 100, 200, 100, 200],
+      tag: 'pomodoro'
+    });
   }
-
-  // Queue a message for when back online
-  if (type === 'QUEUE_MESSAGE' && payload) {
-    openQueueDB().then(db => {
-      const tx = db.transaction(QUEUE_STORE, 'readwrite');
-      tx.objectStore(QUEUE_STORE).put({
-        id: Date.now().toString(),
-        url: payload.url,
-        method: payload.method || 'POST',
-        body: payload.body,
-        timestamp: Date.now(),
-      });
-    }).catch(() => {});
+  
+  if (type === 'REMINDER') {
+    self.registration.showNotification('JARVIS Reminder ⏰', {
+      body: data?.text || 'Reminder!',
+      icon: '/icons/icon-192x192.png',
+      tag: 'reminder-' + Date.now()
+    });
   }
-
-  // Skip waiting — force update
+  
   if (type === 'SKIP_WAITING') self.skipWaiting();
 });
