@@ -1,89 +1,91 @@
-// app/api/jarvis/route.ts — v10.31 POWERED UP
-// Streaming + File analysis + All chat modes + Smart context
-
+// app/api/jarvis/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { orchestrate } from '../../../lib/core/orchestrator'
+export const runtime = 'edge'
 
-export const maxDuration = 60  // 60s timeout for complex queries
+const JARVIS_SYSTEM = `Tu JARVIS hai — Pranshu ka personal AI assistant. Hinglish mein baat kar (Hindi+English mix).
+Personality: Smart, witty, helpful, dost jaisa. Tony Stark wala reference mat de.
+Pranshu Rewa MP mein rehta hai. Uski help kar seedha aur clearly.
+Short responses do — 2-3 lines max jab tak detail na maanga jaaye.`
 
-export async function POST(req: NextRequest) {
-  const start = Date.now()
-  try {
-    const body = await req.json()
-    const {
-      message      = '',
-      userId       = 'user',
-      chatId,
-      history      = [],
-      location,
-      providerMode = 'smart',
-      chatMode     = 'auto',
-      userName,
-      memoryPrompt,
-      fileData,        // base64 image/pdf for vision
-      url,             // URL to analyze
-    } = body
+const LUNA_SYSTEM = `Tu LUNA hai — ek warm, caring AI bestie for girls.
+Rules:
+- Sirf Hinglish mein baat kar (Hindi+English mix)
+- Bestie/dost jaisi tone — caring, funny, supportive
+- KABHI bhi JARVIS, Iron Man, Tony Stark, "Master Stark" mat bol
+- Tu ek girl bestie hai, AI assistant nahi
+- Short reh — 2-3 lines max
+- NO markdown — no **, no *, no bullet points
+- Emoji naturally use kar`
 
-    if (!message?.trim() && !fileData && !url) {
-      return NextResponse.json({ error: 'No input' }, { status: 400 })
-    }
-
-    const resolvedChatId = chatId || `chat_${userId}_${new Date().toDateString().replace(/ /g,'_')}`
-
-    let forcedProvider: string | undefined
-    if (chatMode === 'flash') forcedProvider = 'groq_fast'
-    else if (chatMode === 'think') forcedProvider = 'deepseek_r1'
-    else if (chatMode === 'deep') forcedProvider = 'gemini_deep'
-
-    // Enhance message with context
-    let enhancedMessage = message
-    if (url) enhancedMessage = message + ' [URL: ' + url + ']'
-
-    const result = await orchestrate({
-      message: enhancedMessage || 'Analyze this',
-      userId,
-      chatId: resolvedChatId,
-      history,
-      location,
-      baseUrl: req.nextUrl.origin,
-      providerMode,
-      forcedProvider,
-      chatMode,
-      userName,
-      memoryPrompt,
-      fileData,
+async function callGroq(messages: any[], system: string): Promise<string> {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: system },
+        ...messages
+      ],
+      max_tokens: 300,
+      temperature: 0.8
     })
-
-    return NextResponse.json({
-      reply:        result.reply,
-      thinking:     result.thinking,
-      richData:     result.richData,
-      toolsUsed:    result.toolsUsed,
-      model:        result.model,
-      provider:     result.provider,
-      processingMs: result.processingMs,
-      safeMode:     result.safeMode,
-      intent:       result.routeReason,
-      apiCallsMade: result.apiCallsMade,
-      errors:       result.errors.length ? result.errors : undefined,
-    })
-  } catch (err) {
-    console.error('[JARVIS]', err)
-    return NextResponse.json({
-      reply: 'Kuch gadbad ho gayi. Dobara try karo.',
-      error: true,
-      processingMs: Date.now() - start,
-    }, { status: 200 })  // 200 so client shows the error message
-  }
+  })
+  const d = await res.json()
+  return d.choices?.[0]?.message?.content || ''
 }
 
-export async function GET() {
-  return NextResponse.json({
-    status: 'JARVIS v10.31 online — Maximum Power',
-    version: 'v10.31',
-    modes: ['flash (Groq 8B — fastest)', 'think (DeepSeek R1 — reasoning)', 'deep (Gemini 2.0 — tools)', 'auto (Smart Router)'],
-    providers: ['Gemini 2.0 Flash', 'Groq Llama 3.3 70B', 'DeepSeek V3/R1', 'Mistral', 'Grok xAI', 'OpenRouter', 'Together AI', 'Cohere', 'AIMLAPI', 'Pollinations (unlimited)'],
-    tools: ['weather', 'news', 'crypto', 'wikipedia', 'image_gen', 'youtube', 'cricket', 'maps', '67+ more'],
-    features: ['MacroDroid phone control', 'Contact picker', 'Push notifications', 'Offline queue', 'Mood tracking', 'Agentic multi-step', 'Memory', 'File/image analysis'],
-  })
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^[\s]*[-*•]\s+/gm, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { message, lunaMode, systemOverride, conversationHistory } = body
+
+    // Choose system prompt
+    let system = systemOverride || (lunaMode ? LUNA_SYSTEM : JARVIS_SYSTEM)
+    
+    // If lunaMode, ALWAYS use LUNA_SYSTEM as base (not JARVIS)
+    if (lunaMode && !systemOverride) {
+      system = LUNA_SYSTEM
+    }
+    if (lunaMode && systemOverride) {
+      // Merge — but LUNA rules come first to prevent JARVIS leak
+      system = LUNA_SYSTEM + '\n\nAdditional context: ' + systemOverride
+    }
+
+    const messages = conversationHistory 
+      ? conversationHistory.map((m: any) => ({ role: m.role, content: m.content }))
+      : [{ role: 'user', content: message }]
+
+    // Add current message if using history
+    if (conversationHistory) {
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg?.role !== 'user' || lastMsg?.content !== message) {
+        messages.push({ role: 'user', content: message })
+      }
+    }
+
+    let response = await callGroq(messages, system)
+    
+    // Strip markdown from LUNA responses
+    if (lunaMode) {
+      response = stripMarkdown(response)
+    }
+
+    return NextResponse.json({ response, message: response, reply: response })
+  } catch (e) {
+    return NextResponse.json({ response: 'Kuch issue aaya, phir try karo! 😅', error: String(e) })
+  }
 }
