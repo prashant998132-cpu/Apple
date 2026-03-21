@@ -1,30 +1,14 @@
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
 import './globals.css'
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
-}
+import GirlModeBtn from '../components/GirlModeBtn'
 
 export const metadata: Metadata = {
   title: 'JARVIS AI',
   description: 'Personal AI — Voice, Phone Control, Smart Tools',
   manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'JARVIS',
-  },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -34,8 +18,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#040e1a" />
       </head>
-      <body style={{margin:0,padding:0,background:'#040e1a',overflow:'hidden'}}>
+      <body style={{margin:0,padding:0,background:'#040e1a'}}>
         {children}
+        <GirlModeBtn />
       </body>
     </html>
   )
