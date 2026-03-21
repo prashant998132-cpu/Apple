@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 
 const SYS='Tu LUNA hai — ek warm, stylish AI bestie for girls. Hinglish mein baat kar. Caring, funny, honest jaise real best friend. Topics: skincare, fashion, self-love, relationships, fun. 2-4 lines max.'
-
 const MOODS=[{e:'🌸',l:'Khush',c:'#f9a8d4'},{e:'🌙',l:'Mellow',c:'#c4b5fd'},{e:'☕',l:'Cozy',c:'#fbbf24'},{e:'💪',l:'Fierce',c:'#f87171'},{e:'🌧',l:'Udaas',c:'#93c5fd'},{e:'✨',l:'Glowing',c:'#6ee7b7'}]
 const QUICK=[['Skincare ☁️','Aaj ka simple skincare routine batao'],['Affirmation 💗','Ek powerful self-love affirmation do'],['Outfit 👗','College ke liye cute outfit idea do'],['Motivate 🔥','Mujhe motivate karo please'],['Glow tips ✨','Natural glow ke liye 5 easy tips do'],['Vent 🌧','Mujhe bas sun, kuch share karna hai']]
 const AFFS=['Tu jitni hai utni hi perfect hai 💗','Teri energy room ki vibe badal deti hai ✨','Aaj ka din tera hai — own it! 🌸','Tu strong hai, even when it doesnt feel so 🌙','Work in progress hona okay hai 🌱']
@@ -11,14 +10,14 @@ export default function LunaPage(){
   const [msgs,setMsgs]=useState([{role:'assistant',content:'Heyy bestie! 🌸 Main LUNA hoon — teri AI bestie. Kuch bhi share kar, koi judgment nahi. Aaj kaisi feel ho rahi hai? ✨'}])
   const [input,setInput]=useState('')
   const [loading,setLoading]=useState(false)
-  const [mood,setMood]=useState(null)
+  const [mood,setMood]=useState(null as any)
   const [affIdx,setAffIdx]=useState(0)
-  const endRef=useRef(null)
+  const endRef=useRef(null as any)  // Fix: null as any
 
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'})},[msgs])
   useEffect(()=>{const id=setInterval(()=>setAffIdx(i=>(i+1)%AFFS.length),3500);return()=>clearInterval(id)},[])
 
-  async function send(txt){
+  async function send(txt?: string){
     const msg=(txt||input).trim()
     if(!msg||loading)return
     setInput('')
@@ -91,10 +90,10 @@ export default function LunaPage(){
         </div>
         <div style={{padding:'8px 12px 28px',background:'rgba(255,255,255,0.52)',backdropFilter:'blur(20px)',borderTop:'1px solid rgba(249,168,212,0.12)',zIndex:2,flexShrink:0}}>
           <div style={{display:'flex',gap:'7px',alignItems:'center',background:'rgba(255,255,255,0.82)',borderRadius:'22px',padding:'6px 6px 6px 15px',border:'1.5px solid rgba(196,181,253,0.3)'}}>
-            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send(null)}
+            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}
               placeholder="Kuch bhi poocho bestie... 💗"
               style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:'#4b2563',fontFamily:'inherit'}}/>
-            <button onClick={()=>send(null)} disabled={loading} style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',border:'none',cursor:'pointer',fontSize:'14px',flexShrink:0,boxShadow:'0 3px 12px rgba(236,72,153,0.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>💌</button>
+            <button onClick={()=>send()} disabled={loading} style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',border:'none',cursor:'pointer',fontSize:'14px',flexShrink:0,boxShadow:'0 3px 12px rgba(236,72,153,0.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>💌</button>
           </div>
         </div>
       </div>
