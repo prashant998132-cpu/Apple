@@ -1,49 +1,24 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 
-const SYS = 'Tu LUNA hai — ek warm, stylish AI bestie for girls. Hinglish mein baat kar. Caring, funny, honest jaise real best friend. Topics: skincare, fashion, self-love, relationships, fun. 2-4 lines max.'
+const SYS='Tu LUNA hai — ek warm, stylish AI bestie for girls. Hinglish mein baat kar. Caring, funny, honest jaise real best friend. Topics: skincare, fashion, self-love, relationships, fun. 2-4 lines max.'
 
-const MOODS = [
-  {e:'🌸',l:'Khush',c:'#f9a8d4'},
-  {e:'🌙',l:'Mellow',c:'#c4b5fd'},
-  {e:'☕',l:'Cozy',c:'#fbbf24'},
-  {e:'💪',l:'Fierce',c:'#f87171'},
-  {e:'🌧',l:'Udaas',c:'#93c5fd'},
-  {e:'✨',l:'Glowing',c:'#6ee7b7'},
-]
+const MOODS=[{e:'🌸',l:'Khush',c:'#f9a8d4'},{e:'🌙',l:'Mellow',c:'#c4b5fd'},{e:'☕',l:'Cozy',c:'#fbbf24'},{e:'💪',l:'Fierce',c:'#f87171'},{e:'🌧',l:'Udaas',c:'#93c5fd'},{e:'✨',l:'Glowing',c:'#6ee7b7'}]
+const QUICK=[['Skincare ☁️','Aaj ka simple skincare routine batao'],['Affirmation 💗','Ek powerful self-love affirmation do'],['Outfit 👗','College ke liye cute outfit idea do'],['Motivate 🔥','Mujhe motivate karo please'],['Glow tips ✨','Natural glow ke liye 5 easy tips do'],['Vent 🌧','Mujhe bas sun, kuch share karna hai']]
+const AFFS=['Tu jitni hai utni hi perfect hai 💗','Teri energy room ki vibe badal deti hai ✨','Aaj ka din tera hai — own it! 🌸','Tu strong hai, even when it doesnt feel so 🌙','Work in progress hona okay hai 🌱']
 
-const QUICK = [
-  ['Skincare ☁️','Aaj ka simple skincare routine batao'],
-  ['Affirmation 💗','Ek powerful self-love affirmation do'],
-  ['Outfit 👗','College ke liye cute outfit idea do'],
-  ['Motivate 🔥','Mujhe motivate karo please'],
-  ['Glow tips ✨','Natural glow ke liye 5 easy tips do'],
-  ['Vent 🌧','Mujhe bas sun, kuch share karna hai'],
-]
-
-const AFFS = [
-  'Tu jitni hai utni hi perfect hai 💗',
-  'Teri energy room ki vibe badal deti hai ✨',
-  'Aaj ka din tera hai — own it! 🌸',
-  'Tu strong hai, even when it doesnt feel so 🌙',
-  'Work in progress hona okay hai 🌱',
-]
-
-export default function LunaPage() {
-  const [msgs, setMsgs] = useState([{role:'assistant',content:'Heyy bestie! 🌸 Main LUNA hoon — teri AI bestie. Kuch bhi share kar, koi judgment nahi. Aaj kaisi feel ho rahi hai? ✨'}])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [mood, setMood] = useState(null as any)
-  const [affIdx, setAffIdx] = useState(0)
-  const endRef = useRef(null as any)
+export default function LunaPage(){
+  const [msgs,setMsgs]=useState([{role:'assistant',content:'Heyy bestie! 🌸 Main LUNA hoon — teri AI bestie. Kuch bhi share kar, koi judgment nahi. Aaj kaisi feel ho rahi hai? ✨'}])
+  const [input,setInput]=useState('')
+  const [loading,setLoading]=useState(false)
+  const [mood,setMood]=useState(null)
+  const [affIdx,setAffIdx]=useState(0)
+  const endRef=useRef(null)
 
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'})},[msgs])
-  useEffect(()=>{
-    const id=setInterval(()=>setAffIdx(i=>(i+1)%AFFS.length),3500)
-    return ()=>clearInterval(id)
-  },[])
+  useEffect(()=>{const id=setInterval(()=>setAffIdx(i=>(i+1)%AFFS.length),3500);return()=>clearInterval(id)},[])
 
-  async function send(txt?: string) {
+  async function send(txt){
     const msg=(txt||input).trim()
     if(!msg||loading)return
     setInput('')
@@ -55,11 +30,7 @@ export default function LunaPage() {
       const d=await r.json()
       const rep=d.response||d.message||d.reply||'Kuch nahi aaya bestie 💗'
       setMsgs([...nm,{role:'assistant',content:rep}])
-      if('speechSynthesis' in window){
-        const u=new SpeechSynthesisUtterance(rep.replace(/[^\x00-\x7F]/g,''))
-        u.lang='hi-IN';u.rate=0.9;u.pitch=1.1
-        window.speechSynthesis.speak(u)
-      }
+      if('speechSynthesis' in window){const u=new SpeechSynthesisUtterance(rep.replace(/[^\x00-\x7F]/g,''));u.lang='hi-IN';u.rate=0.9;u.pitch=1.1;window.speechSynthesis.speak(u)}
     }catch{setMsgs([...nm,{role:'assistant',content:'Connection issue 😅 Phir try karo ✨'}])}
     setLoading(false)
   }
@@ -70,17 +41,12 @@ export default function LunaPage() {
         @keyframes lf{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
         @keyframes lb{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
         @keyframes lp{0%,100%{opacity:1}50%{opacity:0.5}}
-        .lmsg{animation:lf 0.25s ease}
         ::-webkit-scrollbar{display:none}
       `}</style>
       <div style={{minHeight:'100vh',background:'linear-gradient(160deg,#fdf2f8,#fce7f3,#ede9fe)',fontFamily:'Georgia,serif',display:'flex',flexDirection:'column',overflow:'hidden'}}>
-        
-        {/* Bg deco */}
         {['🌸','💗','✨','🌙','⭐'].map((e,i)=>(
           <div key={i} style={{position:'fixed',left:(8+i*20)+'%',top:(5+i*16)+'%',fontSize:'16px',opacity:.07,animation:'lf '+(5+i)+'s '+(i*0.7)+'s infinite ease-in-out',pointerEvents:'none',zIndex:0}}>{e}</div>
         ))}
-
-        {/* Header */}
         <div style={{padding:'14px',background:'rgba(255,255,255,0.62)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(249,168,212,0.2)',position:'sticky',top:0,zIndex:50,flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
             <a href="/" style={{background:'rgba(15,23,42,0.08)',border:'1.5px solid rgba(15,23,42,0.12)',color:'#374151',padding:'5px 10px',borderRadius:'12px',fontSize:'11px',textDecoration:'none',fontFamily:'monospace',whiteSpace:'nowrap',flexShrink:0}}>⚡ JARVIS</a>
@@ -91,18 +57,13 @@ export default function LunaPage() {
             <div style={{fontSize:'10px',color:'#8b5cf6',maxWidth:'75px',lineHeight:'1.3',fontStyle:'italic',animation:'lp 3.5s infinite',flexShrink:0,textAlign:'right'}}>{AFFS[affIdx]}</div>
           </div>
         </div>
-
-        {/* Mood */}
         <div style={{display:'flex',gap:'5px',padding:'8px 12px',overflowX:'auto',scrollbarWidth:'none',flexShrink:0,zIndex:2}}>
           {MOODS.map(m=>(
-            <button key={m.l} onClick={()=>setMood(mood?.l===m.l?null:m)}
-              style={{display:'flex',alignItems:'center',gap:'3px',padding:'4px 10px',borderRadius:'20px',border:mood?.l===m.l?'2px solid '+m.c:'1.5px solid rgba(0,0,0,0.07)',background:mood?.l===m.l?m.c+'25':'rgba(255,255,255,0.75)',cursor:'pointer',whiteSpace:'nowrap',fontSize:'11px',color:mood?.l===m.l?'#6b21a8':'#9ca3af',fontWeight:mood?.l===m.l?700:400,transition:'all 0.2s',flexShrink:0}}>
+            <button key={m.l} onClick={()=>setMood(mood?.l===m.l?null:m)} style={{display:'flex',alignItems:'center',gap:'3px',padding:'4px 10px',borderRadius:'20px',border:mood?.l===m.l?'2px solid '+m.c:'1.5px solid rgba(0,0,0,0.07)',background:mood?.l===m.l?m.c+'25':'rgba(255,255,255,0.75)',cursor:'pointer',whiteSpace:'nowrap',fontSize:'11px',color:mood?.l===m.l?'#6b21a8':'#9ca3af',fontWeight:mood?.l===m.l?700:400,transition:'all 0.2s',flexShrink:0}}>
               {m.e} {m.l}
             </button>
           ))}
         </div>
-
-        {/* Messages */}
         <div style={{flex:1,overflowY:'auto',padding:'12px',display:'flex',flexDirection:'column',gap:'10px',zIndex:2}}>
           {msgs.map((m,i)=>(
             <div key={i} style={{display:'flex',gap:'7px',alignItems:'flex-end',flexDirection:m.role==='user'?'row-reverse':'row'}}>
@@ -121,8 +82,6 @@ export default function LunaPage() {
           )}
           <div ref={endRef}/>
         </div>
-
-        {/* Quick */}
         <div style={{padding:'5px 12px',zIndex:2,flexShrink:0}}>
           <div style={{display:'flex',gap:'5px',overflowX:'auto',scrollbarWidth:'none'}}>
             {QUICK.map(([t,p])=>(
@@ -130,17 +89,12 @@ export default function LunaPage() {
             ))}
           </div>
         </div>
-
-        {/* Input */}
         <div style={{padding:'8px 12px 28px',background:'rgba(255,255,255,0.52)',backdropFilter:'blur(20px)',borderTop:'1px solid rgba(249,168,212,0.12)',zIndex:2,flexShrink:0}}>
           <div style={{display:'flex',gap:'7px',alignItems:'center',background:'rgba(255,255,255,0.82)',borderRadius:'22px',padding:'6px 6px 6px 15px',border:'1.5px solid rgba(196,181,253,0.3)'}}>
-            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}
+            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send(null)}
               placeholder="Kuch bhi poocho bestie... 💗"
               style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:'#4b2563',fontFamily:'inherit'}}/>
-            <button onClick={()=>send()} disabled={loading}
-              style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',border:'none',cursor:'pointer',fontSize:'14px',flexShrink:0,boxShadow:'0 3px 12px rgba(236,72,153,0.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              💌
-            </button>
+            <button onClick={()=>send(null)} disabled={loading} style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',border:'none',cursor:'pointer',fontSize:'14px',flexShrink:0,boxShadow:'0 3px 12px rgba(236,72,153,0.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>💌</button>
           </div>
         </div>
       </div>
