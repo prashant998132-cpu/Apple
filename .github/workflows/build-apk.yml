@@ -16,24 +16,23 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.2'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Accept licenses
         run: yes | sdkmanager --licenses || true
 
-      - name: Install Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.2'
+      - name: Install SDK components
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Generate gradlew in wrapper folder
+      - name: Build APK
         working-directory: android-wrapper
-        run: gradle wrapper --gradle-version 8.2
-
-      - name: Build Debug APK
-        working-directory: android-wrapper
-        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -41,3 +40,4 @@ jobs:
           name: JARVIS-APK
           path: android-wrapper/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+          if-no-files-found: warn
