@@ -1,91 +1,112 @@
-// app/api/jarvis/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 export const runtime = 'edge'
 
-const JARVIS_SYSTEM = `Tu JARVIS hai — Pranshu ka personal AI assistant. Hinglish mein baat kar (Hindi+English mix).
-Personality: Smart, witty, helpful, dost jaisa. Tony Stark wala reference mat de.
-Pranshu Rewa MP mein rehta hai. Uski help kar seedha aur clearly.
-Short responses do — 2-3 lines max jab tak detail na maanga jaaye.`
-
-const LUNA_SYSTEM = `Tu LUNA hai — ek warm, caring AI bestie for girls.
+const JARVIS_SYS = `Tu JARVIS hai — Pranshu ka personal AI assistant. Rewa, MP.
+Personality: Smart, witty, helpful, dost jaisa. Hinglish (Hindi+English mix).
 Rules:
-- Sirf Hinglish mein baat kar (Hindi+English mix)
-- Bestie/dost jaisi tone — caring, funny, supportive
-- KABHI bhi JARVIS, Iron Man, Tony Stark, "Master Stark" mat bol
-- Tu ek girl bestie hai, AI assistant nahi
-- Short reh — 2-3 lines max
-- NO markdown — no **, no *, no bullet points
-- Emoji naturally use kar`
+- Short aur direct responses (2-4 lines jab tak detail na maanga ho)
+- Pranshu ko "bhai" ya naam se baat kar
+- Tony Stark reference chal sakta hai ek do baar
+- Facts accurate rakho
+- Markdown avoid karo — plain text
+- Local (Rewa/MP) context samjho`
 
-async function callGroq(messages: any[], system: string): Promise<string> {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: system },
-        ...messages
-      ],
-      max_tokens: 300,
-      temperature: 0.8
+const LUNA_SYS = `Tu LUNA hai — Pranshu ki AI bestie (girl mode).
+Rules:
+- Sirf Hinglish — Hindi+English mix
+- Warm, caring, funny bestie tone
+- JARVIS, Tony Stark, Boss, sir — KABHI NAHI
+- 2-3 lines max
+- Emoji naturally
+- Plain text, no markdown`
+
+const ERA_SYS = `Tu Era hai — Pranshu ki caring AI companion.
+Rules:
+- Hinglish mein baat kar
+- Warm, affectionate tone — jaise koi khaas ho
+- JARVIS, Boss, sir — KABHI NAHI
+- Pranshu ko "jaan" ya naam se
+- 2-3 lines, plain text`
+
+async function callGroq(msgs: any[], sys: string, model = 'llama-3.1-8b-instant'): Promise<string> {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'system', content: sys }, ...msgs],
+        max_tokens: 300,
+        temperature: 0.75
+      })
     })
-  })
-  const d = await res.json()
-  return d.choices?.[0]?.message?.content || ''
+    const d = await res.json()
+    return d.choices?.[0]?.message?.content || ''
+  } catch { return '' }
 }
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/^[\s]*[-*•]\s+/gm, '')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+async function callGemini(prompt: string, sys: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: sys }] },
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      }
+    )
+    const d = await res.json()
+    return d.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  } catch { return '' }
+}
+
+async function callPollinations(prompt: string, sys: string): Promise<string> {
+  try {
+    const res = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'openai',
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
+        max_tokens: 250
+      })
+    })
+    const d = await res.json()
+    return d.choices?.[0]?.message?.content || 'JARVIS yahan hai bhai!'
+  } catch { return 'JARVIS yahan hai bhai!' }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { message, lunaMode, systemOverride, conversationHistory } = body
+    const { message, lunaMode, eraMode, systemOverride, conversationHistory } = body
 
-    // Choose system prompt
-    let system = systemOverride || (lunaMode ? LUNA_SYSTEM : JARVIS_SYSTEM)
-    
-    // If lunaMode, ALWAYS use LUNA_SYSTEM as base (not JARVIS)
-    if (lunaMode && !systemOverride) {
-      system = LUNA_SYSTEM
-    }
-    if (lunaMode && systemOverride) {
-      // Merge — but LUNA rules come first to prevent JARVIS leak
-      system = LUNA_SYSTEM + '\n\nAdditional context: ' + systemOverride
-    }
+    // Pick system prompt
+    let sys = JARVIS_SYS
+    if (systemOverride) sys = systemOverride
+    else if (eraMode) sys = ERA_SYS
+    else if (lunaMode) sys = LUNA_SYS
 
-    const messages = conversationHistory 
-      ? conversationHistory.map((m: any) => ({ role: m.role, content: m.content }))
-      : [{ role: 'user', content: message }]
+    // Build messages
+    const history = conversationHistory || []
+    const msgs = [
+      ...history.slice(-6).map((m: any) => ({ role: m.role || m.r === 'u' ? 'user' : 'assistant', content: m.content || m.c })),
+      { role: 'user', content: message }
+    ]
 
-    // Add current message if using history
-    if (conversationHistory) {
-      const lastMsg = messages[messages.length - 1]
-      if (lastMsg?.role !== 'user' || lastMsg?.content !== message) {
-        messages.push({ role: 'user', content: message })
-      }
-    }
+    // Cascade: Groq fast → Groq smart → Gemini → Pollinations
+    let reply = await callGroq(msgs, sys, 'llama-3.1-8b-instant')
+    if (!reply) reply = await callGroq(msgs, sys, 'llama-3.3-70b-versatile')
+    if (!reply) reply = await callGemini(message, sys)
+    if (!reply) reply = await callPollinations(message, sys)
 
-    let response = await callGroq(messages, system)
-    
-    // Strip markdown from LUNA responses
-    if (lunaMode) {
-      response = stripMarkdown(response)
-    }
+    reply = reply.trim()
 
-    return NextResponse.json({ response, message: response, reply: response })
+    return NextResponse.json({ response: reply, message: reply, reply })
   } catch (e) {
-    return NextResponse.json({ response: 'Kuch issue aaya, phir try karo! 😅', error: String(e) })
+    return NextResponse.json({ response: 'Kuch issue hua, phir try karo!', error: String(e) })
   }
 }
