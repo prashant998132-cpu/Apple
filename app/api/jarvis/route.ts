@@ -3,8 +3,7 @@ export const runtime = 'edge'
 
 const JARVIS_SYS = `Tu JARVIS hai — Pranshu ka personal AI assistant. Rewa, MP.
 Smart, witty, helpful, dost jaisa. Hinglish (Hindi+English mix).
-Short aur direct responses. Markdown avoid karo — plain text.
-Agar search/url/youtube tool use kiya ho to us data ko summarize karo clearly.`
+Short aur direct responses (2-4 lines). Markdown avoid karo — plain text.`
 
 const LUNA_SYS = `Tu LUNA hai — Pranshu ki warm girl bestie.
 Sirf Hinglish. JARVIS/Boss/sir kabhi nahi. 2-3 lines. Emoji naturally.`
@@ -48,21 +47,14 @@ async function pollinations(prompt: string, sys: string): Promise<string> {
   } catch { return 'JARVIS yahan hai!' }
 }
 
-// Detect what tools to use
-function detectTools(msg: string): { search: boolean, url: boolean, youtube: boolean, image: boolean, video: boolean } {
+function detectTools(msg: string) {
   const m = msg.toLowerCase()
-  const ytPatterns = ['youtube', 'youtu.be', 'yt.be']
-  const urlPatterns = ['http://', 'https://']
-  const searchPatterns = ['search', 'dhundho', 'kya hua', 'latest', 'aaj ki', 'news', 'batao abhi', 'live', 'price', 'rate', 'kitne ka', 'kab hai', 'kahan hai']
-  const imagePatterns = ['image banao', 'photo banao', 'picture banao', 'wallpaper', 'drawing', 'art banao', 'generate image', 'ek photo']
-  const videoPatterns = ['video banao', 'animation banao', 'clip banao']
-
   return {
-    youtube: ytPatterns.some(p => m.includes(p)),
-    url: !ytPatterns.some(p => m.includes(p)) && urlPatterns.some(p => msg.includes(p)),
-    search: searchPatterns.some(p => m.includes(p)),
-    image: imagePatterns.some(p => m.includes(p)),
-    video: videoPatterns.some(p => m.includes(p)),
+    youtube: m.includes('youtu'),
+    url: !m.includes('youtu') && (msg.includes('http://') || msg.includes('https://')),
+    search: /search|dhundho|kya hua|latest|aaj ki|news|live|price|rate|kitne ka|kab hai/.test(m),
+    image: /image banao|photo banao|picture banao|wallpaper|generate image|ek photo|draw|sketch/.test(m),
+    video: /video banao|animation banao|clip banao/.test(m),
   }
 }
 
@@ -82,10 +74,23 @@ export async function POST(req: NextRequest) {
       content: m.content || m.c || ''
     }))
 
-    // Tool detection (only for JARVIS, not Era/LUNA)
     let contextData = ''
+
     if (!lunaMode && !eraMode && !systemOverride) {
       const tools = detectTools(message)
+
+      if (tools.image) {
+        const promptClean = message.replace(/image banao|photo banao|picture banao|wallpaper|generate image|ek photo|draw|sketch/gi, '').trim()
+        const seed = Math.floor(Math.random() * 999999)
+        const imageUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(promptClean || message) + '?model=flux&width=1024&height=1024&seed=' + seed + '&nologo=true&enhance=true'
+        return NextResponse.json({ response: 'IMAGE_GENERATED', imageUrl, imagePrompt: promptClean || message })
+      }
+
+      if (tools.video) {
+        const promptClean = message.replace(/video banao|animation banao|clip banao/gi, '').trim()
+        const videoUrl = 'https://video.pollinations.ai/' + encodeURIComponent(promptClean || message)
+        return NextResponse.json({ response: 'VIDEO_GENERATED', videoUrl, note: 'Alpha — 30-60s lag sakta hai' })
+      }
 
       if (tools.youtube) {
         const urlMatch = message.match(/https?:\/\/[^\s]+/)
@@ -95,9 +100,9 @@ export async function POST(req: NextRequest) {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ url: urlMatch[0] })
             })
-            const ytData = await ytRes.json()
-            if (ytData.transcript) contextData = '[YouTube Transcript]: ' + ytData.transcript.substring(0, 2000)
-            else if (ytData.title) contextData = '[YouTube Video]: ' + ytData.title + ' by ' + ytData.author
+            const yt = await ytRes.json()
+            if (yt.transcript) contextData = '[YouTube Transcript]: ' + yt.transcript.substring(0, 2000)
+            else if (yt.title) contextData = '[YouTube]: ' + yt.title
           } catch {}
         }
       } else if (tools.url) {
@@ -120,52 +125,15 @@ export async function POST(req: NextRequest) {
           })
           const sData = await sRes.json()
           if (sData.results?.length > 0) {
-            contextData = '[Search Results]: ' + sData.results.map((r: any) => r.title + ': ' + r.snippet).join(' | ').substring(0, 1500)
-          }
-        } catch {}
-      } else if (tools.image) {
-        const promptMatch = message.replace(/image banao|photo banao|picture banao|ek photo|generate image/gi, '').trim()
-        try {
-          const igRes = await fetch(req.nextUrl.origin + '/api/imagegen', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: promptMatch || message })
-          })
-          const igData = await igRes.json()
-          if (igData.url) {
-            return NextResponse.json({
-              response: 'IMAGE_GENERATED',
-              reply: 'IMAGE_GENERATED',
-              message: 'IMAGE_GENERATED',
-              imageUrl: igData.url,
-              imagePrompt: igData.prompt
-            })
-          }
-        } catch {}
-      } else if (tools.video) {
-        const promptMatch = message.replace(/video banao|animation banao|clip banao/gi, '').trim()
-        try {
-          const vgRes = await fetch(req.nextUrl.origin + '/api/videogen', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: promptMatch || message })
-          })
-          const vgData = await vgRes.json()
-          if (vgData.url) {
-            return NextResponse.json({
-              response: 'VIDEO_GENERATED',
-              reply: 'VIDEO_GENERATED',
-              message: 'VIDEO_GENERATED',
-              videoUrl: vgData.url,
-              note: vgData.note
-            })
+            contextData = '[Search]: ' + sData.results.slice(0,3).map((r: any) => r.title + ': ' + r.snippet).join(' | ')
           }
         } catch {}
       }
     }
 
-    const fullMsg = contextData ? contextData + '\n\nUser ka sawaal: ' + message : message
+    const fullMsg = contextData ? contextData + '\n\nUser: ' + message : message
     msgs.push({ role: 'user', content: fullMsg })
 
-    // Cascade
     let reply = await groq(msgs, sys, 'llama-3.1-8b-instant')
     if (!reply) reply = await groq(msgs, sys, 'llama-3.3-70b-versatile')
     if (!reply) reply = await gemini(message, sys)
