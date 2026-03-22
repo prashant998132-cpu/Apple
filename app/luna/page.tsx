@@ -1,28 +1,46 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-const SYS='Tu LUNA hai — ek caring, fun, warm girl bestie. Sirf Hinglish mein baat kar. JARVIS, Boss, sir, Master Stark kabhi mat bol. Warm bestie tone. 2-3 lines max. Emoji naturally use kar.'
+
+const SYS='Tu LUNA hai. Ek caring, fun, warm girl bestie. Sirf Hinglish. JARVIS, Boss, sir kabhi nahi. 2-3 lines. Emoji use kar.'
+
 const MOODS=[{e:'🌸',l:'Khush',c:'#f9a8d4'},{e:'🌙',l:'Mellow',c:'#c4b5fd'},{e:'☕',l:'Cozy',c:'#fbbf24'},{e:'💪',l:'Fierce',c:'#f87171'},{e:'🌧',l:'Udaas',c:'#93c5fd'},{e:'✨',l:'Glowing',c:'#6ee7b7'}]
 const Q=[['Skincare ☁️','Skincare routine batao'],['Affirmation 💗','Affirmation do'],['Outfit 👗','Outfit idea do'],['Motivate 🔥','Motivate karo'],['Glow ✨','Glow tips do'],['Vent 🌧','Mujhe sun']]
+
+function lunaClean(t: string): string {
+  let s = t
+  let bold = '[' + '*' + '][' + '*' + ']([^' + '*' + ']+)[' + '*' + '][' + '*' + ']'
+  let ital = '[' + '*' + ']([^' + '*' + ']+)[' + '*' + ']'
+  s = s.replace(new RegExp(bold,'g'),'$1')
+  s = s.replace(new RegExp(ital,'g'),'$1')
+  return s.trim()
+}
+
 export default function LunaPage(){
   const [msgs,setMsgs]=useState([{r:'a',c:'Heyy bestie! 🌸 Main LUNA hoon. Kuch bhi share kar, koi judgment nahi. Aaj kaisi feel ho rahi hai? ✨'}])
   const [inp,setInp]=useState('')
   const [load,setLoad]=useState(false)
   const [mood,setMood]=useState(null as any)
   const ref=useRef(null as any)
+
   useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight},[msgs])
+
   async function send(t?: string){
     const msg=(t||inp).trim();if(!msg||load)return
     setInp('');const nm=[...msgs,{r:'u',c:msg}];setMsgs(nm);setLoad(true)
     try{
-      const res=await fetch('/api/jarvis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,systemOverride:SYS+(mood?' Mood:'+mood.l:''),lunaMode:true})})
+      const res=await fetch('/api/jarvis',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:msg,systemOverride:SYS+(mood?' Mood:'+mood.l:''),lunaMode:true})})
       const d=await res.json()
-      const rep=(d.response||d.message||'💗').replace(/*{2}([^*]+)*{2}/g,'$1').replace(/*([^*]+)*/g,'$1')
-      setMsgs([...nm,{r:'a',c:rep}])
+      setMsgs([...nm,{r:'a',c:lunaClean(d.response||d.message||'Phir try karo ✨')}])
     }catch{setMsgs([...nm,{r:'a',c:'Phir try karo ✨'}])}
     setLoad(false)
   }
+
   return(<>
-    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:0}@keyframes lb{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}@keyframes lp{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+    <style>{`
+      *{box-sizing:border-box}::-webkit-scrollbar{width:0}
+      @keyframes lb{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+    `}</style>
     <div style={{position:'fixed',inset:0,background:'linear-gradient(160deg,#fdf2f8,#fce7f3,#ede9fe)',fontFamily:'Georgia,serif',display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div style={{flexShrink:0,padding:'12px 14px',background:'rgba(255,255,255,0.65)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(249,168,212,0.2)',zIndex:10}}>
         <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
@@ -31,7 +49,7 @@ export default function LunaPage(){
             <div style={{fontSize:'20px',fontWeight:800,background:'linear-gradient(135deg,#ec4899,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>✦ LUNA ✦</div>
             <div style={{fontSize:'9px',color:'#9d74c0',letterSpacing:'2px',textTransform:'uppercase'}}>Your Bestie 🌸</div>
           </div>
-          <div style={{width:'70px'}}/>
+          <div style={{width:'60px'}}/>
         </div>
       </div>
       <div style={{flexShrink:0,display:'flex',gap:'5px',padding:'7px 12px',overflowX:'auto',background:'rgba(255,255,255,0.3)',zIndex:10}}>
