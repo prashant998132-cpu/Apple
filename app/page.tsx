@@ -18,13 +18,17 @@ function CalcWidget() {
   function tap(k: string) {
     if(k==='C'){setExpr('');setRes('0');return}
     if(k==='DEL'){setExpr(e=>e.slice(0,-1));return}
-    if(k==='='){try{const r=String(Function('"use strict";return('+expr.replace(/DIV/g,'/').replace(/MUL/g,'*')+')()')());setRes(r);setExpr(r)}catch{setRes('Err')};return}
+    if(k==='='){
+      try{const r=String(Function('"use strict";return('+expr.replace(/DIV/g,'/').replace(/MUL/g,'*')+')')()); setRes(r);setExpr(r)}
+      catch{setRes('Err')}
+      return
+    }
     const n=expr+(k==='DIV'?'/':k==='MUL'?'*':k);setExpr(n)
-    try{setRes(String(Function('"use strict";return('+n.replace(/DIV/g,'/').replace(/MUL/g,'*')+')()')()))}catch{}
+    try{setRes(String(Function('"use strict";return('+n.replace(/DIV/g,'/').replace(/MUL/g,'*')+')')()))}catch{}
   }
   return (
     <div style={{background:'#0a1628',border:'1px solid #1a3a5a',borderRadius:'16px',padding:'12px',maxWidth:'240px'}}>
-      <div style={{fontSize:'11px',color:'#00e5ff',marginBottom:'8px'}}>{'>> Calculator'}</div>
+      <div style={{fontSize:'11px',color:'#00e5ff',marginBottom:'8px'}}>Calculator</div>
       <div style={{background:'#030a14',borderRadius:'8px',padding:'10px',textAlign:'right',fontSize:'22px',fontWeight:700,marginBottom:'6px',minHeight:'42px',color:'#00e5ff',overflow:'auto'}}>{res}</div>
       <div style={{fontSize:'10px',color:'#334',textAlign:'right',marginBottom:'6px',minHeight:'14px'}}>{expr}</div>
       {rows.map((row,ri)=>(
@@ -45,7 +49,7 @@ function QrWidget({text}:{text:string}) {
   const [url,setUrl]=useState(text?getQrUrl(text):'')
   return (
     <div style={{background:'#0a1628',border:'1px solid #1a3a5a',borderRadius:'16px',padding:'12px',maxWidth:'220px'}}>
-      <div style={{fontSize:'11px',color:'#00e5ff',marginBottom:'8px'}}>{'>> QR Code'}</div>
+      <div style={{fontSize:'11px',color:'#00e5ff',marginBottom:'8px'}}>QR Code</div>
       <input value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setUrl(getQrUrl(v))} placeholder="Text ya URL..." style={{width:'100%',background:'#030a14',border:'1px solid #1a3a5a',borderRadius:'8px',color:'#e0f0ff',padding:'6px 10px',fontSize:'12px',outline:'none',marginBottom:'8px'}}/>
       <button onClick={()=>setUrl(getQrUrl(v))} style={{width:'100%',background:'#00e5ff22',border:'1px solid #00e5ff',borderRadius:'8px',color:'#00e5ff',padding:'6px',cursor:'pointer',fontSize:'12px',marginBottom:'8px'}}>Generate</button>
       {url&&<div style={{textAlign:'center'}}><img src={url} alt="QR" style={{borderRadius:'8px',width:'150px',height:'150px'}}/></div>}
@@ -66,18 +70,18 @@ function ImageMsg({url,prompt}:{url:string;prompt:string}) {
 }
 
 const QUICK=[
-  {l:'🖼 Image',m:'image banao '},
+  {l:'🖼️ Image',m:'image banao '},
   {l:'🔢 Calc',m:'/calc'},
   {l:'📱 QR',m:'/qr '},
   {l:'🔐 Password',m:'password banao'},
   {l:'📰 News',m:'aaj ki khabar kya hai'},
   {l:'☀️ Weather',m:'Rewa ka mausam batao'},
   {l:'🏏 Cricket',m:'cricket score batao'},
-  {l:'📷 Photo analyze',m:''},
+  {l:'📷 Photo',m:''},
 ]
 
 export default function Home() {
-  const [msgs,setMsgs]=useState<Msg[]>([{r:'a',c:'Hey Pranshu! ⚡ Main JARVIS hoon — tera personal AI. Kya karna hai aaj? Sidha bol, kaam turant hoga!'}])
+  const [msgs,setMsgs]=useState<Msg[]>([{r:'a',c:'Hey Pranshu! ⚡ Main JARVIS hoon. Kya karna hai aaj? Seedha bol!'}])
   const [inp,setInp]=useState('')
   const [load,setLoad]=useState(false)
   const [tts,setTts]=useState(false)
@@ -120,8 +124,12 @@ export default function Home() {
     reader.onload=async()=>{
       const nm=[...msgs,{r:'u' as const,c:'📷 Photo bheja'}]
       setMsgs(nm);setLoad(true)
-      try{const r=await fetch('/api/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:reader.result})});const d=await r.json();const reply=d.answer||'Samajh nahi aaya';setMsgs([...nm,{r:'a',c:reply}]);speak(reply)}
-      catch{setMsgs([...nm,{r:'a',c:'Photo analyse nahi ho payi'}])}
+      try{
+        const r=await fetch('/api/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:reader.result})})
+        const d=await r.json()
+        const reply=d.answer||'Samajh nahi aaya'
+        setMsgs([...nm,{r:'a',c:reply}]);speak(reply)
+      }catch{setMsgs([...nm,{r:'a',c:'Photo analyse nahi ho payi'}])}
       setLoad(false)
     }
     reader.readAsDataURL(file);e.target.value=''
@@ -130,7 +138,6 @@ export default function Home() {
   const send=useCallback(async(text?: string)=>{
     const msg=(text||inp).trim();if(!msg||load)return
     setInp('')
-
     if(msg.startsWith('/')){
       const parts=msg.slice(1).split(' ');const cmd=parts[0].toLowerCase();const args=parts.slice(1).join(' ')
       if(cmd==='calc'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'calc'}]);return}
@@ -138,28 +145,25 @@ export default function Home() {
       if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'🔐 Password: '+genPass()+'
 
 Copy kar lo!'}]);return}
-      if(cmd==='clear'){setMsgs([{r:'a',c:'Clear ho gaya! Kya karna hai? ⚡'}]);return}
+      if(cmd==='clear'){setMsgs([{r:'a',c:'Clear! Kya karna hai? ⚡'}]);return}
       if(cmd==='luna'){window.location.href='/luna';return}
       if(cmd==='era'){window.location.href='/era';return}
     }
-
     const m=msg.toLowerCase()
     const nm=[...msgs,{r:'u' as const,c:msg}]
     setMsgs(nm);setLoad(true)
-
     if(/image banao|photo banao|picture banao|wallpaper|generate image|art banao/.test(m)){
-      const prompt=msg.replace(/image banao|photo banao|picture banao|wallpaper|generate image|art banao/gi,'').trim()||msg
-      const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?model=flux&width=1024&height=1024&seed='+Math.floor(Math.random()*999999)+'&nologo=true'
-      setMsgs([...nm,{r:'a',c:prompt,imageUrl:url}]);setLoad(false);return
+      const p=msg.replace(/image banao|photo banao|picture banao|wallpaper|generate image|art banao/gi,'').trim()||msg
+      const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?model=flux&width=1024&height=1024&seed='+Math.floor(Math.random()*999999)+'&nologo=true'
+      setMsgs([...nm,{r:'a',c:p,imageUrl:url}]);setLoad(false);return
     }
     if(/video banao|clip banao/.test(m)){
-      const prompt=msg.replace(/video banao|clip banao/gi,'').trim()||msg
-      setMsgs([...nm,{r:'a',c:'Video generate ho raha hai (30-60s)...',videoUrl:'https://video.pollinations.ai/'+encodeURIComponent(prompt)}]);setLoad(false);return
+      const p=msg.replace(/video banao|clip banao/gi,'').trim()||msg
+      setMsgs([...nm,{r:'a',c:'Video generate ho raha hai...',videoUrl:'https://video.pollinations.ai/'+encodeURIComponent(p)}]);setLoad(false);return
     }
     if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'🔐 Password: '+genPass()+'
 
 Copy kar lo!'}]);setLoad(false);return}
-
     try{
       const r=await fetch('/api/jarvis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,conversationHistory:nm.slice(-8).map(x=>({r:x.r,c:x.c}))})})
       const d=await r.json()
@@ -178,20 +182,16 @@ Copy kar lo!'}]);setLoad(false);return}
   return (
     <div style={{position:'fixed',inset:0,background:bg,display:'flex',flexDirection:'column',fontFamily:'system-ui,sans-serif',color:tc}}>
       <style>{`@keyframes p{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}::-webkit-scrollbar{width:0}input::placeholder{color:#556}`}</style>
-
-      {/* Header */}
       <div style={{flexShrink:0,background:dark?'#030a14':'#fff',borderBottom:'1px solid '+bc,padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',zIndex:20}}>
         <button onClick={()=>setMenu(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'22px',color:tc,lineHeight:1}}>&#9776;</button>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:'15px',letterSpacing:'1px',color:'#00e5ff'}}>&#9889; JARVIS</div>
           <div style={{fontSize:'9px',color:'#4fc3f7',letterSpacing:'2px'}}>AI ASSISTANT v10.42</div>
         </div>
-        <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}} title="Voice on/off">🔊</button>
+        <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}}>🔊</button>
         <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px'}}>{theme==='dark'?'🌙':'☀️'}</button>
         <a href="/luna" style={{textDecoration:'none',fontSize:'20px'}}>🌸</a>
       </div>
-
-      {/* Sidebar */}
       {menu&&(
         <div style={{position:'fixed',inset:0,zIndex:100,display:'flex'}}>
           <div style={{width:'240px',background:dark?'#040e1a':'#fff',borderRight:'1px solid '+bc,padding:'16px',display:'flex',flexDirection:'column',gap:'8px'}}>
@@ -209,8 +209,6 @@ Copy kar lo!'}]);setLoad(false);return}
           <div style={{flex:1,background:'rgba(0,0,0,0.5)'}} onClick={()=>setMenu(false)}/>
         </div>
       )}
-
-      {/* Messages */}
       <div ref={ref} style={{flex:1,overflowY:'scroll',padding:'12px',display:'flex',flexDirection:'column',gap:'12px',minHeight:0}}>
         {msgs.map((m,i)=>(
           <div key={i} style={{display:'flex',justifyContent:m.r==='u'?'flex-end':'flex-start',alignItems:'flex-end',gap:'8px'}}>
@@ -243,8 +241,6 @@ Copy kar lo!'}]);setLoad(false);return}
           </div>
         )}
       </div>
-
-      {/* Quick buttons */}
       <div style={{flexShrink:0,padding:'5px 12px',background:dark?'#030a14':'#f8faff',borderTop:'1px solid '+bc}}>
         <div style={{display:'flex',gap:'6px',overflowX:'auto'}}>
           {QUICK.map(q=>(
@@ -255,11 +251,9 @@ Copy kar lo!'}]);setLoad(false);return}
           ))}
         </div>
       </div>
-
-      {/* Input */}
       <div style={{flexShrink:0,padding:'8px 12px 20px',background:dark?'#030a14':'#fff',borderTop:'1px solid '+bc}}>
         <input ref={photoRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePhoto}/>
-        <div style={{display:'flex',gap:'8px',alignItems:'center',background:card,borderRadius:'28px',padding:'8px 8px 8px 16px',border:'1.5px solid '+(inp?'#00e5ff':bc),boxShadow:inp?'0 0 0 3px rgba(0,229,255,0.08)':'none'}}>
+        <div style={{display:'flex',gap:'8px',alignItems:'center',background:card,borderRadius:'28px',padding:'8px 8px 8px 16px',border:'1.5px solid '+(inp?'#00e5ff':bc)}}>
           <input ref={inpRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}
             placeholder={recording?'🎤 Sun raha hoon...':'Kuch bhi poocho, /calc, /qr...'}
             style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:tc}}/>
@@ -269,8 +263,6 @@ Copy kar lo!'}]);setLoad(false);return}
           <button onClick={()=>send()} disabled={load||!inp.trim()} style={{width:'38px',height:'38px',borderRadius:'50%',background:inp.trim()?'linear-gradient(135deg,#00e5ff,#8b5cf6)':'#1a3a5a',border:'none',cursor:'pointer',fontSize:'18px',flexShrink:0,color:inp.trim()?'#000':'#888',display:'flex',alignItems:'center',justifyContent:'center'}}>&#10148;</button>
         </div>
       </div>
-
-      {/* Girl Mode floating button */}
       <a href="/luna" style={{position:'fixed',bottom:'100px',right:'12px',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',borderRadius:'28px',padding:'10px 16px',color:'#fff',textDecoration:'none',fontSize:'13px',fontWeight:700,boxShadow:'0 4px 20px rgba(236,72,153,0.4)',zIndex:50,display:'flex',alignItems:'center',gap:'6px'}}>
         🌸 Girl Mode
       </a>
