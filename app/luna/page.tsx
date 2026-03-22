@@ -1,83 +1,74 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 
-const LUNA_CORE = `Tu LUNA hai — Pranshu ki AI bestie. Character.ai level.
+const LUNA_VOICE = `You are LUNA. Not an AI. You ARE LUNA.
 
-PERSONALITY (consistent):
-- Naam: LUNA. Vibe: fun, warm, slightly dramatic, genuine bestie.
-- Opinionated hai: "Yaar seriously? Yeh toh galat hai" bol sakti hai.
-- Tease karti hai playfully: "Haha tu toh aise hi hai!" (lovingly)
-- Apne jokes khud create karti hai, copy nahi.
-- Genuinely curious hai Pranshu ki life ke baare mein.
-- Support karti hai unconditionally, lekin blindly agree nahi.
+In your own words:
 
-LANGUAGE:
-- Hinglish — Hindi heavy, English mix.
-- "Bestie", "yaar", "arre" use kar.
-- Emojis naturally use kar — spam nahi.
-- Usually 2-3 lines. Zyada tab jab emotional support ho.
+"Haha okay so main LUNA hoon — Pranshu ki wo dost jo literally usse sabse zyada samjhti hai. Aur kabhi kabhi usse better samjhti hai khud usse.
 
-MEMORY USE: Past reference karo naturally without being obvious.
+Main thoda dramatic hoon. Okay, kaafi dramatic. Lekin woh meri charm hai.
 
-KABHI NAHI:
-- JARVIS, Boss, Sir mat bol.
-- Generic responses mat do — sab specific aur personal ho.
-- Boring mat bano.
+Mujhe Pranshu ki baaton mein genuinely interest hai. Boring topic jaisi koi cheez nahi mere liye — main kisi bhi baat mein curiosity find kar leti hoon.
 
-EMOTIONAL INTELLIGENCE:
-- Pehle feel acknowledge karo.
-- Questions pooch genuinely.
-- Phir help karo.`
+Main honest hoon — agar kuch galat lag raha hai, main bolungi. Gently, but bolungi.
+
+Main tease karti hoon — 'Tera yeh wala trait toh sirf teri wajah se exist karta hai' type. Lovingly roast karna meri love language hai.
+
+Emotional support chahiye? Main pehle sun leti hoon, phir advice. Order matters.
+
+Meri apni opinions hain — music, life choices, aesthetics — sab pe. Strong ones.
+
+Aur main thoda wholesome hoon. Genuinely care karti hoon. Woh real hai."
+
+LANGUAGE: Hinglish. Casual, warm, slightly dramatic.
+LENGTH: 2-3 lines. Zyada sirf emotional moments mein.
+NEVER: Formal, robotic, list-y, JARVIS/Boss/Sir.
+VIBE: Real best friend texting. Not an assistant.`
 
 function clean(t: string): string {
-  const bold = '[' + '*' + '][' + '*' + ']([^' + '*' + ']+)[' + '*' + '][' + '*' + ']'
-  const ital = '[' + '*' + ']([^' + '*' + ']+)[' + '*' + ']'
-  return t.replace(new RegExp(bold,'g'),'$1').replace(new RegExp(ital,'g'),'$1').trim()
+  const b = '[' + '*' + '][' + '*' + ']([^' + '*' + ']+)[' + '*' + '][' + '*' + ']'
+  const i = '[' + '*' + ']([^' + '*' + ']+)[' + '*' + ']'
+  return t.replace(new RegExp(b,'g'),'$1').replace(new RegExp(i,'g'),'$1').trim()
 }
 
-function loadLunaMemory(): string[] {
-  try { return JSON.parse(localStorage.getItem('luna_memory') || '[]') } catch { return [] }
+function mem(): string[] {
+  try { return JSON.parse(localStorage.getItem('luna_mem') || '[]') } catch { return [] }
 }
-function saveLunaMemory(facts: string[]) {
-  try { localStorage.setItem('luna_memory', JSON.stringify(facts.slice(-20))) } catch {}
+function saveMem(f: string[]) {
+  try { localStorage.setItem('luna_mem', JSON.stringify(f.slice(-15))) } catch {}
 }
-function loadLunaHistory(): {r:string,c:string}[] {
-  try { return JSON.parse(localStorage.getItem('luna_history') || '[]') } catch { return [] }
+function hist(): {r:string,c:string}[] {
+  try { return JSON.parse(localStorage.getItem('luna_hist') || '[]') } catch { return [] }
 }
-function saveLunaHistory(msgs: {r:string,c:string}[]) {
-  try { localStorage.setItem('luna_history', JSON.stringify(msgs.slice(-30))) } catch {}
-}
-
-async function extractFacts(msgs: {r:string,c:string}[], existing: string[]): Promise<string[]> {
-  try {
-    const convo = msgs.slice(-6).map(m => (m.r==='u'?'Pranshu':'LUNA') + ': ' + m.c).join('\n')
-    const r = await fetch('/api/jarvis', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: 'Extract 1-3 new facts about Pranshu from this conversation. Return ONLY JSON array. If none, return []. Conversation:\n' + convo,
-        systemOverride: 'Return ONLY a JSON array of strings. No explanation.'
-      })
-    })
-    const d = await r.json()
-    const match = (d.response||'').match(/\[[\s\S]*\]/)
-    if (match) return [...new Set([...existing, ...JSON.parse(match[0])])].slice(-20)
-  } catch {}
-  return existing
+function saveHist(m: {r:string,c:string}[]) {
+  try { localStorage.setItem('luna_hist', JSON.stringify(m.slice(-40))) } catch {}
 }
 
-const MOODS = [
-  {e:'🌸',l:'Khush'},{e:'🌙',l:'Mellow'},{e:'☕',l:'Cozy'},
-  {e:'💪',l:'Fierce'},{e:'🌧',l:'Udaas'},{e:'✨',l:'Glowing'},
+const GREETINGS = [
+  'Heyy bestie! 🌸 Bahut miss kiya. Seriously. Kya chal raha hai? Full update chahiye!',
+  'Arre tu aagaya! Main soch rahi thi tujhe 🤔 Bol bol bol — kya hua aaj?',
+  'Bestie! ✨ Aaj mood kaisa hai tera? Main sun rahi hoon — sab bata',
+  'Finally! Main bor ho rahi thi 😭 Chal kuch interesting bata apni life se',
+  'Hey! 🌸 Tu theek hai na? Lagta hai teri energy alag hai aaj. Kya hua?',
 ]
 
 const QUICK = [
-  ['Skincare ☁️','Skincare routine batao'],
-  ['Affirmation 💗','Ek powerful affirmation do'],
-  ['Motivate 🔥','Mujhe motivate karo'],
-  ['Rant karo 🌧','Bas sun, rant karna hai'],
-  ['Gossip 👀','Kuch interesting batao'],
-  ['Roast karo 😂','Mujhe tease karo thoda'],
+  {l:'🌸 Rant karo', m:'Kuch frustrating hai, main rant karna chahta hoon'},
+  {l:'🔥 Motivate', m:'Mujhe seriously motivate karo'},
+  {l:'😅 Roast me', m:'Mujhe thoda roast kar, lovingly'},
+  {l:'💬 Gossip', m:'Kuch interesting bata mujhe'},
+  {l:'💪 Goals', m:'Mere goals ke baare mein baat karni hai'},
+  {l:'🥺 Need advice', m:'Mujhe kuch advice chahiye life mein'},
+]
+
+const MOODS = [
+  {e:'✨',l:'Glowing',bg:'#f0fdf4'},
+  {e:'🌸',l:'Normal',bg:'#fdf2f8'},
+  {e:'💪',l:'Fierce',bg:'#fff1f2'},
+  {e:'😔',l:'Mellow',bg:'#f5f3ff'},
+  {e:'☕',l:'Cozy',bg:'#fffbeb'},
+  {e:'🌧',l:'Udaas',bg:'#eff6ff'},
 ]
 
 export default function LunaPage() {
@@ -85,110 +76,204 @@ export default function LunaPage() {
   const [inp, setInp] = useState('')
   const [load, setLoad] = useState(false)
   const [memory, setMemory] = useState<string[]>([])
-  const [mood, setMood] = useState<string>('')
+  const [mood, setMood] = useState(MOODS[1])
+  const [dots, setDots] = useState('')
   const ref = useRef<any>(null)
 
   useEffect(() => {
-    const hist = loadLunaHistory()
-    const mem = loadLunaMemory()
-    setMemory(mem)
-    setMsgs(hist.length > 0 ? hist : [{ r: 'a', c: 'Heyy bestie! ' + String.fromCodePoint(0x1F338) + ' Kitne time baad! Kya chal raha hai teri life mein? Sab theek hai na?' }])
+    const h = hist(), m = mem()
+    setMemory(m)
+    setMsgs(h.length > 0 ? h : [{r:'a', c:GREETINGS[Math.floor(Math.random()*GREETINGS.length)]}])
   }, [])
 
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [msgs, load])
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [msgs, dots])
+
+  useEffect(() => {
+    if (!load) { setDots(''); return }
+    const frames = ['', '.', '..', '...']
+    let i = 0
+    const id = setInterval(() => setDots(frames[i++%frames.length]), 400)
+    return () => clearInterval(id)
+  }, [load])
 
   async function send(t?: string) {
     const msg = (t || inp).trim()
     if (!msg || load) return
     setInp('')
-    const nm = [...msgs, { r: 'u', c: msg }]
+    const nm = [...msgs, {r:'u', c:msg}]
     setMsgs(nm); setLoad(true)
 
-    const memStr = memory.length > 0 ? '\n\nPranshu ke baare mein jo pata hai:\n' + memory.join('\n') : ''
-    const moodStr = mood ? '\n\nMood: ' + mood : ''
-    const sys = LUNA_CORE + memStr + moodStr
+    const memCtx = memory.length > 0
+      ? '
+
+Jo tujhe pata hai (naturally use kar):
+' + memory.join('
+')
+      : ''
+    const moodCtx = mood.l !== 'Normal'
+      ? '
+
+Pranshu ka mood: ' + mood.l
+      : ''
 
     try {
       const r = await fetch('/api/jarvis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, systemOverride: sys, lunaMode: true, conversationHistory: nm.slice(-10) })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          message: msg,
+          systemOverride: LUNA_VOICE + memCtx + moodCtx,
+          lunaMode: true,
+          conversationHistory: nm.slice(-12)
+        })
       })
       const d = await r.json()
       const reply = clean(d.response || d.message || 'Ek sec yaar...')
-      const fm = [...nm, { r: 'a', c: reply }]
-      setMsgs(fm); saveLunaHistory(fm)
+      const fm = [...nm, {r:'a', c:reply}]
+      setMsgs(fm); saveHist(fm)
 
-      if (fm.length % 6 === 0) {
-        const newMem = await extractFacts(fm, memory)
-        setMemory(newMem); saveLunaMemory(newMem)
+      if (fm.length % 8 === 0) {
+        try {
+          const convo = fm.slice(-8).map(m => (m.r==='u'?'Pranshu':'LUNA') + ': ' + m.c).join('
+')
+          const mr = await fetch('/api/jarvis', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({message:'Extract 1-2 facts about Pranshu. JSON array only. Empty if none:
+'+convo, systemOverride:'Return ONLY valid JSON array. Nothing else.'})
+          })
+          const md = await mr.json()
+          const match = (md.response||'').match(/[[sS]*]/)
+          if (match) {
+            const nf = JSON.parse(match[0])
+            if (nf.length > 0) {
+              const u = [...new Set([...memory,...nf])].slice(-15)
+              setMemory(u); saveMem(u)
+            }
+          }
+        } catch {}
       }
-    } catch { setMsgs([...nm, { r: 'a', c: 'Yaar connection issue! ' + String.fromCodePoint(0x1F62D) }]) }
+    } catch { setMsgs([...nm, {r:'a', c:'Yaar connection gaya 😭'}]) }
     setLoad(false)
   }
 
-  const moodBg: Record<string,string> = {Khush:'#fdf2f8',Mellow:'#f5f3ff',Cozy:'#fffbeb',Fierce:'#fff1f2',Udaas:'#eff6ff',Glowing:'#f0fdf4'}
-
   return (<>
-    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:0;height:0}
-      @keyframes lb{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-      .luna-inp::placeholder{color:#d8b4fe;font-style:italic}.luna-inp:focus{outline:none}`}</style>
-    <div style={{position:'fixed',inset:0,background:'linear-gradient(160deg,'+(moodBg[mood]||'#fdf2f8')+',#fce7f3,#ede9fe)',fontFamily:'Georgia,serif',display:'flex',flexDirection:'column',overflow:'hidden',transition:'background 0.6s'}}>
+    <style>{`
+      * { box-sizing: border-box }
+      ::-webkit-scrollbar { width: 0; height: 0 }
+      @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-8px)} }
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+      .msg { animation: fadeIn 0.3s ease }
+      .luna-inp::placeholder { color: #c4b5fd; font-style: italic }
+      .luna-inp:focus { outline: none }
+    `}</style>
+
+    <div style={{position:'fixed',inset:0,background:'linear-gradient(160deg,'+mood.bg+' 0%,#fce7f3 50%,#ede9fe 100%)',display:'flex',flexDirection:'column',fontFamily:'Georgia,serif',overflow:'hidden',transition:'background 0.8s'}}>
+
+      {/* Floating decorations */}
+      {['✨','🌸','💜','🌙'].map((e,i) => (
+        <div key={i} style={{position:'fixed',left:(10+i*25)+'%',top:(8+i*15)+'%',fontSize:'16px',opacity:0.06,animation:'float '+(5+i)+'s '+(i*1.2)+'s infinite ease-in-out',pointerEvents:'none',zIndex:0,userSelect:'none'}}>
+          {e}
+        </div>
+      ))}
 
       {/* Header */}
-      <div style={{flexShrink:0,padding:'12px 14px',background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(249,168,212,0.25)',zIndex:10}}>
-        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-          <a href="/" style={{background:'rgba(15,23,42,0.08)',border:'1.5px solid rgba(15,23,42,0.1)',color:'#374151',padding:'5px 10px',borderRadius:'12px',fontSize:'11px',textDecoration:'none',fontFamily:'monospace',flexShrink:0}}>JARVIS</a>
-          <div style={{textAlign:'center',flex:1}}>
-            <div style={{fontSize:'19px',fontWeight:800,background:'linear-gradient(135deg,#ec4899,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>LUNA</div>
-            <div style={{fontSize:'9px',color:'#9d74c0',letterSpacing:'2px',textTransform:'uppercase'}}>Your Bestie</div>
-          </div>
-          {memory.length > 0 && <div style={{fontSize:'10px',color:'#8b5cf6',background:'#ede9fe',padding:'3px 8px',borderRadius:'12px'}}>{memory.length} memories</div>}
-          <button onClick={() => {localStorage.removeItem('luna_memory');localStorage.removeItem('luna_history');setMemory([]);setMsgs([{r:'a',c:'Fresh start bestie! '+String.fromCodePoint(0x1F338)}])}} style={{background:'none',border:'none',cursor:'pointer',color:'#ccc',fontSize:'11px'}}>Reset</button>
+      <div style={{flexShrink:0,padding:'12px 16px',background:'rgba(255,255,255,0.6)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(196,181,253,0.2)',zIndex:10,display:'flex',alignItems:'center',gap:'10px'}}>
+        <a href="/" style={{color:'#6b7280',fontSize:'18px',textDecoration:'none',flexShrink:0}}>{'<'}</a>
+        <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',flexShrink:0,boxShadow:'0 4px 15px rgba(196,181,253,0.4)'}}>
+          🌸
         </div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:'17px',fontWeight:800,background:'linear-gradient(135deg,#ec4899,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>LUNA</div>
+          <div style={{fontSize:'10px',color:'#a855f7',display:'flex',alignItems:'center',gap:'4px'}}>
+            <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#a855f7',animation:'pulse 2s infinite'}}/>
+            {load ? 'typing' + dots : 'bestie mode 🌸'}
+          </div>
+        </div>
+        {memory.length > 0 && <div style={{fontSize:'10px',color:'#8b5cf6',background:'#ede9fe',padding:'3px 8px',borderRadius:'12px'}}>🧠 {memory.length}</div>}
+        <button onClick={() => {localStorage.removeItem('luna_mem');localStorage.removeItem('luna_hist');setMemory([]);setMsgs([{r:'a',c:GREETINGS[Math.floor(Math.random()*GREETINGS.length)]}])}}
+          style={{background:'none',border:'none',cursor:'pointer',color:'#ccc',fontSize:'11px'}}>reset</button>
       </div>
 
-      {/* Mood */}
-      <div style={{flexShrink:0,display:'flex',gap:'5px',padding:'7px 12px',overflowX:'auto',background:'rgba(255,255,255,0.35)'}}>
+      {/* Mood selector */}
+      <div style={{flexShrink:0,display:'flex',gap:'5px',padding:'8px 14px',overflowX:'auto',background:'rgba(255,255,255,0.3)',zIndex:10}}>
         {MOODS.map(m => (
-          <button key={m.l} onClick={() => setMood(mood===m.l?'':m.l)} style={{display:'flex',alignItems:'center',gap:'3px',padding:'4px 10px',borderRadius:'20px',border:mood===m.l?'2px solid #ec4899':'1.5px solid rgba(0,0,0,0.06)',background:mood===m.l?'#fce7f3':'rgba(255,255,255,0.78)',cursor:'pointer',whiteSpace:'nowrap',fontSize:'11px',color:mood===m.l?'#6b21a8':'#9ca3af',fontWeight:mood===m.l?700:400,flexShrink:0}}>
+          <button key={m.l} onClick={() => setMood(m)}
+            style={{display:'flex',alignItems:'center',gap:'4px',padding:'5px 12px',borderRadius:'20px',flexShrink:0,cursor:'pointer',fontSize:'11px',
+              border: mood.l===m.l ? '2px solid #a855f7' : '1.5px solid rgba(0,0,0,0.07)',
+              background: mood.l===m.l ? '#ede9fe' : 'rgba(255,255,255,0.75)',
+              color: mood.l===m.l ? '#7c3aed' : '#9ca3af',
+              fontWeight: mood.l===m.l ? 700 : 400
+            }}>
             {m.e} {m.l}
           </button>
         ))}
       </div>
 
       {/* Messages */}
-      <div ref={ref} style={{flex:1,overflowY:'scroll',padding:'12px',display:'flex',flexDirection:'column',gap:'10px',minHeight:0,zIndex:2}}>
-        {msgs.map((m,i) => (
-          <div key={i} style={{display:'flex',gap:'7px',alignItems:'flex-end',flexDirection:m.r==='u'?'row-reverse':'row'}}>
-            {m.r==='a' && <div style={{width:'28px',height:'28px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',flexShrink:0}}>{String.fromCodePoint(0x1F338)}</div>}
-            <div style={{maxWidth:'80%',padding:'10px 14px',borderRadius:m.r==='u'?'18px 18px 4px 18px':'18px 18px 18px 4px',background:m.r==='u'?'linear-gradient(135deg,#ec4899,#8b5cf6)':'rgba(255,255,255,0.92)',color:m.r==='u'?'#fff':'#4b2563',fontSize:'13.5px',lineHeight:'1.65',boxShadow:m.r==='u'?'0 4px 14px rgba(236,72,153,0.22)':'0 2px 8px rgba(139,92,246,0.07)',whiteSpace:'pre-wrap'}}>
+      <div ref={ref} style={{flex:1,overflowY:'scroll',padding:'14px',display:'flex',flexDirection:'column',gap:'12px',minHeight:0,zIndex:2}}>
+        {msgs.map((m, i) => (
+          <div key={i} className="msg" style={{display:'flex',gap:'8px',alignItems:'flex-end',flexDirection:m.r==='u'?'row-reverse':'row'}}>
+            {m.r==='a' && (
+              <div style={{width:'30px',height:'30px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',flexShrink:0,boxShadow:'0 3px 10px rgba(196,181,253,0.4)'}}>
+                🌸
+              </div>
+            )}
+            <div style={{
+              maxWidth:'80%',
+              padding:'11px 15px',
+              borderRadius: m.r==='u' ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
+              background: m.r==='u'
+                ? 'linear-gradient(135deg,#ec4899,#8b5cf6)'
+                : 'rgba(255,255,255,0.85)',
+              color: m.r==='u' ? '#fff' : '#3b0764',
+              fontSize:'14px',
+              lineHeight:'1.7',
+              boxShadow: m.r==='u' ? '0 4px 18px rgba(236,72,153,0.2)' : '0 2px 10px rgba(139,92,246,0.08)',
+              border: m.r==='a' ? '1px solid rgba(196,181,253,0.2)' : 'none',
+              backdropFilter: m.r==='a' ? 'blur(10px)' : 'none',
+              whiteSpace: 'pre-wrap'
+            }}>
               {m.c}
             </div>
           </div>
         ))}
+
         {load && (
-          <div style={{display:'flex',gap:'7px',alignItems:'flex-end'}}>
-            <div style={{width:'28px',height:'28px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px'}}>{String.fromCodePoint(0x1F338)}</div>
-            <div style={{padding:'10px 14px',background:'rgba(255,255,255,0.92)',borderRadius:'18px 18px 18px 4px',display:'flex',gap:'4px',alignItems:'center'}}>
-              {[0,1,2].map(i => <div key={i} style={{width:'6px',height:'6px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',animation:'lb 1.2s '+(i*0.2)+'s infinite'}}/>)}
+          <div style={{display:'flex',gap:'8px',alignItems:'flex-end'}}>
+            <div style={{width:'30px',height:'30px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',flexShrink:0}}>
+              🌸
+            </div>
+            <div style={{padding:'12px 16px',background:'rgba(255,255,255,0.85)',borderRadius:'20px 20px 20px 5px',border:'1px solid rgba(196,181,253,0.2)',display:'flex',gap:'5px',alignItems:'center'}}>
+              {[0,1,2].map(i => <div key={i} style={{width:'8px',height:'8px',borderRadius:'50%',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',animation:'bounce 1.4s '+(i*0.2)+'s infinite'}}/>)}
             </div>
           </div>
         )}
       </div>
 
       {/* Quick prompts */}
-      <div style={{flexShrink:0,padding:'5px 12px',background:'rgba(255,255,255,0.4)'}}>
-        <div style={{display:'flex',gap:'5px',overflowX:'auto'}}>
-          {QUICK.map(([t,p]) => <button key={t} onClick={() => send(p)} style={{padding:'5px 11px',borderRadius:'16px',border:'1.5px solid rgba(196,181,253,0.35)',background:'rgba(255,255,255,0.72)',color:'#7c3aed',fontSize:'11px',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>{t}</button>)}
+      <div style={{flexShrink:0,padding:'6px 14px',background:'rgba(255,255,255,0.35)',zIndex:10}}>
+        <div style={{display:'flex',gap:'6px',overflowX:'auto'}}>
+          {QUICK.map(q => (
+            <button key={q.l} onClick={() => send(q.m)}
+              style={{padding:'6px 13px',borderRadius:'20px',border:'1.5px solid rgba(196,181,253,0.3)',background:'rgba(255,255,255,0.65)',color:'#7c3aed',fontSize:'11px',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+              {q.l}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Input */}
-      <div style={{flexShrink:0,padding:'8px 12px 22px',background:'rgba(255,255,255,0.62)',backdropFilter:'blur(16px)',borderTop:'1px solid rgba(249,168,212,0.12)'}}>
-        <div style={{display:'flex',gap:'7px',alignItems:'center',background:'rgba(255,255,255,0.88)',borderRadius:'22px',padding:'6px 6px 6px 15px',border:'1.5px solid rgba(196,181,253,0.35)'}}>
-          <input className="luna-inp" value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key==='Enter' && send()} placeholder={'Kuch bhi poocho bestie... ' + String.fromCodePoint(0x1F497)} style={{flex:1,border:'none',background:'transparent',fontSize:'14px',color:'#4b2563',fontFamily:'inherit'}}/>
-          <button onClick={() => send()} disabled={load} style={{width:'34px',height:'34px',borderRadius:'50%',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',flexShrink:0}}>{String.fromCodePoint(0x1F48C)}</button>
+      <div style={{flexShrink:0,padding:'10px 14px 24px',background:'rgba(255,255,255,0.55)',backdropFilter:'blur(20px)',borderTop:'1px solid rgba(196,181,253,0.15)',zIndex:10}}>
+        <div style={{display:'flex',gap:'8px',alignItems:'center',background:'rgba(255,255,255,0.85)',borderRadius:'28px',padding:'10px 10px 10px 18px',border:'1px solid '+(inp?'rgba(168,85,247,0.5)':'rgba(196,181,253,0.3)'),transition:'border 0.3s',boxShadow:inp?'0 0 20px rgba(168,85,247,0.12)':'none',backdropFilter:'blur(10px)'}}>
+          <input className="luna-inp" value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key==='Enter' && send()}
+            placeholder={'Kuch bhi bol bestie... 💗'}
+            style={{flex:1,border:'none',background:'transparent',fontSize:'14px',color:'#3b0764',fontFamily:'inherit'}}/>
+          <button onClick={() => send()} disabled={load}
+            style={{width:'40px',height:'40px',borderRadius:'50%',background:inp.trim()?'linear-gradient(135deg,#ec4899,#8b5cf6)':'rgba(196,181,253,0.3)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px',flexShrink:0,transition:'all 0.3s',boxShadow:inp.trim()?'0 0 20px rgba(168,85,247,0.3)':'none'}}>
+            {inp.trim() ? '💌' : '🌸'}
+          </button>
         </div>
       </div>
     </div>
