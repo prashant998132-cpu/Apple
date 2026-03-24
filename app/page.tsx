@@ -107,9 +107,7 @@ export default function Home(){
       const parts=msg.slice(1).split(' ');const cmd=parts[0].toLowerCase();const args=parts.slice(1).join(' ')
       if(cmd==='calc'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'calc'}]);return}
       if(cmd==='qr'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'qr:'+args}]);return}
-      if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'ð Password: '+genPass()+'
-
-Copy kar lo!'}]);return}
+      if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'ð Password: '+genPass()+'\n\nCopy kar lo!'}]);return}
       if(cmd==='clear'){setMsgs([{r:'a',c:'Clear! Kya karna hai? â¡'}]);return}
       if(cmd==='luna'){window.location.href='/luna';return}
       if(cmd==='era'){window.location.href='/era';return}
@@ -120,9 +118,7 @@ Copy kar lo!'}]);return}
       setMsgs([...nm,{r:'a',c:p,imageUrl:'https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?model=flux&width=1024&height=1024&seed='+Math.floor(Math.random()*999999)+'&nologo=true'}]);setLoad(false);return
     }
     if(/video banao|clip banao/.test(m)){const p=msg.replace(/video banao|clip banao/gi,'').trim()||msg;setMsgs([...nm,{r:'a',c:'Video generate ho raha hai...',videoUrl:'https://video.pollinations.ai/'+encodeURIComponent(p)}]);setLoad(false);return}
-    if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'ð Password: '+genPass()+'
-
-Copy kar lo!'}]);setLoad(false);return}
+    if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'ð Password: '+genPass()+'\n\nCopy kar lo!'}]);setLoad(false);return}
     try{const r=await fetch('/api/jarvis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,conversationHistory:nm.slice(-8).map(x=>({r:x.r,c:x.c}))})});const d=await r.json();const rep=d.response||d.message||'Samajh nahi aaya';setMsgs([...nm,{r:'a',c:rep}]);speak(rep)}
     catch{setMsgs([...nm,{r:'a',c:'Network issue, retry karo!'}])}
     setLoad(false)
