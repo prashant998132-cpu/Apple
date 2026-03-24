@@ -9,7 +9,7 @@ function genPass(){const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 function CalcWidget(){
   const [expr,setExpr]=useState('');const [res,setRes]=useState('0')
   const rows=[['7','8','9','DIV'],['4','5','6','MUL'],['1','2','3','-'],['0','.','DEL','+'],['C','(',')', '=']]
-  const sym:Record<string,string>={DIV:'÷',MUL:'×',DEL:'⌫'}
+  const sym:Record<string,string>={DIV:'Ã·',MUL:'Ã',DEL:'â«'}
   function tap(k:string){
     if(k==='C'){setExpr('');setRes('0');return}
     if(k==='DEL'){setExpr(e=>e.slice(0,-1));return}
@@ -56,18 +56,18 @@ function ImageMsg({url,prompt}:{url:string;prompt:string}){
 }
 
 const QUICK=[
-  {l:'🖼️ Image',m:'image banao '},
-  {l:'🔢 Calc',m:'/calc'},
-  {l:'📱 QR',m:'/qr '},
-  {l:'🔐 Password',m:'password banao'},
-  {l:'📰 News',m:'aaj ki khabar kya hai'},
-  {l:'☀️ Weather',m:'Rewa ka mausam batao'},
-  {l:'🏏 Cricket',m:'cricket score batao'},
-  {l:'📷 Photo',m:''},
+  {l:'ð¼ï¸ Image',m:'image banao '},
+  {l:'ð¢ Calc',m:'/calc'},
+  {l:'ð± QR',m:'/qr '},
+  {l:'ð Password',m:'password banao'},
+  {l:'ð° News',m:'aaj ki khabar kya hai'},
+  {l:'âï¸ Weather',m:'Rewa ka mausam batao'},
+  {l:'ð Cricket',m:'cricket score batao'},
+  {l:'ð· Photo',m:''},
 ]
 
 export default function Home(){
-  const [msgs,setMsgs]=useState<Msg[]>([{r:'a',c:'Hey Pranshu! ⚡ Main JARVIS hoon. Kya karna hai aaj? Seedha bol!'}])
+  const [msgs,setMsgs]=useState<Msg[]>([{r:'a',c:'Hey Pranshu! â¡ Main JARVIS hoon. Kya karna hai aaj? Seedha bol!'}])
   const [inp,setInp]=useState('');const [load,setLoad]=useState(false)
   const [tts,setTts]=useState(false);const [theme,setTheme]=useState<'dark'|'light'>('dark')
   const [menu,setMenu]=useState(false);const [recording,setRecording]=useState(false)
@@ -93,7 +93,7 @@ export default function Home(){
     const file=e.target.files?.[0];if(!file)return
     const reader=new FileReader()
     reader.onload=async()=>{
-      const nm=[...msgs,{r:'u' as const,c:'📷 Photo bheja'}];setMsgs(nm);setLoad(true)
+      const nm=[...msgs,{r:'u' as const,c:'ð· Photo bheja'}];setMsgs(nm);setLoad(true)
       try{const r=await fetch('/api/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:reader.result})});const d=await r.json();const rep=d.answer||'Samajh nahi aaya';setMsgs([...nm,{r:'a',c:rep}]);speak(rep)}
       catch{setMsgs([...nm,{r:'a',c:'Photo analyse nahi ho payi'}])}
       setLoad(false)
@@ -107,10 +107,10 @@ export default function Home(){
       const parts=msg.slice(1).split(' ');const cmd=parts[0].toLowerCase();const args=parts.slice(1).join(' ')
       if(cmd==='calc'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'calc'}]);return}
       if(cmd==='qr'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'qr:'+args}]);return}
-      if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'🔐 Password: '+genPass()+'
+      if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'ð Password: '+genPass()+'
 
 Copy kar lo!'}]);return}
-      if(cmd==='clear'){setMsgs([{r:'a',c:'Clear! Kya karna hai? ⚡'}]);return}
+      if(cmd==='clear'){setMsgs([{r:'a',c:'Clear! Kya karna hai? â¡'}]);return}
       if(cmd==='luna'){window.location.href='/luna';return}
       if(cmd==='era'){window.location.href='/era';return}
     }
@@ -120,7 +120,7 @@ Copy kar lo!'}]);return}
       setMsgs([...nm,{r:'a',c:p,imageUrl:'https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?model=flux&width=1024&height=1024&seed='+Math.floor(Math.random()*999999)+'&nologo=true'}]);setLoad(false);return
     }
     if(/video banao|clip banao/.test(m)){const p=msg.replace(/video banao|clip banao/gi,'').trim()||msg;setMsgs([...nm,{r:'a',c:'Video generate ho raha hai...',videoUrl:'https://video.pollinations.ai/'+encodeURIComponent(p)}]);setLoad(false);return}
-    if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'🔐 Password: '+genPass()+'
+    if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'ð Password: '+genPass()+'
 
 Copy kar lo!'}]);setLoad(false);return}
     try{const r=await fetch('/api/jarvis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,conversationHistory:nm.slice(-8).map(x=>({r:x.r,c:x.c}))})});const d=await r.json();const rep=d.response||d.message||'Samajh nahi aaya';setMsgs([...nm,{r:'a',c:rep}]);speak(rep)}
@@ -140,16 +140,16 @@ Copy kar lo!'}]);setLoad(false);return}
           <div style={{fontWeight:800,fontSize:'15px',letterSpacing:'1px',color:'#00e5ff'}}>&#9889; JARVIS</div>
           <div style={{fontSize:'9px',color:'#4fc3f7',letterSpacing:'2px'}}>AI ASSISTANT v10.43</div>
         </div>
-        <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}}>🔊</button>
-        <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px'}}>{theme==='dark'?'🌙':'☀️'}</button>
-        <a href="/luna" style={{textDecoration:'none',fontSize:'20px'}}>🌸</a>
+        <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}}>ð</button>
+        <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px'}}>{theme==='dark'?'ð':'âï¸'}</button>
+        <a href="/luna" style={{textDecoration:'none',fontSize:'20px'}}>ð¸</a>
       </div>
 
       {menu&&(
         <div style={{position:'fixed',inset:0,zIndex:100,display:'flex'}}>
           <div style={{width:'240px',background:dark?'#040e1a':'#fff',borderRight:'1px solid '+bc,padding:'16px',display:'flex',flexDirection:'column',gap:'8px'}}>
             <div style={{fontWeight:700,fontSize:'14px',color:'#00e5ff',marginBottom:'8px'}}>&#9889; JARVIS Menu</div>
-            {[['&#9889; JARVIS','/'],['&#127800; LUNA','/luna'],['💗 Era','/era'],['🛠&#65039; Tools','/tools']].map(([l,h])=>(
+            {[['&#9889; JARVIS','/'],['&#127800; LUNA','/luna'],['ð Era','/era'],['ð &#65039; Tools','/tools']].map(([l,h])=>(
               <a key={h} href={h} style={{display:'block',padding:'12px 14px',borderRadius:'12px',background:card,border:'1px solid '+bc,color:tc,textDecoration:'none',fontSize:'13px',fontWeight:600}} dangerouslySetInnerHTML={{__html:l}}/>
             ))}
             <div style={{borderTop:'1px solid '+bc,paddingTop:'10px',marginTop:'4px'}}>
@@ -169,11 +169,11 @@ Copy kar lo!'}]);setLoad(false);return}
               {m.widget==='calc'&&<CalcWidget/>}
               {m.widget?.startsWith('qr:')&&<QrWidget text={m.widget.slice(3)}/>}
               {m.imageUrl&&<ImageMsg url={m.imageUrl} prompt={m.c}/>}
-              {m.videoUrl&&!m.imageUrl&&<div style={{background:card,border:'1px solid '+bc,borderRadius:'12px',padding:'12px',maxWidth:'260px'}}><div style={{fontSize:'13px',marginBottom:'8px'}}>{m.c}</div><a href={m.videoUrl} target="_blank" style={{display:'block',background:'#8b5cf622',border:'1px solid #8b5cf6',borderRadius:'8px',padding:'8px',textAlign:'center',color:'#8b5cf6',textDecoration:'none',fontSize:'12px'}}>🎬 Video Dekho</a></div>}
+              {m.videoUrl&&!m.imageUrl&&<div style={{background:card,border:'1px solid '+bc,borderRadius:'12px',padding:'12px',maxWidth:'260px'}}><div style={{fontSize:'13px',marginBottom:'8px'}}>{m.c}</div><a href={m.videoUrl} target="_blank" style={{display:'block',background:'#8b5cf622',border:'1px solid #8b5cf6',borderRadius:'8px',padding:'8px',textAlign:'center',color:'#8b5cf6',textDecoration:'none',fontSize:'12px'}}>ð¬ Video Dekho</a></div>}
               {!m.widget&&!m.imageUrl&&!m.videoUrl&&m.c&&(
                 <div style={{padding:'11px 15px',borderRadius:m.r==='u'?'20px 20px 5px 20px':'20px 20px 20px 5px',background:m.r==='u'?'linear-gradient(135deg,#00e5ff22,#8b5cf622)':card,border:'1px solid '+(m.r==='u'?'#00e5ff44':bc),color:tc,fontSize:'14px',lineHeight:'1.65',whiteSpace:'pre-wrap'}}>
                   {m.c}
-                  {m.r==='a'&&tts&&<button onClick={()=>speak(m.c)} style={{display:'block',marginTop:'4px',background:'none',border:'none',color:'#4fc3f7',cursor:'pointer',fontSize:'11px'}}>🔊 Suno</button>}
+                  {m.r==='a'&&tts&&<button onClick={()=>speak(m.c)} style={{display:'block',marginTop:'4px',background:'none',border:'none',color:'#4fc3f7',cursor:'pointer',fontSize:'11px'}}>ð Suno</button>}
                 </div>
               )}
             </div>
@@ -196,14 +196,14 @@ Copy kar lo!'}]);setLoad(false);return}
       <div style={{flexShrink:0,padding:'8px 12px 20px',background:dark?'#030a14':'#fff',borderTop:'1px solid '+bc}}>
         <input ref={photoRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePhoto}/>
         <div style={{display:'flex',gap:'8px',alignItems:'center',background:card,borderRadius:'28px',padding:'8px 8px 8px 16px',border:'1.5px solid '+(inp?'#00e5ff':bc)}}>
-          <input ref={inpRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder={recording?'🎤 Sun raha hoon...':'Kuch bhi poocho, /calc, /qr...'} style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:tc}}/>
-          <button onClick={toggleVoice} style={{width:'36px',height:'36px',borderRadius:'50%',background:recording?'rgba(255,82,82,0.15)':'transparent',border:recording?'2px solid #ff5252':'none',cursor:'pointer',fontSize:'20px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{recording?'⏹️':'🎤'}</button>
+          <input ref={inpRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder={recording?'ð¤ Sun raha hoon...':'Kuch bhi poocho, /calc, /qr...'} style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:tc}}/>
+          <button onClick={toggleVoice} style={{width:'36px',height:'36px',borderRadius:'50%',background:recording?'rgba(255,82,82,0.15)':'transparent',border:recording?'2px solid #ff5252':'none',cursor:'pointer',fontSize:'20px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{recording?'â¹ï¸':'ð¤'}</button>
           <button onClick={()=>send()} disabled={load||!inp.trim()} style={{width:'38px',height:'38px',borderRadius:'50%',background:inp.trim()?'linear-gradient(135deg,#00e5ff,#8b5cf6)':'#1a3a5a',border:'none',cursor:'pointer',fontSize:'18px',flexShrink:0,color:inp.trim()?'#000':'#888',display:'flex',alignItems:'center',justifyContent:'center'}}>&#10148;</button>
         </div>
       </div>
 
       <a href="/luna" style={{position:'fixed',bottom:'100px',right:'12px',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',borderRadius:'28px',padding:'10px 16px',color:'#fff',textDecoration:'none',fontSize:'13px',fontWeight:700,boxShadow:'0 4px 20px rgba(236,72,153,0.4)',zIndex:50,display:'flex',alignItems:'center',gap:'6px'}}>
-        🌸 Girl Mode
+        ð¸ Girl Mode
       </a>
     </div>
   )
