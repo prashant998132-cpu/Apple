@@ -1,10 +1,10 @@
 // JARVIS AI STREAM v39 — Claude Haiku Added
 import { NextRequest } from 'next/server';
 
-function sse(t) { return `data: ${JSON.stringify({ choices: [{ delta: { content: t } }] })}\n\n`; }
+function sse(t: string) { return `data: ${JSON.stringify({ choices: [{ delta: { content: t } }] })}\n\n`; }
 function done() { return 'data: [DONE]\n\n'; }
 
-function cleanChunk(text) {
+function cleanChunk(text: string) {
   return text
     .replace(/<\|[^|>]*\|>/g, '')
     .replace(/---\s*\n?Support Pollinations\.AI:[\s\S]*?accessible for everyone\./gi, '')
