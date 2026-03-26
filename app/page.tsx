@@ -9,7 +9,7 @@ function genPass(){const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 function CalcWidget(){
   const [expr,setExpr]=useState('');const [res,setRes]=useState('0')
   const rows=[['7','8','9','DIV'],['4','5','6','MUL'],['1','2','3','-'],['0','.','DEL','+'],['C','(',')', '=']]
-  const sym:Record<string,string>={DIV:String.fromCharCode(247),MUL:String.fromCharCode(215),DEL:'<'}
+  const sym:Record<string,string>={DIV:'÷',MUL:'×',DEL:'⌫'}
   function tap(k:string){
     if(k==='C'){setExpr('');setRes('0');return}
     if(k==='DEL'){setExpr(e=>e.slice(0,-1));return}
@@ -55,16 +55,15 @@ function ImageMsg({url,prompt}:{url:string;prompt:string}){
   )
 }
 
-// Using plain text labels to avoid emoji encoding issues
 const QUICK=[
-  {l:'Image',m:'image banao '},
-  {l:'Calc',m:'/calc'},
-  {l:'QR',m:'/qr '},
-  {l:'Password',m:'password banao'},
-  {l:'News',m:'aaj ki khabar kya hai'},
-  {l:'Weather',m:'Rewa ka mausam batao'},
-  {l:'Cricket',m:'cricket score batao'},
-  {l:'Photo',m:''},
+  {l:'🖼️ Image',m:'image banao '},
+  {l:'🔢 Calc',m:'/calc'},
+  {l:'📱 QR',m:'/qr '},
+  {l:'🔐 Password',m:'password banao'},
+  {l:'📰 News',m:'aaj ki khabar kya hai'},
+  {l:'☀️ Weather',m:'Rewa ka mausam batao'},
+  {l:'🏏 Cricket',m:'cricket score batao'},
+  {l:'📷 Photo',m:''},
 ]
 
 export default function Home(){
@@ -94,7 +93,7 @@ export default function Home(){
     const file=e.target.files?.[0];if(!file)return
     const reader=new FileReader()
     reader.onload=async()=>{
-      const nm=[...msgs,{r:'u' as const,c:'Photo bheja'}];setMsgs(nm);setLoad(true)
+      const nm=[...msgs,{r:'u' as const,c:'📷 Photo bheja'}];setMsgs(nm);setLoad(true)
       try{const r=await fetch('/api/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:reader.result})});const d=await r.json();const rep=d.answer||'Samajh nahi aaya';setMsgs([...nm,{r:'a',c:rep}]);speak(rep)}
       catch{setMsgs([...nm,{r:'a',c:'Photo analyse nahi ho payi'}])}
       setLoad(false)
@@ -108,9 +107,7 @@ export default function Home(){
       const parts=msg.slice(1).split(' ');const cmd=parts[0].toLowerCase();const args=parts.slice(1).join(' ')
       if(cmd==='calc'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'calc'}]);return}
       if(cmd==='qr'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'',widget:'qr:'+args}]);return}
-      if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'Password: '+genPass()+'
-
-Copy kar lo!'}]);return}
+      if(cmd==='password'){setMsgs(m=>[...m,{r:'u',c:msg},{r:'a',c:'🔐 Password: '+genPass()+'\n\nCopy kar lo!'}]);return}
       if(cmd==='clear'){setMsgs([{r:'a',c:'Clear! Kya karna hai? ⚡'}]);return}
       if(cmd==='luna'){window.location.href='/luna';return}
       if(cmd==='era'){window.location.href='/era';return}
@@ -121,9 +118,7 @@ Copy kar lo!'}]);return}
       setMsgs([...nm,{r:'a',c:p,imageUrl:'https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?model=flux&width=1024&height=1024&seed='+Math.floor(Math.random()*999999)+'&nologo=true'}]);setLoad(false);return
     }
     if(/video banao|clip banao/.test(m)){const p=msg.replace(/video banao|clip banao/gi,'').trim()||msg;setMsgs([...nm,{r:'a',c:'Video generate ho raha hai...',videoUrl:'https://video.pollinations.ai/'+encodeURIComponent(p)}]);setLoad(false);return}
-    if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'Password: '+genPass()+'
-
-Copy kar lo!'}]);setLoad(false);return}
+    if(/password banao|strong password/.test(m)){setMsgs([...nm,{r:'a',c:'🔐 Password: '+genPass()+'\n\nCopy kar lo!'}]);setLoad(false);return}
     try{const r=await fetch('/api/jarvis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,conversationHistory:nm.slice(-8).map(x=>({r:x.r,c:x.c}))})});const d=await r.json();const rep=d.response||d.message||'Samajh nahi aaya';setMsgs([...nm,{r:'a',c:rep}]);speak(rep)}
     catch{setMsgs([...nm,{r:'a',c:'Network issue, retry karo!'}])}
     setLoad(false)
@@ -135,25 +130,23 @@ Copy kar lo!'}]);setLoad(false);return}
     <div style={{position:'fixed',inset:0,background:bg,display:'flex',flexDirection:'column',fontFamily:'system-ui,sans-serif',color:tc}}>
       <style>{`@keyframes p{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}::-webkit-scrollbar{width:0}input::placeholder{color:#556}`}</style>
 
-      {/* Header */}
       <div style={{flexShrink:0,background:dark?'#030a14':'#fff',borderBottom:'1px solid '+bc,padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',zIndex:20}}>
-        <button onClick={()=>setMenu(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'22px',color:tc,lineHeight:1}}>☰</button>
+        <button onClick={()=>setMenu(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'22px',color:tc,lineHeight:1}}>&#9776;</button>
         <div style={{flex:1}}>
-          <div style={{fontWeight:800,fontSize:'15px',letterSpacing:'1px',color:'#00e5ff'}}>⚡ JARVIS</div>
+          <div style={{fontWeight:800,fontSize:'15px',letterSpacing:'1px',color:'#00e5ff'}}>&#9889; JARVIS</div>
           <div style={{fontSize:'9px',color:'#4fc3f7',letterSpacing:'2px'}}>AI ASSISTANT v10.43</div>
         </div>
-        <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}} title="Voice">🔊</button>
+        <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}}>🔊</button>
         <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px'}}>{theme==='dark'?'🌙':'☀️'}</button>
         <a href="/luna" style={{textDecoration:'none',fontSize:'20px'}}>🌸</a>
       </div>
 
-      {/* Sidebar */}
       {menu&&(
         <div style={{position:'fixed',inset:0,zIndex:100,display:'flex'}}>
           <div style={{width:'240px',background:dark?'#040e1a':'#fff',borderRight:'1px solid '+bc,padding:'16px',display:'flex',flexDirection:'column',gap:'8px'}}>
-            <div style={{fontWeight:700,fontSize:'14px',color:'#00e5ff',marginBottom:'8px'}}>⚡ JARVIS Menu</div>
-            {[['⚡ JARVIS','/'],['🌸 LUNA','/luna'],['💗 Era','/era'],['🛠️ Tools','/tools']].map(([l,h])=>(
-              <a key={h} href={h} style={{display:'block',padding:'12px 14px',borderRadius:'12px',background:card,border:'1px solid '+bc,color:tc,textDecoration:'none',fontSize:'13px',fontWeight:600}}>{l}</a>
+            <div style={{fontWeight:700,fontSize:'14px',color:'#00e5ff',marginBottom:'8px'}}>&#9889; JARVIS Menu</div>
+            {[['&#9889; JARVIS','/'],['&#127800; LUNA','/luna'],['💗 Era','/era'],['🛠&#65039; Tools','/tools']].map(([l,h])=>(
+              <a key={h} href={h} style={{display:'block',padding:'12px 14px',borderRadius:'12px',background:card,border:'1px solid '+bc,color:tc,textDecoration:'none',fontSize:'13px',fontWeight:600}} dangerouslySetInnerHTML={{__html:l}}/>
             ))}
             <div style={{borderTop:'1px solid '+bc,paddingTop:'10px',marginTop:'4px'}}>
               <div style={{fontSize:'11px',color:'#888',marginBottom:'8px'}}>Slash Commands:</div>
@@ -164,11 +157,10 @@ Copy kar lo!'}]);setLoad(false);return}
         </div>
       )}
 
-      {/* Messages */}
       <div ref={ref} style={{flex:1,overflowY:'scroll',padding:'12px',display:'flex',flexDirection:'column',gap:'12px',minHeight:0}}>
         {msgs.map((m,i)=>(
           <div key={i} style={{display:'flex',justifyContent:m.r==='u'?'flex-end':'flex-start',alignItems:'flex-end',gap:'8px'}}>
-            {m.r==='a'&&<div style={{width:'32px',height:'32px',borderRadius:'50%',background:'linear-gradient(135deg,#00e5ff,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',flexShrink:0}}>⚡</div>}
+            {m.r==='a'&&<div style={{width:'32px',height:'32px',borderRadius:'50%',background:'linear-gradient(135deg,#00e5ff,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',flexShrink:0}}>&#9889;</div>}
             <div style={{maxWidth:'82%'}}>
               {m.widget==='calc'&&<CalcWidget/>}
               {m.widget?.startsWith('qr:')&&<QrWidget text={m.widget.slice(3)}/>}
@@ -184,33 +176,28 @@ Copy kar lo!'}]);setLoad(false);return}
           </div>
         ))}
         {load&&<div style={{display:'flex',gap:'8px',alignItems:'flex-end'}}>
-          <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'linear-gradient(135deg,#00e5ff,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px'}}>⚡</div>
+          <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'linear-gradient(135deg,#00e5ff,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px'}}>&#9889;</div>
           <div style={{padding:'11px 15px',background:card,border:'1px solid '+bc,borderRadius:'20px 20px 20px 5px',display:'flex',gap:'5px',alignItems:'center'}}>
             {[0,1,2].map(i=><div key={i} style={{width:'7px',height:'7px',borderRadius:'50%',background:'#00e5ff',animation:'p 1.2s '+(i*0.2)+'s infinite'}}/>)}
           </div>
         </div>}
       </div>
 
-      {/* Quick buttons */}
       <div style={{flexShrink:0,padding:'5px 12px',background:dark?'#030a14':'#f8faff',borderTop:'1px solid '+bc}}>
         <div style={{display:'flex',gap:'6px',overflowX:'auto'}}>
-          {QUICK.map(q=><button key={q.l} onClick={()=>{if(q.m===''){photoRef.current?.click();return};if(q.m.endsWith(' '))setInp(q.m);else send(q.m)}} style={{padding:'6px 12px',borderRadius:'18px',border:'1px solid '+bc,background:card,color:tc,fontSize:'12px',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,fontWeight:500}}>{q.l}</button>)}
+          {QUICK.map(q=><button key={q.l} onClick={()=>{if(q.m===''){photoRef.current?.click();return};if(q.m.endsWith(' '))setInp(q.m);else send(q.m)}} style={{padding:'6px 12px',borderRadius:'18px',border:'1px solid '+bc,background:card,color:tc,fontSize:'11px',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>{q.l}</button>)}
         </div>
       </div>
 
-      {/* Input */}
       <div style={{flexShrink:0,padding:'8px 12px 20px',background:dark?'#030a14':'#fff',borderTop:'1px solid '+bc}}>
         <input ref={photoRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePhoto}/>
         <div style={{display:'flex',gap:'8px',alignItems:'center',background:card,borderRadius:'28px',padding:'8px 8px 8px 16px',border:'1.5px solid '+(inp?'#00e5ff':bc)}}>
-          <input ref={inpRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder={recording?'Sun raha hoon...':'Kuch bhi poocho, /calc, /qr...'} style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:tc}}/>
-          <button onClick={toggleVoice} style={{width:'36px',height:'36px',borderRadius:'50%',background:recording?'rgba(255,82,82,0.15)':'transparent',border:recording?'2px solid #ff5252':'none',cursor:'pointer',fontSize:'20px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            {recording?'⏹️':'🎤'}
-          </button>
-          <button onClick={()=>send()} disabled={load||!inp.trim()} style={{width:'38px',height:'38px',borderRadius:'50%',background:inp.trim()?'linear-gradient(135deg,#00e5ff,#8b5cf6)':'#1a3a5a',border:'none',cursor:'pointer',fontSize:'16px',flexShrink:0,color:inp.trim()?'#000':'#888',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>➤</button>
+          <input ref={inpRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder={recording?'🎤 Sun raha hoon...':'Kuch bhi poocho, /calc, /qr...'} style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:tc}}/>
+          <button onClick={toggleVoice} style={{width:'36px',height:'36px',borderRadius:'50%',background:recording?'rgba(255,82,82,0.15)':'transparent',border:recording?'2px solid #ff5252':'none',cursor:'pointer',fontSize:'20px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{recording?'⏹️':'🎤'}</button>
+          <button onClick={()=>send()} disabled={load||!inp.trim()} style={{width:'38px',height:'38px',borderRadius:'50%',background:inp.trim()?'linear-gradient(135deg,#00e5ff,#8b5cf6)':'#1a3a5a',border:'none',cursor:'pointer',fontSize:'18px',flexShrink:0,color:inp.trim()?'#000':'#888',display:'flex',alignItems:'center',justifyContent:'center'}}>&#10148;</button>
         </div>
       </div>
 
-      {/* Girl Mode button */}
       <a href="/luna" style={{position:'fixed',bottom:'100px',right:'12px',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',borderRadius:'28px',padding:'10px 16px',color:'#fff',textDecoration:'none',fontSize:'13px',fontWeight:700,boxShadow:'0 4px 20px rgba(236,72,153,0.4)',zIndex:50,display:'flex',alignItems:'center',gap:'6px'}}>
         🌸 Girl Mode
       </a>
