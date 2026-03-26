@@ -15,8 +15,11 @@ function cleanChunk(text: string) {
 }
 
 class AdFilter {
+  buffer: string;
+  adDetected: boolean;
+
   constructor() { this.buffer = ''; this.adDetected = false; }
-  filter(chunk) {
+  filter(chunk: string) {
     if (this.adDetected) return '';
     this.buffer += chunk;
     const adStart = this.buffer.search(/---\s*\n?Support Pollinations|Support Pollinations\.AI:|🌸\s*Ad\s*🌸/i);
