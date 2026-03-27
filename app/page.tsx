@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-type Msg={r:'u'|'a';c:string;imageUrl?:string;videoUrl?:string;widget?:string}
+type Msg={r:'u'|'a';c:string;imageUrl?:string;videoUrl?:string;widget?:string;streaming?:boolean}
 
 function getQrUrl(t:string){return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(t)}
 function genPass(){const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';return Array.from({length:16},()=>c[Math.floor(Math.random()*c.length)]).join('')}
@@ -134,7 +134,7 @@ export default function Home(){
         <button onClick={()=>setMenu(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'22px',color:tc,lineHeight:1}}>&#9776;</button>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:'15px',letterSpacing:'1px',color:'#00e5ff'}}>&#9889; JARVIS</div>
-          <div style={{fontSize:'9px',color:'#4fc3f7',letterSpacing:'2px'}}>AI ASSISTANT v10.43</div>
+          <div style={{fontSize:'9px',color:'#4fc3f7',letterSpacing:'2px'}}>AI ASSISTANT v10.44</div>
         </div>
         <button onClick={()=>setTts(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px',opacity:tts?1:0.3}}>🔊</button>
         <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} style={{background:'none',border:'none',cursor:'pointer',fontSize:'20px'}}>{theme==='dark'?'🌙':'☀️'}</button>
