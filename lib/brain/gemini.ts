@@ -82,7 +82,7 @@ export async function askGemini(params: {
   memoryContext?: string;
   toolNames?: string[];   // Restrict to specific tools (optional)
 }): Promise<GeminiResponse> {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   const start = Date.now();
 
   if (!apiKey) {
