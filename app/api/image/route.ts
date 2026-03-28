@@ -24,7 +24,7 @@ function pollinationsUrl(prompt: string, seed?: number): string {
 }
 
 async function geminiUrl(prompt: string): Promise<string> {
-  const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('no_key');
   // Use Gemini to generate — returns base64 BUT we proxy only if <500KB
   const res = await fetch(
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
   const primaryUrl = pollinationsUrl(enhanced, seed);
 
   // Try Gemini only if key exists (proxy small images only)
-  if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+  if (process.env.GEMINI_API_KEY) {
     tried.push('gemini');
     try {
       const url = await geminiUrl(enhanced);
