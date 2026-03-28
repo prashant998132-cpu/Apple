@@ -36,7 +36,7 @@ export async function imagePollinations(o: ImageOptions): Promise<ImageResult|nu
 
 // 2. Gemini Imagen -- generous free tier
 export async function imageGemini(o: ImageOptions): Promise<ImageResult|null> {
-  const k = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const k = process.env.GEMINI_API_KEY;
   if(!k) return null;
   try {
     const p = await translatePrompt(o.prompt);
