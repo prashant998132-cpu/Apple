@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 type Tool = 'calculator' | 'qr' | 'password' | 'pomodoro' | 'color' | 'json' | 'unit'
 
@@ -131,7 +132,7 @@ export default function ToolsPage() {
     <div style={{minHeight:'100vh',background:'#040e1a',color:'#e0f0ff',fontFamily:'monospace',display:'flex',flexDirection:'column'}}>
       {/* Header */}
       <div style={{padding:'12px 16px',background:'#0a1628',borderBottom:'1px solid #1a3a5a',display:'flex',alignItems:'center',gap:'12px'}}>
-        <a href="/" style={{color:'#00e5ff',textDecoration:'none',fontSize:'12px',border:'1px solid #00e5ff33',padding:'4px 10px',borderRadius:'8px'}}>⚡ JARVIS</a>
+        <Link href="/" style={{color:'#00e5ff',textDecoration:'none',fontSize:'12px',border:'1px solid #00e5ff33',padding:'4px 10px',borderRadius:'8px'}}>⚡ JARVIS</Link>
         <span style={{fontSize:'16px',fontWeight:700,color:'#00e5ff'}}>🛠️ Tools</span>
       </div>
 
