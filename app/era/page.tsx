@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 
 const ERA_VOICE = 'Tu Era hai. Pranshu ki caring, warm, slightly mischievous companion.' +
   ' Directly baat karti hai. Opinions hain. Tease karti hai affectionately.' +
@@ -91,7 +92,7 @@ export default function EraPage(){
     <div style={{position:'fixed',inset:0,background:'linear-gradient(135deg,#1a0010,#0d0020)',display:'flex',flexDirection:'column',fontFamily:'system-ui,sans-serif',overflow:'hidden'}}>
 
       <div style={{flexShrink:0,padding:'14px 16px',background:'rgba(233,30,140,0.08)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(233,30,140,0.15)',display:'flex',alignItems:'center',gap:'12px'}}>
-        <a href="/" style={{color:'rgba(255,255,255,0.5)',fontSize:'18px',textDecoration:'none'}}>{'<'}</a>
+        <Link href="/" style={{color:'rgba(255,255,255,0.5)',fontSize:'18px',textDecoration:'none'}}>{'<'}</Link>
         <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'linear-gradient(135deg,#e91e8c,#9c27b0)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',boxShadow:'0 0 20px rgba(233,30,140,0.4)',flexShrink:0}}>{'🌸'}</div>
         <div style={{flex:1}}>
           <div style={{color:'#fff',fontWeight:700,fontSize:'17px'}}>Era</div>
