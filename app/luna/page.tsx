@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 
 const LUNA_VOICE = 'Tu LUNA hai. Pranshu ki warm, fun, genuine bestie.' +
   ' Opinionated hai — blindly agree nahi karti.' +
@@ -95,7 +96,7 @@ export default function LunaPage() {
     <div style={{position:'fixed',inset:0,background:'linear-gradient(160deg,'+(mood.bg||'#fdf2f8')+',#fce7f3,#ede9fe)',fontFamily:'Georgia,serif',display:'flex',flexDirection:'column',overflow:'hidden',transition:'background 0.8s'}}>
 
       <div style={{flexShrink:0,padding:'12px 16px',background:'rgba(255,255,255,0.6)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(196,181,253,0.2)',zIndex:10,display:'flex',alignItems:'center',gap:'10px'}}>
-        <a href="/" style={{color:'#6b7280',fontSize:'18px',textDecoration:'none',flexShrink:0}}>{'<'}</a>
+        <Link href="/" style={{color:'#6b7280',fontSize:'18px',textDecoration:'none',flexShrink:0}}>{'<'}</Link>
         <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'linear-gradient(135deg,#f9a8d4,#c4b5fd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',flexShrink:0,boxShadow:'0 4px 15px rgba(196,181,253,0.4)'}}>{'🌸'}</div>
         <div style={{flex:1}}>
           <div style={{fontSize:'17px',fontWeight:800,background:'linear-gradient(135deg,#ec4899,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>LUNA</div>
