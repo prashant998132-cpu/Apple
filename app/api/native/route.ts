@@ -9,8 +9,8 @@ export async function POST(req: NextRequest) {
   if (action === 'device_info') {
     return NextResponse.json({
       timestamp: new Date().toISOString(),
-      region: req.geo?.country || 'IN',
-      city: req.geo?.city || 'Unknown',
+      region: req.headers.get('x-vercel-ip-country') || 'IN' || 'IN',
+      city: req.headers.get('x-vercel-ip-city') || 'Unknown' || 'Unknown',
       timezone: req.headers.get('x-vercel-ip-timezone') || 'Asia/Kolkata',
     })
   }
