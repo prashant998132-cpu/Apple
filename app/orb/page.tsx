@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link';
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking'
