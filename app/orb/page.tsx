@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import Link from 'next/link'
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking'
 
@@ -384,7 +385,7 @@ export default function OrbPage(){
         </div>
 
         {/* back */}
-        <a href="/" style={{marginTop:'24px',fontSize:'11px',letterSpacing:'2px',color:'rgba(0,229,255,0.4)',textDecoration:'none',border:'1px solid rgba(0,229,255,0.15)',padding:'6px 16px',borderRadius:'16px'}}>← JARVIS HOME</a>
+        <Link href="/" style={{marginTop:'24px',fontSize:'11px',letterSpacing:'2px',color:'rgba(0,229,255,0.4)',textDecoration:'none',border:'1px solid rgba(0,229,255,0.15)',padding:'6px 16px',borderRadius:'16px'}}>← JARVIS HOME</Link>
       </div>
 
       <style>{`
