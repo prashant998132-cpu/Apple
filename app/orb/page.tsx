@@ -106,7 +106,7 @@ export default function OrbPage(){
     const W=440,H=440,R=220
 
     function drawFrame(){
-      ctx.clearRect(0,0,W,H)
+      ctx!.clearRect(0,0,W,H)
       const s = stateRef.current
       const pal = PALETTES[s]
       const cx=R+orbOffXRef.current, cy=R+orbOffYRef.current
@@ -115,18 +115,18 @@ export default function OrbPage(){
 
       // outer glow
       const outerR=140*breath+sa*18
-      const og=ctx.createRadialGradient(cx,cy,outerR*0.5,cx,cy,outerR*1.4)
+      const og=ctx!.createRadialGradient(cx,cy,outerR*0.5,cx,cy,outerR*1.4)
       og.addColorStop(0,'rgba('+hexToRgb(pal.c1)+',0.12)')
       og.addColorStop(0.6,'rgba('+hexToRgb(pal.c1)+',0.04)')
       og.addColorStop(1,'transparent')
-      ctx.save(); ctx.globalAlpha=glow
-      ctx.fillStyle=og
-      ctx.beginPath(); ctx.arc(cx,cy,outerR*1.5,0,Math.PI*2); ctx.fill()
-      ctx.restore()
+      ctx!.save(); ctx!.globalAlpha=glow
+      ctx!.fillStyle=og
+      ctx!.beginPath(); ctx!.arc(cx,cy,outerR*1.5,0,Math.PI*2); ctx!.fill()
+      ctx!.restore()
 
       // blob
       const blobR=110*breath
-      ctx.save(); ctx.beginPath()
+      ctx!.save(); ctx!.beginPath()
       const pts=80
       for(let i=0;i<=pts;i++){
         const a=(i/pts)*Math.PI*2
@@ -135,66 +135,66 @@ export default function OrbPage(){
         const distort=morph*16+sa*22
         const r2=blobR+n*distort+sa*Math.sin(a*4+tRef.current)*8
         const x=cx+Math.cos(a)*r2, y=cy+Math.sin(a)*r2
-        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+        i===0?ctx!.moveTo(x,y):ctx!.lineTo(x,y)
       }
-      ctx.closePath()
-      const bg=ctx.createRadialGradient(cx-20,cy-25,5,cx,cy,blobR*1.1)
+      ctx!.closePath()
+      const bg=ctx!.createRadialGradient(cx-20,cy-25,5,cx,cy,blobR*1.1)
       bg.addColorStop(0,lighten(pal.c1,0.9)); bg.addColorStop(0.35,pal.c1)
       bg.addColorStop(0.65,pal.c2); bg.addColorStop(1,darken(pal.c3))
-      ctx.fillStyle=bg; ctx.shadowColor=pal.c1; ctx.shadowBlur=20+sa*25
-      ctx.fill(); ctx.restore()
+      ctx!.fillStyle=bg; ctx!.shadowColor=pal.c1; ctx!.shadowBlur=20+sa*25
+      ctx!.fill(); ctx!.restore()
 
       // inner highlight
-      ctx.save()
-      const ig=ctx.createRadialGradient(cx-28,cy-28,2,cx,cy,blobR*0.6)
+      ctx!.save()
+      const ig=ctx!.createRadialGradient(cx-28,cy-28,2,cx,cy,blobR*0.6)
       ig.addColorStop(0,'rgba(255,255,255,0.7)'); ig.addColorStop(0.3,'rgba(255,255,255,0.15)'); ig.addColorStop(1,'transparent')
-      ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,blobR*0.75,0,Math.PI*2); ctx.fill(); ctx.restore()
+      ctx!.fillStyle=ig; ctx!.beginPath(); ctx!.arc(cx,cy,blobR*0.75,0,Math.PI*2); ctx!.fill(); ctx!.restore()
 
       // waveform rings
       if(s==='speaking'||s==='listening'){
-        ctx.save(); ctx.globalAlpha=0.5+sa*0.4
+        ctx!.save(); ctx!.globalAlpha=0.5+sa*0.4
         for(let ring=0;ring<3;ring++){
-          const wR=blobR+4+ring*8; ctx.beginPath()
+          const wR=blobR+4+ring*8; ctx!.beginPath()
           for(let i=0;i<=60;i++){
             const a=(i/60)*Math.PI*2
             const wave=Math.sin(a*(6+ring*2)+tRef.current*(2+ring)+stateTimeRef.current)*(sa*12+2)
             const wr=wR+wave
             const x=cx+Math.cos(a)*wr, y=cy+Math.sin(a)*wr
-            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+            i===0?ctx!.moveTo(x,y):ctx!.lineTo(x,y)
           }
-          ctx.closePath()
-          ctx.strokeStyle=ring===0?pal.c1:ring===1?pal.c2:pal.c3
-          ctx.lineWidth=1.5-ring*0.3; ctx.stroke()
+          ctx!.closePath()
+          ctx!.strokeStyle=ring===0?pal.c1:ring===1?pal.c2:pal.c3
+          ctx!.lineWidth=1.5-ring*0.3; ctx!.stroke()
         }
-        ctx.restore()
+        ctx!.restore()
       }
 
       // thinking pattern
       if(s==='thinking'){
-        ctx.save(); ctx.translate(cx,cy); ctx.rotate(rotRef.current)
-        ctx.globalAlpha=0.3+Math.sin(tRef.current*2)*0.1
+        ctx!.save(); ctx!.translate(cx,cy); ctx!.rotate(rotRef.current)
+        ctx!.globalAlpha=0.3+Math.sin(tRef.current*2)*0.1
         for(let i=0;i<8;i++){
           const a=(i/8)*Math.PI*2
-          ctx.beginPath(); ctx.moveTo(Math.cos(a)*blobR*0.5,Math.sin(a)*blobR*0.5)
-          ctx.lineTo(Math.cos(a)*blobR*0.85,Math.sin(a)*blobR*0.85)
-          ctx.strokeStyle=i%2===0?pal.c1:pal.c2; ctx.lineWidth=1; ctx.stroke()
+          ctx!.beginPath(); ctx!.moveTo(Math.cos(a)*blobR*0.5,Math.sin(a)*blobR*0.5)
+          ctx!.lineTo(Math.cos(a)*blobR*0.85,Math.sin(a)*blobR*0.85)
+          ctx!.strokeStyle=i%2===0?pal.c1:pal.c2; ctx!.lineWidth=1; ctx!.stroke()
         }
-        ctx.restore()
+        ctx!.restore()
       }
 
       // ripple
       if(rippleOpRef.current>0){
-        ctx.save(); ctx.globalAlpha=rippleOpRef.current
-        ctx.beginPath(); ctx.arc(cx,cy,blobR*rippleScaleRef.current,0,Math.PI*2)
-        ctx.strokeStyle=pal.c1; ctx.lineWidth=2; ctx.stroke(); ctx.restore()
+        ctx!.save(); ctx!.globalAlpha=rippleOpRef.current
+        ctx!.beginPath(); ctx!.arc(cx,cy,blobR*rippleScaleRef.current,0,Math.PI*2)
+        ctx!.strokeStyle=pal.c1; ctx!.lineWidth=2; ctx!.stroke(); ctx!.restore()
       }
 
       // charge
       if(chargeRef.current>0){
-        ctx.save(); ctx.globalAlpha=chargeRef.current*0.6
-        const cg=ctx.createRadialGradient(cx,cy,blobR*0.5,cx,cy,blobR*1.2)
+        ctx!.save(); ctx!.globalAlpha=chargeRef.current*0.6
+        const cg=ctx!.createRadialGradient(cx,cy,blobR*0.5,cx,cy,blobR*1.2)
         cg.addColorStop(0,'transparent'); cg.addColorStop(0.7,pal.glow); cg.addColorStop(1,'transparent')
-        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(cx,cy,blobR*1.3,0,Math.PI*2); ctx.fill(); ctx.restore()
+        ctx!.fillStyle=cg; ctx!.beginPath(); ctx!.arc(cx,cy,blobR*1.3,0,Math.PI*2); ctx!.fill(); ctx!.restore()
       }
     }
 
