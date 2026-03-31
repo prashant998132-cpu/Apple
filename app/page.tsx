@@ -127,7 +127,7 @@ export default function Home(){
   const dark=theme==='dark';const bg=dark?'#040e1a':'#f0f4ff';const card=dark?'#0a1628':'#fff';const tc=dark?'#e0f0ff':'#1a2040';const bc=dark?'#1a3a5a':'#d0d8f0'
 
   return(
-    <div style={{position:'fixed',inset:0,background:bg,display:'flex',flexDirection:'column',fontFamily:'system-ui,sans-serif',color:tc}}>
+    <div style={{position:'fixed',top:0,left:0,right:0,bottom:'calc(56px + env(safe-area-inset-bottom,0px))',background:bg,display:'flex',flexDirection:'column',fontFamily:'system-ui,sans-serif',color:tc}}>
       <style>{`@keyframes p{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}::-webkit-scrollbar{width:0}input::placeholder{color:#556}`}</style>
 
       <div style={{flexShrink:0,background:dark?'#030a14':'#fff',borderBottom:'1px solid '+bc,padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',zIndex:20}}>
@@ -142,7 +142,7 @@ export default function Home(){
       </div>
 
       {menu&&(
-        <div style={{position:'fixed',inset:0,zIndex:100,display:'flex'}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:'calc(56px + env(safe-area-inset-bottom,0px))',zIndex:100,display:'flex'}}>
           <div style={{width:'240px',background:dark?'#040e1a':'#fff',borderRight:'1px solid '+bc,padding:'16px',display:'flex',flexDirection:'column',gap:'8px'}}>
             <div style={{fontWeight:700,fontSize:'14px',color:'#00e5ff',marginBottom:'8px'}}>&#9889; JARVIS Menu</div>
             {[['&#9889; JARVIS','/'],['&#127800; LUNA','/luna'],['💗 Era','/era'],['🛠&#65039; Tools','/tools']].map(([l,h])=>(
@@ -189,7 +189,7 @@ export default function Home(){
         </div>
       </div>
 
-      <div style={{flexShrink:0,padding:'8px 12px 20px',background:dark?'#030a14':'#fff',borderTop:'1px solid '+bc}}>
+      <div style={{flexShrink:0,padding:'8px 12px 10px',background:dark?'#030a14':'#fff',borderTop:'1px solid '+bc}}>
         <input ref={photoRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePhoto}/>
         <div style={{display:'flex',gap:'8px',alignItems:'center',background:card,borderRadius:'28px',padding:'8px 8px 8px 16px',border:'1.5px solid '+(inp?'#00e5ff':bc)}}>
           <input ref={inpRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder={recording?'🎤 Sun raha hoon...':'Kuch bhi poocho, /calc, /qr...'} style={{flex:1,border:'none',background:'transparent',outline:'none',fontSize:'14px',color:tc}}/>
@@ -198,7 +198,7 @@ export default function Home(){
         </div>
       </div>
 
-      <a href="/luna" style={{position:'fixed',bottom:'100px',right:'12px',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',borderRadius:'28px',padding:'10px 16px',color:'#fff',textDecoration:'none',fontSize:'13px',fontWeight:700,boxShadow:'0 4px 20px rgba(236,72,153,0.4)',zIndex:50,display:'flex',alignItems:'center',gap:'6px'}}>
+      // removed,bottom:'100px',right:'12px',background:'linear-gradient(135deg,#ec4899,#8b5cf6)',borderRadius:'28px',padding:'10px 16px',color:'#fff',textDecoration:'none',fontSize:'13px',fontWeight:700,boxShadow:'0 4px 20px rgba(236,72,153,0.4)',zIndex:50,display:'flex',alignItems:'center',gap:'6px'}}>
         🌸 Girl Mode
       </a>
     </div>
