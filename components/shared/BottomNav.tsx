@@ -1,52 +1,32 @@
 'use client';
-import { usePathname, useRouter } from 'next/navigation';
-
-const TABS = [
-  { href: '/',         icon: '⚡', label: 'JARVIS'   },
-  { href: '/tools',    icon: '🧮', label: 'Tools'    },
-  { href: '/settings', icon: '⚙️', label: 'Settings' },
-  { href: '/voice',    icon: '🎙️', label: 'Voice'  },
-  { href: '/india',    icon: '🇮🇳', label: 'India'   },
-];
+import { useRouter } from 'next/navigation';
 
 export default function BottomNav() {
-  const pathname = usePathname();
-  const router   = useRouter();
+  const router = useRouter();
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-      display: 'flex', alignItems: 'stretch',
-      background: 'rgba(4,8,20,0.96)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(3,10,20,0.96)',
       backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-      borderTop: '1px solid rgba(255,255,255,0.08)',
-      height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+      borderTop: '1px solid rgba(26,58,90,0.8)',
+      height: 'calc(56px + env(safe-area-inset-bottom, 0px))',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      gap: '8px',
     }}>
-      {TABS.map(({ href, icon, label }) => {
-        const active = pathname === href || (href !== '/' && pathname.startsWith(href));
-        return (
-          <button key={href} onClick={() => router.push(href)} style={{
-            flex: 1, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: '3px',
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            position: 'relative', transition: 'transform .15s',
-            transform: active ? 'scale(1.1)' : 'scale(1)',
-          }}>
-            {active && (
-              <span style={{
-                position: 'absolute', top: 0, left: '15%', right: '15%',
-                height: '2px', background: '#00e5ff', borderRadius: '0 0 3px 3px',
-              }} />
-            )}
-            <span style={{ fontSize: active ? '22px' : '20px', lineHeight: 1 }}>{icon}</span>
-            <span style={{
-              fontSize: '9px', fontWeight: active ? 700 : 400,
-              color: active ? '#00e5ff' : 'rgba(255,255,255,0.38)',
-              letterSpacing: '.03em', whiteSpace: 'nowrap',
-            }}>{label}</span>
-          </button>
-        );
-      })}
+      <button
+        onClick={() => router.push('/')}
+        style={{
+          background: 'linear-gradient(135deg,#0077ff22,#00bcd422)',
+          border: '1px solid rgba(0,229,255,0.25)',
+          borderRadius: '20px', padding: '8px 24px',
+          color: '#00e5ff', fontSize: '14px', fontWeight: 800,
+          cursor: 'pointer', letterSpacing: '1px',
+          display: 'flex', alignItems: 'center', gap: '6px',
+        }}
+      >
+        <span style={{ fontSize: '18px' }}>⚡</span> JARVIS
+      </button>
     </nav>
   );
 }
