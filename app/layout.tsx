@@ -3,33 +3,26 @@ import './globals.css';
 import BottomNav from '@/components/shared/BottomNav';
 
 export const metadata: Metadata = {
-  title: 'JARVIS',
-  description: 'Your Personal AI Assistant',
+  title: 'JARVIS AI',
+  description: 'Personal AI — Voice, Phone Control, Smart Tools',
   manifest: '/manifest.json',
-  themeColor: '#0a0a14',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'JARVIS',
-  },
+  themeColor: '#040e1a',
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'JARVIS' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="icon" href="/icons/icon-192.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#040e1a" />
       </head>
       <body style={{
-        margin: 0,
-        padding: 0,
-        background: '#0a0a14',
-        color: '#fff',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Color Emoji", sans-serif',
+        margin: 0, padding: 0, background: '#040e1a',
         paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-        minHeight: '100dvh',
       }}>
         {children}
         <BottomNav />
