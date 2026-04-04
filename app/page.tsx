@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Sidebar from '../components/shared/Sidebar'
+import { initProactiveEngine } from '../lib/proactive'
+import { awardXP } from '../lib/xp'
 
 type Role = 'user' | 'assistant'
 type ChatMode = 'auto' | 'flash' | 'think' | 'deep'
@@ -206,6 +208,8 @@ export default function Home() {
       const m = localStorage.getItem(MSTORE) as ChatMode | null
       if (m && ['auto', 'flash', 'think', 'deep'].includes(m)) setChatMode(m)
     } catch {}
+    // Init proactive engine — alerts, habit detection, morning brief
+    try { initProactiveEngine('', 'main') } catch {}
   }, [])
 
   useEffect(() => {
@@ -263,15 +267,18 @@ export default function Home() {
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const question = inp.trim() || 'Is image mein kya dikh raha hai? Hinglish mein batao.'
+    const userLabel = inp.trim() ? inp.trim() : 'Photo sent for analysis'
+    if (inp.trim()) setInp('')
     const reader = new FileReader()
     reader.onload = async () => {
-      const newMsgs: Msg[] = [...msgs, { id: uid(), role: 'user', content: 'Photo sent for analysis', ts: Date.now() }]
+      const newMsgs: Msg[] = [...msgs, { id: uid(), role: 'user', content: userLabel, ts: Date.now() }]
       setMsgs(newMsgs)
       setStreaming(true)
       setStreamText('')
       setStreamProv('Gemini Vision')
       try {
-        const r = await fetch('/api/photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: reader.result }) })
+        const r = await fetch('/api/photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: reader.result, question }) })
         const d = await r.json()
         const rep = d.answer || 'Could not analyse'
         const final: Msg = { id: uid(), role: 'assistant', content: rep, provider: 'Gemini Vision', ts: Date.now() }
@@ -380,6 +387,7 @@ export default function Home() {
       }
       setMsgs([...newMsgs, finalMsg])
       speak(full)
+      awardXP('chat_message')
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: 'Network issue - retry karo!', ts: Date.now() }])
