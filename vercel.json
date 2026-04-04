@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/scheduler?task=daily_summary",
+      "path": "/api/scheduler?task=daily_summary&secret=jarvis-cron-2025",
       "schedule": "0 4 * * *"
     }
   ]
