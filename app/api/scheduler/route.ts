@@ -76,8 +76,9 @@ export async function GET(req: NextRequest) {
   const secret = searchParams.get('secret');
   const task = (searchParams.get('task') || 'daily_summary') as ScheduledTask;
 
-  // Security check
-  if (secret !== CRON_SECRET) {
+  // Accept: (1) correct secret param, OR (2) Vercel's internal cron header
+  const isVercelCron = req.headers.get('x-vercel-cron') === '1';
+  if (!isVercelCron && secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
