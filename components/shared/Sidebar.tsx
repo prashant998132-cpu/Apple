@@ -11,6 +11,9 @@ const ITEMS = [
   { href: '/study',    icon: '📚', label: 'Study',    color: '#34d399' },
   { href: '/target',   icon: '🎯', label: 'Goals',    color: '#fbbf24' },
   { href: '/voice',    icon: '🎙️', label: 'Voice',   color: '#60a5fa' },
+  { href: '/health',   icon: '🏥', label: 'Health',  color: '#00e676' },
+  { href: '/finance',  icon: '💰', label: 'Finance', color: '#ffd600' },
+  { href: '/write',    icon: '✍️', label: 'Write',   color: '#40c4ff' },
   { href: '/settings', icon: '⚙️', label: 'Settings', color: '#94a3b8' },
 ];
 
