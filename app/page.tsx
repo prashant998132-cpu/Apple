@@ -116,13 +116,13 @@ function CalcWidget() {
     if (k === 'C') { setExpr(''); setRes('0'); return }
     if (k === '⌫') { setExpr(e => e.slice(0,-1)); return }
     if (k === '=') {
-      try { const r = String(Function('"use strict";return(' + expr.replace(/÷/g,'/').replace(/×/g,'*') + ')')());setRes(r);setExpr(r) }
+      try { const r = String(Function('"use strict";return(' + expr.split("÷").join("/").split("×").join("*") + ')')());setRes(r);setExpr(r) }
       catch { setRes('Err') }
       return
     }
     const n = expr + (k === '÷' ? '/' : k === '×' ? '*' : k)
     setExpr(n)
-    try { setRes(String(Function('"use strict";return(' + n.replace(/÷/g,'/').replace(/×/g,'*') + ')')()) } catch {}
+    try { setRes(String(Function('"use strict";return(' + n.split("÷").join("/").split("×").join("*") + ')')()) } catch {}
   }
   return (
     <div style={{ background:'#0a1628', border:'1px solid #1a3a5a', borderRadius:'16px', padding:'12px', maxWidth:'240px' }}>
