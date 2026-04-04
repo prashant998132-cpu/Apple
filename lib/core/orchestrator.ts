@@ -129,7 +129,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
     return { ...cached, processingMs: 1, routeReason: 'cache_hit' }
   }
 
-  const geminiKey = !!process.env.NEXT_PUBLIC_GEMINI_API_KEY
+  const geminiKey = !!process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY
   const groqKey   = !!process.env.GROQ_API_KEY
   safeMode = !geminiKey && !groqKey
 
