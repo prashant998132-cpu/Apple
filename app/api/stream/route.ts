@@ -71,7 +71,7 @@ async function streamOpenAI(
 }
 
 export async function POST(req: NextRequest) {
-  const { message, history = [], memoryPrompt, chatMode = 'auto', userName = 'Boss' } = await req.json()
+  const { message, history = [], memoryPrompt, chatMode = 'auto', userName = 'Boss', systemPrompt: overrideSystem } = await req.json()
   if (!message?.trim()) return new Response('No message', { status: 400 })
 
   const encoder = new TextEncoder()
@@ -107,7 +107,7 @@ RULES:
 - Address user as "${userName || 'Boss'}" occasionally
 - Keep responses short unless detail is needed
 - For math/science formulas use LaTeX: $formula$ inline, $$formula$$ display`
-        const systemPrompt = baseSystem + toolContext
+        const systemPrompt = (overrideSystem || baseSystem) + toolContext
 
         const maxTok = getMaxTokens(message)
         let replied = false
