@@ -6,14 +6,18 @@ const ITEMS = [
   { href: '/',         icon: '⚡', label: 'JARVIS',   color: '#00e5ff' },
   { href: '/luna',     icon: '🌸', label: 'LUNA',     color: '#f9a8d4' },
   { href: '/era',      icon: '💗', label: 'Era',      color: '#fb7185' },
+  { href: '/brief',    icon: '📰', label: 'Brief',    color: '#ffd600' },
+  { href: '/health',   icon: '🏥', label: 'Health',   color: '#00e676' },
+  { href: '/finance',  icon: '💰', label: 'Finance',  color: '#ffd600' },
+  { href: '/write',    icon: '✍️', label: 'Write',    color: '#40c4ff' },
   { href: '/india',    icon: '🇮🇳', label: 'India',   color: '#f97316' },
   { href: '/tools',    icon: '🧮', label: 'Tools',    color: '#a78bfa' },
   { href: '/study',    icon: '📚', label: 'Study',    color: '#34d399' },
   { href: '/target',   icon: '🎯', label: 'Goals',    color: '#fbbf24' },
   { href: '/voice',    icon: '🎙️', label: 'Voice',   color: '#60a5fa' },
-  { href: '/health',   icon: '🏥', label: 'Health',  color: '#00e676' },
-  { href: '/finance',  icon: '💰', label: 'Finance', color: '#ffd600' },
-  { href: '/write',    icon: '✍️', label: 'Write',   color: '#40c4ff' },
+  { href: '/image',    icon: '🎨', label: 'Image',    color: '#f472b6' },
+  { href: '/orb',      icon: '🌐', label: 'Orb',      color: '#7c3aed' },
+  { href: '/xp',       icon: '🎮', label: 'XP',       color: '#ff9800' },
   { href: '/settings', icon: '⚙️', label: 'Settings', color: '#94a3b8' },
 ];
 
@@ -50,7 +54,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         }}>
           <div>
             <div style={{ fontSize: '16px', fontWeight: 800, color: '#00e5ff', letterSpacing: '1px' }}>⚡ JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#4fc3f7', letterSpacing: '2px', marginTop: '2px' }}>AI ASSISTANT</div>
+            <div style={{ fontSize: '9px', color: '#4fc3f7', letterSpacing: '2px', marginTop: '2px' }}>LIFE OS v11</div>
           </div>
           <button onClick={onClose} style={{
             background: 'rgba(255,255,255,0.07)', border: 'none', borderRadius: '8px',
@@ -83,7 +87,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           padding: '10px 16px 16px', borderTop: '1px solid rgba(255,255,255,0.07)',
           fontSize: '10px', color: 'rgba(255,255,255,0.18)', textAlign: 'center',
         }}>
-          JARVIS · ₹0 Forever 🤖
+          JARVIS Life OS · ₹0 Forever 🤖
         </div>
       </div>
     </>
