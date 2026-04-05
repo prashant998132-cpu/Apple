@@ -1,50 +1,171 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Mono:wght@700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#090d18;color:#ddeeff;font-family:'Inter','Noto Sans Devanagari','Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji','Twemoji Mozilla',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,229,255,.25);border-radius:3px}
-/* Markdown */
-.h1{font-size:16px;font-weight:700;color:#f0f8ff;margin:14px 0 5px}
-.h2{font-size:15px;font-weight:600;color:#e8f4ff;margin:12px 0 4px}
-.h3{font-size:14px;font-weight:600;color:#c8dff0;margin:9px 0 3px}
-.li{padding:2px 0 2px 2px;color:#c0d8ee}
-.spacer{height:7px}.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:9px 0}
-/* Code */
-.code-block{background:#060c18;border:1px solid rgba(0,229,255,.09);border-radius:8px;padding:11px 13px;overflow-x:auto;font-family:'Space Mono','Courier New',monospace;font-size:12px;line-height:1.65;color:#9ac8e8;margin:7px 0;white-space:pre}
-.inline-code{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.1);border-radius:3px;padding:1px 5px;font-family:'Space Mono',monospace;font-size:12px;color:#6dc8f0}
-a{color:#00e5ff;text-decoration:none}
-button{font-family:'Inter','Noto Sans Devanagari','Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif}
-input,textarea,select{font-family:inherit;background:#0c1422;border:1px solid rgba(0,229,255,.1);color:#ddeeff;border-radius:9px;padding:9px 12px;font-size:14px;outline:none;width:100%;transition:border-color .2s}
-input:focus,textarea:focus{border-color:rgba(0,229,255,.3)}
-input::placeholder,textarea::placeholder{color:#1e3248}
-/* Grid bg */
-.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.022) 1px,transparent 1px);background-size:44px 44px}
-/* Animations */
-@keyframes blink{0%,100%{opacity:.15}50%{opacity:1}}
-.typing-dot{animation:blink 1.1s infinite;width:4px;height:4px;border-radius:50%;background:#a78bfa;display:inline-block}
-.typing-dot:nth-child(2){animation-delay:.18s}.typing-dot:nth-child(3){animation-delay:.36s}
-@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.msg-enter{animation:fadeUp .16s ease-out forwards}
-/* NEET options */
-.neet-option{padding:9px 13px;border-radius:8px;border:1px solid rgba(0,229,255,.1);background:#0c1422;color:#b8cfe0;font-size:13px;cursor:pointer;text-align:left;width:100%;display:block;margin-bottom:6px;transition:border-color .12s,background .12s}
-.neet-option.correct{border-color:#00e676!important;background:rgba(0,230,118,.07)!important;color:#00e676!important}
-.neet-option.wrong{border-color:#ff5555!important;background:rgba(255,85,85,.07)!important;color:#ff6666!important}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
 
-/* ── InputBar animations ────────────────────────────────── */
+/* ── CSS Variables ──────────────────────────────────────── */
+:root {
+  --bg-base: #080d18;
+  --bg-surface: #0c1422;
+  --bg-elevated: #111927;
+  --bg-overlay: rgba(8,13,24,0.95);
+  --border: rgba(0,229,255,0.08);
+  --border-bright: rgba(0,229,255,0.22);
+  --text-primary: #ddeeff;
+  --text-secondary: #7ca5c0;
+  --text-muted: #2a4560;
+  --accent: #00e5ff;
+  --accent-purple: #a78bfa;
+  --accent-pink: #f9a8d4;
+  --accent-green: #34d399;
+  --accent-amber: #fbbf24;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-glow: 0 0 20px rgba(0,229,255,0.08);
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+  --transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.35); }
+
+/* ── Typography ─────────────────────────────────────────── */
+.h1 { font-size: 16px; font-weight: 700; color: #f0f8ff; margin: 14px 0 5px; }
+.h2 { font-size: 15px; font-weight: 600; color: #e8f4ff; margin: 12px 0 4px; }
+.h3 { font-size: 14px; font-weight: 600; color: #c8dff0; margin: 9px 0 3px; }
+.li { padding: 2px 0 2px 2px; color: #c0d8ee; }
+.spacer { height: 7px; }
+.divider { border: none; border-top: 1px solid rgba(255,255,255,.06); margin: 9px 0; }
+
+/* ── Code ───────────────────────────────────────────────── */
+.code-block {
+  background: #060c18;
+  border: 1px solid rgba(0,229,255,.09);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  overflow-x: auto;
+  font-family: 'Space Mono', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #9ac8e8;
+  margin: 7px 0;
+  white-space: pre;
+}
+.inline-code {
+  background: rgba(0,229,255,.06);
+  border: 1px solid rgba(0,229,255,.1);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: #6dc8f0;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Form elements ──────────────────────────────────────── */
+button { font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif; }
+input, textarea, select {
+  font-family: inherit;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  transition: border-color .2s;
+}
+input:focus, textarea:focus { border-color: var(--border-bright); }
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+/* ── Background grid ────────────────────────────────────── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,229,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.018) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes blink { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 @keyframes recording {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255,68,68,0); }
-  50%       { box-shadow: 0 0 0 6px rgba(255,68,68,.15); }
+  50% { box-shadow: 0 0 0 6px rgba(255,68,68,.15); }
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes glow-ring {
+  0%, 100% { box-shadow: 0 0 12px rgba(0,229,255,0.3); }
+  50% { box-shadow: 0 0 24px rgba(0,229,255,0.6), 0 0 40px rgba(0,229,255,0.2); }
 }
-@keyframes compress-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
+@keyframes compress-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Utility classes ────────────────────────────────────── */
+.msg-enter { animation: fadeUp .18s ease-out forwards; }
+.typing-dot {
+  animation: blink 1.1s infinite;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent-purple);
+  display: inline-block;
+}
+.typing-dot:nth-child(2) { animation-delay: .2s; }
+.typing-dot:nth-child(3) { animation-delay: .4s; }
+.chat-content { color: #d4e8f5; }
+
+/* ── Card component ─────────────────────────────────────── */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: var(--transition);
+}
+.card:hover { border-color: var(--border-bright); }
+
+/* ── Glass effect ───────────────────────────────────────── */
+.glass {
+  background: rgba(12, 20, 34, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 229, 255, 0.1);
 }
 
-.chat-content{color:#d4e8f5;}
+/* ── NEET study options ─────────────────────────────────── */
+.neet-option {
+  padding: 9px 13px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: #b8cfe0; font-size: 13px; cursor: pointer;
+  text-align: left; width: 100%; display: block; margin-bottom: 6px;
+  transition: border-color .12s, background .12s;
+}
+.neet-option.correct { border-color: #00e676 !important; background: rgba(0,230,118,.07) !important; color: #00e676 !important; }
+.neet-option.wrong { border-color: #ff5555 !important; background: rgba(255,85,85,.07) !important; color: #ff6666 !important; }
 
-/* Emoji rendering fix for Android Chrome */
+/* ── Emoji rendering fix ─────────────────────────────────── */
 .emoji, button, [role=button] {
-  font-family: 'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji','Twemoji Mozilla',sans-serif;
+  font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji Mozilla', sans-serif;
 }
+
+/* ── Page transitions ───────────────────────────────────── */
+main { animation: fadeIn 0.2s ease-out; }
