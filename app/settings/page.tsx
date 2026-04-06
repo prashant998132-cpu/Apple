@@ -1,586 +1,184 @@
 'use client'
-// Settings — Provider Mode (Auto/Select/Smart) + API Keys + Storage
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Sidebar from '../../components/shared/Sidebar'
-import { setPIN, clearPIN, isPINEnabled, verifyPIN } from '../../components/shared/PinLock'
-import MemoryTab from '../../components/settings/MemoryTab'
-import ConnectedApps from '../../components/settings/ConnectedApps'
+import Link from 'next/link'
 
-type MainTab = 'mode' | 'keys' | 'apps' | 'storage' | 'memory' | 'security' | 'phone'
-type KeyTab  = 'llm' | 'tts' | 'image' | 'music' | 'social'
+type Setting = { id: string; label: string; desc: string; type: 'toggle'|'select'|'text'|'range'; options?: string[]; default: any }
 
-// ── Provider options — best first ─────────────────────────
-const PROVIDERS = {
-  llm:   ['auto','gemini','groq','openrouter','aimlapi'],
-  tts:   ['auto','google','elevenlabs','azure','playht','openai','fish','huggingface','browser'],
-  image: ['auto','puter','gemini','flux','aimlapi','deepai','pollinations'],
-  music: ['auto','musicgen','elevenlabs','mubert','suno_link','udio_link'],
-  storage: ['auto','supabase','firebase','indexeddb','localstorage'],
+const SETTINGS: Setting[] = [
+  { id: 'tts_auto',    label: 'Auto TTS',           desc: 'Responses automatically padh ke sunao', type: 'toggle', default: false },
+  { id: 'dark_mode',   label: 'Dark Mode',           desc: 'Dark theme (always on recommended)',   type: 'toggle', default: true },
+  { id: 'notif',       label: 'Notifications',       desc: 'Push notifications enable karo',       type: 'toggle', default: false },
+  { id: 'memory',      label: 'LUNA Memory',         desc: 'Luna tumhe yaad rakhein',              type: 'toggle', default: true },
+  { id: 'animations',  label: 'Animations',          desc: 'UI animations aur transitions',        type: 'toggle', default: true },
+  { id: 'sound_fx',    label: 'Sound FX',            desc: 'Button click sounds',                  type: 'toggle', default: false },
+  { id: 'chat_mode',   label: 'Default Mode',        desc: 'JARVIS ka default chat mode',          type: 'select', options: ['Auto','Flash','Think','Deep'], default: 'Auto' },
+  { id: 'font_size',   label: 'Font Size',           desc: 'Chat text size',                       type: 'select', options: ['Small','Medium','Large'], default: 'Medium' },
+  { id: 'city',        label: 'My City',             desc: 'Weather aur local info ke liye',       type: 'text', default: 'Rewa' },
+  { id: 'name',        label: 'My Name',             desc: 'JARVIS tumhe is naam se pukarega',     type: 'text', default: 'Pranshu' },
+  { id: 'msg_limit',   label: 'History Limit',       desc: 'Kitne messages yaad rahe',             type: 'range', default: 80 },
+]
+
+const SECTIONS = [
+  { title: '🤖 AI & Chat',   ids: ['chat_mode','tts_auto','memory','msg_limit'] },
+  { title: '🎨 Appearance',  ids: ['dark_mode','animations','font_size','sound_fx'] },
+  { title: '👤 Personal',    ids: ['name','city','notif'] },
+]
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem('jarvis_settings')||'{}') } catch { return {} }
 }
-
-const PROVIDER_INFO: Record<string, { label: string; limit: string; quality: number; note?: string }> = {
-  // LLM
-  auto:        { label:'🤖 Auto (Smart)',         limit:'Best for each query',      quality:5 },
-  gemini:      { label:'Gemini 2.0 Flash 🥇',    limit:'1500 req/day free',        quality:5 },
-  groq:        { label:'Groq Llama 3.3 70B 🥈',  limit:'6K tokens/min free',      quality:4 },
-  openrouter:  { label:'OpenRouter 🥉',           limit:'Free models available',    quality:3 },
-  aimlapi:     { label:'AIMLAPI',                 limit:'Free credits',             quality:4 },
-  // TTS
-  google:      { label:'Google Cloud TTS 🥇',    limit:'1M chars/month',           quality:5, note:'Best Hindi' },
-  elevenlabs:  { label:'ElevenLabs 🥈',           limit:'10K chars/month',          quality:5, note:'Most realistic' },
-  azure:       { label:'Azure Neural 🥉',         limit:'500K chars/month',         quality:4 },
-  playht:      { label:'Play.ht',                 limit:'12.5K words/month',        quality:4 },
-  openai:      { label:'OpenAI TTS',              limit:'Free credits',             quality:4 },
-  fish:        { label:'Fish Audio',              limit:'Free credits',             quality:3 },
-  huggingface: { label:'HuggingFace MMS',         limit:'Rate limited',             quality:3, note:'Hindi local' },
-  browser:     { label:'Browser Speech ✅',       limit:'Unlimited, always works',  quality:2 },
-  // Image
-  puter:       { label:'Puter.js ✅ 🥇',         limit:'Unlimited, no key',        quality:4 },
-  flux:        { label:'FLUX.1 via HF 🥈',        limit:'Rate limited',             quality:5 },
-  deepai:      { label:'DeepAI',                  limit:'Free tier',                quality:3 },
-  pollinations:{ label:'Pollinations ✅ 🥉',      limit:'Unlimited, no key',        quality:3 },
-  // Music
-  musicgen:    { label:'MusicGen via HF 🥇',      limit:'Rate limited',             quality:4 },
-  mubert:      { label:'Mubert API 🥈',           limit:'Free tier',                quality:3 },
-  suno_link:   { label:'Suno AI (link) 🥉',       limit:'~50/day free',             quality:5, note:'Best quality' },
-  udio_link:   { label:'Udio AI (link)',           limit:'Free tier',                quality:5 },
-  // Storage
-  supabase:    { label:'Supabase 🥇',             limit:'500MB free, cross-device', quality:5 },
-  firebase:    { label:'Firebase 🥈',             limit:'1GB free, 50K reads/day',  quality:5 },
-  indexeddb:   { label:'IndexedDB ✅ 🥉',         limit:'Device storage, offline',  quality:4 },
-  localstorage:{ label:'localStorage ✅',         limit:'5-10MB always works',      quality:2 },
+function saveSettings(s: Record<string,any>) {
+  try { localStorage.setItem('jarvis_settings', JSON.stringify(s)) } catch {}
 }
-
-const KEY_CONFIG: Record<KeyTab, Array<{ id:string; label:string; env:string; link:string; ph?:string; req?:boolean }>> = {
-  llm: [
-    { id:'gemini_key',  label:'Gemini API Key 🥇',        env:'GEMINI_API_KEY',     link:'https://aistudio.google.com',      ph:'AIza...',  req:true },
-    { id:'groq',        label:'Groq API Key 🥈',          env:'GROQ_API_KEY',       link:'https://console.groq.com',         ph:'gsk_...',  req:true },
-    { id:'openrouter',  label:'OpenRouter Key 🥉',         env:'OPENROUTER_KEY',     link:'https://openrouter.ai',            ph:'sk-or-...' },
-    { id:'aimlapi',     label:'AIMLAPI Key',               env:'AIMLAPI_KEY',        link:'https://aimlapi.com',              ph:'...' },
-    { id:'deepseek',    label:'DeepSeek API Key 🧠',       env:'DEEPSEEK_API_KEY',   link:'https://platform.deepseek.com',  ph:'sk-...' },
-    { id:'mistral',     label:'Mistral API Key',           env:'MISTRAL_API_KEY',    link:'https://console.mistral.ai',     ph:'...' },
-    { id:'grok',        label:'Grok (xAI) Key',           env:'GROK_API_KEY',       link:'https://x.ai/api',              ph:'xai-...' },
-    { id:'together',    label:'Together AI Key',           env:'TOGETHER_API_KEY',   link:'https://api.together.xyz',       ph:'...' },
-    { id:'cohere',      label:'Cohere API Key',            env:'COHERE_API_KEY',     link:'https://dashboard.cohere.com',   ph:'...' },
-  ],
-  tts: [
-    { id:'google_tts',  label:'Google Cloud TTS 🥇',      env:'GOOGLE_TTS_KEY',     link:'https://console.cloud.google.com', ph:'AIza...' },
-    { id:'elevenlabs',  label:'ElevenLabs 🥈',             env:'ELEVENLABS',         link:'https://elevenlabs.io',            ph:'...' },
-    { id:'azure',       label:'Azure TTS Key 🥉',          env:'AZURE_TTS_KEY',      link:'https://portal.azure.com',         ph:'...' },
-    { id:'playht',      label:'Play.ht Key',               env:'PLAYHT_API_KEY',     link:'https://play.ht',                  ph:'...' },
-    { id:'openai',      label:'OpenAI Key',                env:'OPENAI_API_KEY',     link:'https://platform.openai.com',      ph:'sk-...' },
-    { id:'huggingface', label:'HuggingFace Token',         env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
-  ],
-  image: [
-    { id:'hf2',         label:'HuggingFace (FLUX) 🥈',    env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
-    { id:'aimlapi2',    label:'AIMLAPI 🥉',                env:'AIMLAPI_KEY',        link:'https://aimlapi.com',              ph:'...' },
-    { id:'deepai',      label:'DeepAI',                    env:'DEEPAI_KEY',         link:'https://deepai.org/api',           ph:'...' },
-  ],
-  music: [
-    { id:'hf3',         label:'HuggingFace (MusicGen) 🥇',env:'HF_TOKEN',           link:'https://huggingface.co/settings/tokens', ph:'hf_...' },
-    { id:'elevenlabs2', label:'ElevenLabs (Sound) 🥈',    env:'ELEVENLABS',         link:'https://elevenlabs.io',            ph:'...' },
-    { id:'mubert',      label:'Mubert API 🥉',             env:'MUBERT_API_KEY',     link:'https://mubert.com/api',           ph:'...' },
-  ],
-  social: [
-    { id:'telegram',    label:'Telegram Bot Token 🥇',    env:'TELEGRAM_BOT',       link:'https://t.me/BotFather',           ph:'123:ABC...' },
-    { id:'meta',        label:'Meta App ID (IG+FB) 🥈',   env:'META_APP_ID',        link:'https://developers.facebook.com',  ph:'...' },
-    { id:'twitter',     label:'Twitter Bearer Token 🥉',  env:'TWITTER_BEARER',     link:'https://developer.twitter.com',    ph:'...' },
-    { id:'google_cal',  label:'Google OAuth Client ID',   env:'GOOGLE_CLIENT_ID',   link:'https://console.cloud.google.com', ph:'...' },
-    { id:'supabase_u',  label:'Supabase URL 🥇',          env:'SUPABASE_URL',       link:'https://supabase.com',             ph:'https://xxx.supabase.co' },
-    { id:'supabase_k',  label:'Supabase Anon Key',        env:'SUPABASE_ANON_KEY',  link:'https://supabase.com',             ph:'eyJ...' },
-    { id:'firebase_k',  label:'Firebase API Key 🥈',      env:'FIREBASE_API_KEY',   link:'https://console.firebase.google.com', ph:'AIza...' },
-    { id:'firebase_p',  label:'Firebase Project ID',      env:'FIREBASE_PROJECT_ID',link:'https://console.firebase.google.com', ph:'my-project' },
-  ],
-}
-
-// ── Mode descriptions ─────────────────────────────────────
-const MODE_INFO = {
-  smart: {
-    label: '⚡ Smart Mode',
-    desc:  'JARVIS khud decide karta hai — simple messages pe Groq (cheap+fast), NEET pe Gemini, images pe direct API. Zero waste.',
-    color: '#00e5ff',
-  },
-  auto: {
-    label: '🤖 Auto Mode',
-    desc:  'Har cheez ke liye best available provider use karo. Simple full cascade.',
-    color: '#a78bfa',
-  },
-  select: {
-    label: '🎛️ Select Mode',
-    desc:  'Tum khud choose karo — TTS ke liye kaun, Image ke liye kaun, etc. Fallback phir bhi active.',
-    color: '#00e676',
-  },
-}
-
-// ── Helpers ───────────────────────────────────────────────
-const lsGet = (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }
-const lsSet = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch {} }
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const [tab, setTab] = useState<MainTab>('mode')
-  const [pinEnabled, setPinEnabled] = useState(false)
-  const [newPin, setNewPin] = useState('')
-  const [confirmPin, setConfirmPin] = useState('')
-  const [currentPin, setCurrentPin] = useState('')
-  const [pinMsg, setPinMsg] = useState('')
-  const [pinMsgType, setPinMsgType] = useState<'ok'|'err'>('ok')
-  const [keyTab, setKeyTab] = useState<KeyTab>('llm')
-  const [saved, setSaved] = useState('')
-  const [verified, setVerified] = useState<Record<string, 'ok'|'fail'|'testing'>>({})
-  const [prefs, setPrefs] = useState<Record<string,string>>({})
-  const [keys, setKeys]   = useState<Record<string,string>>({})
+  const [vals, setVals] = useState<Record<string,any>>({})
+  const [saved, setSaved] = useState(false)
+  const [stats, setStats] = useState({ msgs: 0, notes: 0, habits: 0, todos: 0, xp: 0 })
 
   useEffect(() => {
-    setPinEnabled(isPINEnabled());
+    const stored = loadSettings()
+    const defaults: Record<string,any> = {}
+    SETTINGS.forEach(s => { defaults[s.id] = stored[s.id] ?? s.default })
+    setVals(defaults)
+
+    // Load stats
     try {
-      const p = JSON.parse(lsGet('jarvis_provider_prefs') || '{}')
-      setPrefs({ mode: 'smart', ...p })
-    } catch { setPrefs({ mode: 'smart' }) }
-    // Load saved keys
-    const allKeys: Record<string,string> = {}
-    Object.values(KEY_CONFIG).flat().forEach(k => {
-      allKeys[k.env] = lsGet('jarvis_key_' + k.env)
-    })
-    setKeys(allKeys)
+      const msgs = JSON.parse(localStorage.getItem('j_msgs_v5')||'[]').length
+      const notes = JSON.parse(localStorage.getItem('jarvis_notes_v1')||'[]').length
+      const habits = JSON.parse(localStorage.getItem('jarvis_habits_v1')||'[]').length
+      const todos = JSON.parse(localStorage.getItem('jarvis_todos_v1')||'[]').length
+      const xp = parseInt(localStorage.getItem('jarvis_xp')||'0')
+      setStats({ msgs, notes, habits, todos, xp })
+    } catch {}
   }, [])
 
-  const savePref = (k: string, v: string) => {
-    const updated = { ...prefs, [k]: v }
-    setPrefs(updated)
-    lsSet('jarvis_provider_prefs', JSON.stringify(updated))
-    setSaved(k); setTimeout(() => setSaved(''), 1200)
+  function set(id: string, val: any) {
+    const nv = { ...vals, [id]: val }
+    setVals(nv); saveSettings(nv)
+    setSaved(true); setTimeout(() => setSaved(false), 1500)
   }
 
-  const verifyKey = async (env: string, val: string) => {
-    if (!val.trim()) return
-    setVerified(p => ({ ...p, [env]: 'testing' }))
-    try {
-      const r = await fetch('/api/verify-key', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ keyName: env, keyValue: val }) })
-      const d = await r.json()
-      setVerified(p => ({ ...p, [env]: d.ok ? 'ok' : 'fail' }))
-    } catch { setVerified(p => ({ ...p, [env]: 'fail' })) }
+  function clearData(key: string) {
+    if (confirm('Ye data delete ho jayega. Sure?')) {
+      try { localStorage.removeItem(key) } catch {}
+      window.location.reload()
+    }
   }
 
-  const saveKey = (env: string, val: string) => {
-    lsSet('jarvis_key_' + env, val)
-    setSaved(env); setTimeout(() => setSaved(''), 1200)
+  function clearAll() {
+    if (confirm('SAB kuch delete hoga — messages, notes, habits, mood sab. Sure?')) {
+      ['j_msgs_v5','jarvis_notes_v1','jarvis_habits_v1','jarvis_todos_v1','jarvis_mood_v1','jarvis_xp','jarvis_badges','luna_h','luna_m','era_h','jarvis_settings'].forEach(k => {
+        try { localStorage.removeItem(k) } catch {}
+      })
+      window.location.reload()
+    }
   }
 
-  const mode = prefs.mode || 'smart'
-
-  const s: Record<string,any> = {
-    wrap:     { position:'fixed', inset:0, background:'#090d18', color:'#ddeeff', display:'flex', flexDirection:'column', fontFamily:"'Inter',sans-serif" },
-    header:   { display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderBottom:'1px solid rgba(255,255,255,.05)', background:'rgba(9,13,24,.97)', flexShrink:0, zIndex:10 },
-    backBtn:  { width:28, height:28, borderRadius:6, border:'1px solid rgba(0,229,255,.1)', background:'#0c1422', color:'#3a6080', fontSize:14, cursor:'pointer' },
-    mainTabs: { display:'flex', borderBottom:'1px solid rgba(255,255,255,.04)', flexShrink:0 },
-    mainTab:  (active: boolean) => ({ flex:1, padding:'10px 0', background:'transparent', border:'none', borderBottom:`2px solid ${active?'#00e5ff':'transparent'}`, color:active?'#00e5ff':'#2a4060', fontSize:12, cursor:'pointer' }),
-    body:     { flex:1, overflowY:'auto', padding:'14px', position:'relative' as const },
-  }
+  const getSetting = (id: string) => SETTINGS.find(s => s.id === id)!
 
   return (
-    <div style={s.wrap}>
-      <div className="bg-grid"/>
-      <header style={s.header}>
-        <button onClick={() => router.back()} style={s.backBtn}>←</button>
-        <span style={{ fontFamily:"'Space Mono',monospace", fontSize:11, color:'#00e5ff', letterSpacing:2 }}>⚙️ SETTINGS</span>
-        <span style={{ fontSize:10, color:'#1e3858', marginLeft:'auto' }}>Keys: localStorage only</span>
-      </header>
+    <div style={{ minHeight: '100vh', background: '#070d1a', color: '#ddeeff', fontFamily: "'Inter', sans-serif", padding: '0 0 80px' }}>
+      <style>{`* { box-sizing: border-box } @keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }`}</style>
 
-      {/* Main tabs */}
-      <div style={s.mainTabs}>
-        {(['mode','keys','apps','storage','memory','phone'] as MainTab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={s.mainTab(tab===t)}>
-            {t === 'mode' ? '⚡ Mode' : t === 'keys' ? '🔑 Keys' : t === 'apps' ? '🔌 Apps' : t === 'storage' ? '💾 Store' : t === 'phone' ? '📱 Phone' : '🧠 Memory'}
-          </button>
-        ))}
+      <div style={{ background: 'rgba(7,13,26,0.97)', borderBottom: '1px solid rgba(0,229,255,0.07)', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
+        <Link href="/" style={{ color: '#2a5070', fontSize: '18px', textDecoration: 'none' }}>←</Link>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: '#ddeeff' }}>⚙️ Settings</div>
+          <div style={{ fontSize: '11px', color: '#2a5070' }}>JARVIS config</div>
+        </div>
+        {saved && <div style={{ fontSize: '11px', color: '#34d399', fontWeight: 600, animation: 'fadeUp 0.2s ease' }}>✓ Saved</div>}
       </div>
 
-      <div style={s.body}>
-
-        {/* ═══ MODE TAB ══════════════════════════════════════ */}
-        {tab === 'mode' && (
-          <div>
-            <div style={{ fontSize:10, color:'#1a3050', marginBottom:14, lineHeight:1.7 }}>
-              JARVIS kaise kaam kare? Smart = API waste nahi, Auto = simple, Select = tumhari marzi.
-            </div>
-
-            {/* 3 mode cards */}
-            {(['smart','auto','select'] as const).map(m => {
-              const info = MODE_INFO[m]
-              const active = mode === m
-              return (
-                <div key={m} onClick={() => savePref('mode', m)}
-                  style={{ marginBottom:10, padding:'13px 14px', background: active ? 'rgba(0,229,255,.05)' : '#0c1422',
-                    border:`1.5px solid ${active ? info.color : 'rgba(0,229,255,.07)'}`, borderRadius:11, cursor:'pointer',
-                    transition:'all .2s' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <span style={{ fontSize:14, color: active ? info.color : '#c8dff0', fontWeight:600 }}>{info.label}</span>
-                    <div style={{ width:16, height:16, borderRadius:'50%', border:`2px solid ${info.color}`,
-                      background: active ? info.color : 'transparent', transition:'all .2s' }}/>
-                  </div>
-                  <div style={{ fontSize:11, color:'#1e3858', marginTop:5, lineHeight:1.6 }}>{info.desc}</div>
-                  {active && m === 'smart' && (
-                    <div style={{ marginTop:8, padding:'6px 9px', background:'rgba(0,229,255,.05)', borderRadius:6, fontSize:10, color:'#00e5ff' }}>
-                      ✅ Active — &ldquo;hello&rdquo; → Groq | &ldquo;image banao&rdquo; → direct API | &ldquo;cell kya hai&rdquo; → Gemini
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {/* Select mode — provider pickers */}
-            {mode === 'select' && (
-              <div style={{ marginTop:16 }}>
-                <div style={{ fontSize:11, color:'#00e676', marginBottom:10 }}>🎛️ Har category ke liye choose karo:</div>
-                {(['llm','tts','image','music'] as const).map(cat => (
-                  <div key={cat} style={{ marginBottom:10 }}>
-                    <div style={{ fontSize:10, color:'#1e3858', marginBottom:5, textTransform:'uppercase', letterSpacing:1 }}>{cat}</div>
-                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                      {PROVIDERS[cat].map(p => {
-                        const sel = (prefs[cat] || 'auto') === p
-                        const info = PROVIDER_INFO[p]
-                        return (
-                          <button key={p} onClick={() => savePref(cat, p)}
-                            style={{ padding:'5px 10px', borderRadius:20, fontSize:11, cursor:'pointer',
-                              background: sel ? 'rgba(0,229,255,.15)' : '#0c1422',
-                              border:`1px solid ${sel?'#00e5ff':'rgba(0,229,255,.1)'}`,
-                              color: sel ? '#00e5ff' : '#3a6080' }}>
-                            {info?.label?.split(' ')[0]} {p === 'auto' ? '(auto)' : ''}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {prefs[cat] && prefs[cat] !== 'auto' && (
-                      <div style={{ fontSize:9, color:'#1a3858', marginTop:3 }}>
-                        Selected: {PROVIDER_INFO[prefs[cat]]?.label} • {PROVIDER_INFO[prefs[cat]]?.limit}
-                        {PROVIDER_INFO[prefs[cat]]?.note ? ` • ${PROVIDER_INFO[prefs[cat]].note}` : ''}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ═══ KEYS TAB ═══════════════════════════════════════ */}
-        {tab === 'keys' && (
-          <div>
-            {/* Key sub-tabs */}
-            <div style={{ display:'flex', gap:6, marginBottom:12, flexWrap:'wrap' }}>
-              {(['llm','tts','image','music','social'] as KeyTab[]).map(t => (
-                <button key={t} onClick={() => setKeyTab(t)}
-                  style={{ padding:'5px 11px', borderRadius:20, fontSize:11, cursor:'pointer',
-                    background: keyTab===t ? 'rgba(0,229,255,.15)' : '#0c1422',
-                    border:`1px solid ${keyTab===t?'#00e5ff':'rgba(0,229,255,.1)'}`,
-                    color: keyTab===t ? '#00e5ff' : '#3a6080' }}>
-                  {t.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ fontSize:9, color:'#1a3050', marginBottom:10 }}>
-              🥇 Best provider first. ✅ = no key needed. Keys stored locally only.
-            </div>
-
-            {(KEY_CONFIG[keyTab as KeyTab] || []).map((cfg: any, i: number) => (
-              <div key={cfg.id} style={{ marginBottom:9, padding:'11px 12px', background:'#0c1422',
-                border:`1px solid ${cfg.req?'rgba(0,229,255,.2)':'rgba(0,229,255,.06)'}`, borderRadius:10 }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:7 }}>
-                  <div>
-                    <span style={{ fontSize:12, color: i===0?'#00e5ff':'#c8dff0', fontWeight:600 }}>{cfg.label}</span>
-                    {cfg.req && <span style={{ fontSize:9, color:'#ff9944', marginLeft:6, padding:'1px 5px', borderRadius:3, border:'1px solid rgba(255,153,68,.3)' }}>REQUIRED</span>}
-                  </div>
-                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                    {keys[cfg.env] && <span style={{ fontSize:9, color:'#00e676', padding:'1px 5px', borderRadius:3, background:'rgba(0,230,118,.08)' }}>✓</span>}
-                    {cfg.link && <a href={cfg.link} target="_blank" rel="noreferrer"
-                      style={{ fontSize:9, color:'#00e5ff', padding:'2px 7px', borderRadius:5, border:'1px solid rgba(0,229,255,.15)', textDecoration:'none' }}>Get →</a>}
-                  </div>
-                </div>
-                <div style={{ display:'flex', gap:7 }}>
-                  <input type="password" value={keys[cfg.env]||''} placeholder={cfg.ph || 'Enter key...'}
-                    onChange={e => setKeys(prev => ({ ...prev, [cfg.env]: e.target.value }))}
-                    style={{ flex:1, fontSize:11, padding:'7px 10px', background:'#060c18',
-                      border:'1px solid rgba(0,229,255,.08)', borderRadius:7, color:'#ddeeff',
-                      fontFamily:"'Space Mono',monospace" }}/>
-                  <button onClick={() => saveKey(cfg.env, keys[cfg.env]||'')}
-                    style={{ padding:'7px 13px', borderRadius:7, fontSize:11, cursor:'pointer', flexShrink:0,
-                      background: saved===cfg.env ? 'rgba(0,230,118,.15)' : 'rgba(0,229,255,.08)',
-                      border:`1px solid ${saved===cfg.env?'rgba(0,230,118,.3)':'rgba(0,229,255,.15)'}`,
-                      color: saved===cfg.env ? '#00e676' : '#00e5ff' }}>
-                    {saved===cfg.env ? '✓' : 'Save'}
-                  </button>
-                  <button onClick={() => verifyKey(cfg.env, keys[cfg.env]||'')}
-                    disabled={!keys[cfg.env]?.trim()}
-                    style={{ padding:'7px 10px', borderRadius:7, fontSize:11, cursor:'pointer', flexShrink:0,
-                      background: verified[cfg.env]==='ok' ? 'rgba(0,230,118,.15)' : verified[cfg.env]==='fail' ? 'rgba(255,68,68,.1)' : 'rgba(255,255,255,.04)',
-                      border:`1px solid ${verified[cfg.env]==='ok'?'rgba(0,230,118,.3)':verified[cfg.env]==='fail'?'rgba(255,68,68,.2)':'rgba(255,255,255,.08)'}`,
-                      color: verified[cfg.env]==='ok' ? '#00e676' : verified[cfg.env]==='fail' ? '#ff6666' : '#3a6080' }}>
-                    {verified[cfg.env]==='testing' ? '⏳' : verified[cfg.env]==='ok' ? '✅' : verified[cfg.env]==='fail' ? '❌' : 'Test'}
-                  </button>
-                </div>
+      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '14px' }}>
+        {/* Stats overview */}
+        <div style={{ background: 'rgba(12,20,34,0.8)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '14px', padding: '14px', marginBottom: '18px' }}>
+          <div style={{ fontSize: '11px', color: '#2a5070', marginBottom: '12px', fontWeight: 600, letterSpacing: '0.5px' }}>📊 YOUR DATA</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '6px' }}>
+            {[
+              { l: 'Messages', v: stats.msgs, c: '#00e5ff' },
+              { l: 'Notes', v: stats.notes, c: '#34d399' },
+              { l: 'Habits', v: stats.habits, c: '#a78bfa' },
+              { l: 'Todos', v: stats.todos, c: '#fbbf24' },
+              { l: 'XP', v: stats.xp, c: '#ff9800' },
+            ].map(s => (
+              <div key={s.l} style={{ textAlign: 'center', background: 'rgba(0,229,255,0.03)', borderRadius: '8px', padding: '8px 4px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: s.c }}>{s.v}</div>
+                <div style={{ fontSize: '9px', color: '#1e3248', marginTop: '2px' }}>{s.l}</div>
               </div>
             ))}
           </div>
-        )}
+        </div>
 
-        {/* ═══ STORAGE TAB ════════════════════════════════════ */}
-        {tab === 'storage' && (
-          <div>
-            <div style={{ fontSize:10, color:'#1a3050', marginBottom:12, lineHeight:1.7 }}>
-              Chat history kahan save ho? Cloud = cross-device sync. Local = fast, offline, private.
-            </div>
-
-            {/* ── Puter.js Cloud Backup ── */}
-            <div style={{ marginBottom:14, padding:'12px 13px', background:'rgba(0,229,255,.04)', border:'1px solid rgba(0,229,255,.15)', borderRadius:11 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                <span style={{ fontSize:20 }}>☁️</span>
-                <div>
-                  <div style={{ fontSize:13, color:'#00e5ff', fontWeight:700 }}>Puter.js Cloud Backup</div>
-                  <div style={{ fontSize:9, color:'#2a5070' }}>FREE • Memory + Chats + Files cloud mein save • No API key</div>
-                </div>
-                <span style={{ marginLeft:'auto', fontSize:9, padding:'2px 7px', borderRadius:8, background:'rgba(0,230,118,.1)', color:'#00e676', border:'1px solid rgba(0,230,118,.2)' }}>FREE ∞</span>
-              </div>
-              <div style={{ fontSize:10, color:'#2a5070', marginBottom:10, lineHeight:1.6 }}>
-                Puter.js = ek baar sign in karo → memories, goals, habits sab cloud mein backup. Cross-device sync. Developer ko $0 cost.
-              </div>
-              <div style={{ display:'flex', gap:6 }}>
-                <button
-                  onClick={async () => {
-                    try {
-                      // Load puter dynamically
-                      const s = document.createElement('script')
-                      s.src = 'https://js.puter.com/v2/'
-                      document.head.appendChild(s)
-                      await new Promise(r => { s.onload = r; setTimeout(r, 5000) })
-                      const p = (window as any).puter
-                      if (!p) { alert('Puter load failed — try again'); return }
-                      await p.auth.signIn()
-                      // Backup memories from localStorage
-                      const memories = localStorage.getItem('jarvis_memories') || '[]'
-                      await p.kv.set('jarvis_memories', memories)
-                      await p.kv.set('jarvis_backup_ts', String(Date.now()))
-                      alert('✅ Backup complete! Puter cloud mein save ho gaya.')
-                    } catch(e: any) { alert('Error: ' + (e?.message || e)) }
-                  }}
-                  style={{ flex:1, padding:'8px', background:'rgba(0,229,255,.1)', border:'1px solid rgba(0,229,255,.3)', borderRadius:7, color:'#00e5ff', fontSize:11, cursor:'pointer', fontWeight:600 }}>
-                  ☁️ Backup Now
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const s = document.createElement('script')
-                      s.src = 'https://js.puter.com/v2/'
-                      document.head.appendChild(s)
-                      await new Promise(r => { s.onload = r; setTimeout(r, 5000) })
-                      const p = (window as any).puter
-                      if (!p) { alert('Puter load failed'); return }
-                      await p.auth.signIn()
-                      const memories = await p.kv.get('jarvis_memories')
-                      if (memories) {
-                        localStorage.setItem('jarvis_memories', memories)
-                        alert('✅ Restore complete! Memories wapas aa gayi.')
-                      } else {
-                        alert('⚠️ Koi backup nahi mila Puter cloud mein.')
-                      }
-                    } catch(e: any) { alert('Error: ' + (e?.message || e)) }
-                  }}
-                  style={{ flex:1, padding:'8px', background:'rgba(167,139,250,.1)', border:'1px solid rgba(167,139,250,.3)', borderRadius:7, color:'#a78bfa', fontSize:11, cursor:'pointer', fontWeight:600 }}>
-                  ⬇️ Restore
-                </button>
-              </div>
-            </div>
-
-            {/* Storage mode */}
-            <div style={{ display:'flex', gap:7, marginBottom:14 }}>
-              {(['auto','select'] as const).map(m => (
-                <button key={m} onClick={() => savePref('storageMode', m)}
-                  style={{ flex:1, padding:'8px', borderRadius:8, fontSize:12, cursor:'pointer',
-                    background: (prefs.storageMode||'auto')===m ? 'rgba(0,229,255,.1)' : '#0c1422',
-                    border:`1.5px solid ${(prefs.storageMode||'auto')===m?'#00e5ff':'rgba(0,229,255,.08)'}`,
-                    color: (prefs.storageMode||'auto')===m ? '#00e5ff' : '#3a6080' }}>
-                  {m === 'auto' ? '🤖 Auto (cascade)' : '🎛️ Select provider'}
-                </button>
-              ))}
-            </div>
-
-            {/* Provider cards */}
-            {PROVIDERS.storage.filter(p => p !== 'auto').map((p, i) => {
-              const info = PROVIDER_INFO[p]
-              const sel = prefs.storage === p
-              const selMode = (prefs.storageMode || 'auto') === 'select'
-              return (
-                <div key={p} onClick={() => selMode && savePref('storage', p)}
-                  style={{ marginBottom:9, padding:'12px 13px',
-                    background: sel && selMode ? 'rgba(0,229,255,.06)' : '#0c1422',
-                    border:`1.5px solid ${sel && selMode?'#00e5ff':i===0?'rgba(0,229,255,.15)':'rgba(0,229,255,.06)'}`,
-                    borderRadius:11, cursor: selMode ? 'pointer' : 'default' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div>
-                      <span style={{ fontSize:13, color: i===0?'#00e5ff':'#c8dff0', fontWeight:600 }}>{info.label}</span>
-                      <div style={{ fontSize:10, color:'#1e3858', marginTop:2 }}>{info.limit}</div>
+        {/* Settings sections */}
+        {SECTIONS.map(section => (
+          <div key={section.title} style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#2a5070', marginBottom: '10px', fontWeight: 600, letterSpacing: '0.8px', padding: '0 2px' }}>{section.title}</div>
+            <div style={{ background: 'rgba(12,20,34,0.8)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '14px', overflow: 'hidden' }}>
+              {section.ids.map((id, idx) => {
+                const s = getSetting(id)
+                const val = vals[id]
+                return (
+                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', borderBottom: idx < section.ids.length-1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: '#c8dff0' }}>{s.label}</div>
+                      <div style={{ fontSize: '11px', color: '#2a5070', marginTop: '1px' }}>{s.desc}</div>
                     </div>
-                    <div style={{ textAlign:'right' as const }}>
-                      {'⭐'.repeat(info.quality).padEnd(5,'☆')}
-                      {sel && selMode && <div style={{ fontSize:9, color:'#00e676', marginTop:2 }}>✓ Selected</div>}
-                      {!selMode && i===0 && <div style={{ fontSize:9, color:'#00e5ff', marginTop:2 }}>Primary</div>}
-                    </div>
+                    {s.type === 'toggle' && (
+                      <button onClick={() => set(id, !val)}
+                        style={{ width: '44px', height: '24px', borderRadius: '12px', background: val ? 'linear-gradient(90deg, #0055cc, #00e5ff)' : 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0, transition: 'background 0.2s', boxShadow: val ? '0 0 10px rgba(0,229,255,0.3)' : 'none' }}>
+                        <div style={{ position: 'absolute', top: '3px', left: val ? '22px' : '3px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                      </button>
+                    )}
+                    {s.type === 'select' && (
+                      <select value={val} onChange={e => set(id, e.target.value)}
+                        style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '7px', color: '#00e5ff', padding: '5px 8px', fontSize: '12px', outline: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, colorScheme: 'dark' }}>
+                        {s.options!.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    )}
+                    {s.type === 'text' && (
+                      <input value={val||''} onChange={e => set(id, e.target.value)}
+                        style={{ background: 'rgba(0,229,255,0.04)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '7px', color: '#ddeeff', padding: '5px 10px', fontSize: '12px', outline: 'none', width: '110px', fontFamily: 'inherit', flexShrink: 0 }} />
+                    )}
+                    {s.type === 'range' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <input type="range" min={10} max={200} value={val||80} onChange={e => set(id, parseInt(e.target.value))}
+                          style={{ width: '80px', accentColor: '#00e5ff', cursor: 'pointer' }} />
+                        <span style={{ fontSize: '12px', color: '#00e5ff', width: '30px', textAlign: 'right' }}>{val||80}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )
-            })}
-
-            <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(255,153,68,.05)', border:'1px solid rgba(255,153,68,.1)', borderRadius:8 }}>
-              <div style={{ fontSize:10, color:'#ff9944', lineHeight:1.7 }}>
-                💡 Supabase/Firebase keys = Vercel env variables mein daalte hain (GitHub push se pehle).<br/>
-                IndexedDB + localStorage = koi key nahi chahiye, auto works ✅
-              </div>
+                )
+              })}
             </div>
           </div>
-        )}
+        ))}
 
+        {/* Data management */}
+        <div style={{ background: 'rgba(12,20,34,0.8)', border: '1px solid rgba(248,113,113,0.1)', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', color: '#2a5070', marginBottom: '12px', fontWeight: 600, letterSpacing: '0.5px' }}>🗑️ DATA MANAGEMENT</div>
+          {[
+            { label: 'Chat History Clear', key: 'j_msgs_v5', color: '#f87171' },
+            { label: 'LUNA Memory Clear', key: 'luna_m', color: '#f9a8d4' },
+            { label: 'Notes Clear', key: 'jarvis_notes_v1', color: '#34d399' },
+            { label: 'Habits Clear', key: 'jarvis_habits_v1', color: '#a78bfa' },
+          ].map(item => (
+            <button key={item.key} onClick={() => clearData(item.key)}
+              style={{ display: 'block', width: '100%', background: 'none', border: '1px solid rgba(248,113,113,0.1)', borderRadius: '8px', color: item.color + '99', cursor: 'pointer', padding: '8px 12px', fontSize: '12px', textAlign: 'left', marginBottom: '6px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
+              Delete {item.label}
+            </button>
+          ))}
+          <button onClick={clearAll}
+            style={{ display: 'block', width: '100%', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '9px', color: '#f87171', cursor: 'pointer', padding: '10px', fontSize: '13px', fontWeight: 700, fontFamily: 'inherit', marginTop: '4px' }}>
+            ⚠️ Reset Everything
+          </button>
+        </div>
 
-        {/* ═══ MEMORY TAB ════════════════════════════════════ */}
-
-        {tab === 'security' && (
-          <div style={{ padding: '12px 0' }}>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, color: '#00e5ff', fontWeight: 700, marginBottom: 4 }}>🔐 PIN Lock</div>
-              <div style={{ fontSize: 11, color: '#2a5070', marginBottom: 12 }}>SHA-256 hashed — 4 digit PIN. Galat try: 5 baar mein 5 min lock.</div>
-              <div style={{ padding: 12, background: 'rgba(0,229,255,.04)', borderRadius: 10, border: '1px solid rgba(0,229,255,.1)', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: pinEnabled ? '#00e676' : '#ef5350' }}/>
-                  <span style={{ fontSize: 12, color: pinEnabled ? '#00e676' : '#ef5350' }}>{pinEnabled ? 'PIN Lock Enabled' : 'PIN Lock Disabled'}</span>
-                </div>
-                {!pinEnabled ? (
-                  <>
-                    <div style={{ fontSize: 11, color: '#4a7090', marginBottom: 4 }}>New PIN (4 digits)</div>
-                    <input type="password" inputMode="numeric" maxLength={4} value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g,''))}
-                      placeholder="••••" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(0,229,255,.2)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 8 }}/>
-                    <div style={{ fontSize: 11, color: '#4a7090', marginBottom: 4 }}>Confirm PIN</div>
-                    <input type="password" inputMode="numeric" maxLength={4} value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g,''))}
-                      placeholder="••••" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(0,229,255,.2)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 10 }}/>
-                    <button onClick={async () => {
-                      if (newPin.length !== 4) { setPinMsg('4 digit PIN chahiye'); setPinMsgType('err'); return; }
-                      if (newPin !== confirmPin) { setPinMsg('PIN match nahi kiya'); setPinMsgType('err'); return; }
-                      await setPIN(newPin);
-                      setPinEnabled(true); setNewPin(''); setConfirmPin('');
-                      setPinMsg('✅ PIN set ho gaya!'); setPinMsgType('ok');
-                    }} style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(0,229,255,.15)', border: '1px solid rgba(0,229,255,.3)', color: '#00e5ff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                      Set PIN 🔐
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 11, color: '#4a7090', marginBottom: 4 }}>Current PIN (verify to disable)</div>
-                    <input type="password" inputMode="numeric" maxLength={4} value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/\D/g,''))}
-                      placeholder="••••" style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(239,83,80,.3)', color: '#e8f4ff', fontSize: 16, textAlign: 'center', letterSpacing: 8, boxSizing: 'border-box' as const, marginBottom: 10 }}/>
-                    <button onClick={async () => {
-                      const ok = await verifyPIN(currentPin);
-                      if (!ok) { setPinMsg('Galat PIN'); setPinMsgType('err'); return; }
-                      clearPIN(); setPinEnabled(false); setCurrentPin('');
-                      setPinMsg('✅ PIN hata diya'); setPinMsgType('ok');
-                    }} style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(239,83,80,.1)', border: '1px solid rgba(239,83,80,.3)', color: '#ef5350', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                      Disable PIN
-                    </button>
-                  </>
-                )}
-                {pinMsg && <div style={{ marginTop: 8, fontSize: 12, color: pinMsgType === 'ok' ? '#00e676' : '#ef5350', textAlign: 'center' as const }}>{pinMsg}</div>}
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, color: '#00e5ff', fontWeight: 700, marginBottom: 8 }}>🧹 Data Management</div>
-              <button onClick={() => { if(confirm('Sab chats delete karein?')) { indexedDB.deleteDatabase('jarvis_v10'); localStorage.clear(); window.location.reload(); }}}
-                style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(239,83,80,.06)', border: '1px solid rgba(239,83,80,.2)', color: '#ef5350', fontSize: 12, cursor: 'pointer', marginBottom: 6 }}>
-                🗑️ Sab Data Delete (Reset)
-              </button>
-              <button onClick={() => { localStorage.removeItem('jarvis_v10_chats'); location.reload(); }}
-                style={{ width: '100%', padding: '9px', borderRadius: 9, background: 'rgba(255,152,0,.06)', border: '1px solid rgba(255,152,0,.2)', color: '#ffa000', fontSize: 12, cursor: 'pointer' }}>
-                🗂️ Sirf Chats Clear
-              </button>
-            </div>
-          </div>
-        )}
-        {tab === 'apps' && (
-          <ConnectedApps />
-        )}
-        {tab === 'memory' && (
-          <MemoryTab />
-        )}
-
-        {/* ═══ PHONE TAB — MacroDroid + Push ══════════════════ */}
-        {tab === 'phone' && (
-          <div>
-            {/* MacroDroid Bridge */}
-            <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:'#00e5ff', fontWeight:700, marginBottom:6 }}>📱 MacroDroid Bridge</div>
-              <div style={{ fontSize:10, color:'#1a4060', marginBottom:10, lineHeight:1.6 }}>
-                MacroDroid app install karo → Webhook trigger macro banao → URL yahan paste karo.
-                JARVIS bolega "WiFi on karo" → apne aap ho jaayega.
-              </div>
-              <input
-                type="url"
-                placeholder="https://trigger.macrodroid.com/YOUR_DEVICE_ID/jarvis"
-                defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('jarvis_macrodroid_url')||'') : ''}
-                onChange={e => localStorage.setItem('jarvis_macrodroid_url', e.target.value)}
-                style={{ width:'100%', padding:'9px 12px', borderRadius:8, background:'#071828', border:'1px solid rgba(0,229,255,.2)', color:'#c8e0f0', fontSize:12, boxSizing:'border-box' as const }}
-              />
-              <div style={{ fontSize:10, color:'#1a3050', marginTop:8, lineHeight:1.6 }}>
-                Supported commands: WiFi on/off, Bluetooth on/off, Torch on/off, Hotspot, Silent/Ringer, DND, Screen, Alarm, Volume, App open
-              </div>
-              <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(0,229,255,.04)', borderRadius:8, border:'1px solid rgba(0,229,255,.08)' }}>
-                <div style={{ fontSize:10, color:'#3a7090', fontWeight:700, marginBottom:6 }}>MacroDroid Setup:</div>
-                <div style={{ fontSize:10, color:'#1a3050', lineHeight:1.8 }}>
-                  1. MacroDroid app install karo (free)<br/>
-                  2. New Macro → Trigger: Webhook<br/>
-                  3. Action: WiFi toggle / App launch / etc.<br/>
-                  4. Webhook URL copy karo → yahan paste karo<br/>
-                  5. JARVIS se bolo: "WiFi on karo"
-                </div>
-              </div>
-            </div>
-
-            {/* MacroDroid Receive URL */}
-            <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:'#00e5ff', fontWeight:700, marginBottom:6 }}>📡 MacroDroid → JARVIS Events</div>
-              <div style={{ fontSize:10, color:'#1a4060', marginBottom:8 }}>
-                MacroDroid se JARVIS ko event bhejne ke liye yeh URL use karo:
-              </div>
-              <div style={{ padding:'8px 12px', background:'#050d1a', borderRadius:8, border:'1px solid rgba(0,229,255,.15)', fontSize:10, color:'#00e5ff', fontFamily:'monospace', wordBreak:'break-all' as const }}>
-                https://apple-lemon-zeta.vercel.app/api/macrodroid?event=battery_low
-              </div>
-              <div style={{ fontSize:10, color:'#1a3050', marginTop:6 }}>
-                Events: battery_low, charging, arrived_home, left_home, call_missed, screen_on, wifi_connected
-              </div>
-            </div>
-
-            {/* Push Notifications */}
-            <div>
-              <div style={{ fontSize:11, color:'#00e5ff', fontWeight:700, marginBottom:6 }}>🔔 Push Notifications</div>
-              <div style={{ fontSize:10, color:'#1a4060', marginBottom:10 }}>
-                Background notifications — JARVIS tab band ho tab bhi notify karega.
-              </div>
-              <button onClick={async () => {
-                if (!('Notification' in window)) { alert('Browser support nahi hai'); return }
-                const perm = await Notification.requestPermission()
-                if (perm === 'granted') {
-                  new Notification('JARVIS', { body: 'Push notifications enabled!', icon: '/icons/icon-192x192.png' })
-                } else {
-                  alert('Notification permission denied. Browser settings mein allow karo.')
-                }
-              }} style={{ padding:'9px 16px', borderRadius:8, background:'rgba(0,229,255,.1)', border:'1px solid rgba(0,229,255,.3)', color:'#00e5ff', fontSize:12, cursor:'pointer' }}>
-                🔔 Enable Push Notifications
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div style={{ height:70 }}/>
+        {/* App info */}
+        <div style={{ textAlign: 'center', fontSize: '11px', color: '#0e2030', padding: '10px' }}>
+          JARVIS Life OS v11 · Next.js 15 · Made with ❤️ · ₹0 Forever
+        </div>
       </div>
-      <Sidebar/>
     </div>
   )
 }
