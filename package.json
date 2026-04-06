@@ -1,7 +1,7 @@
 {
   "name": "jarvis-ai",
-  "version": "11.0.0",
-  "description": "JARVIS — Autonomous Hinglish-first AI Assistant — Life OS",
+  "version": "10.46.0",
+  "description": "JARVIS — Autonomous Hindi-first AI Assistant for Mayur, Nadan MP",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,9 +10,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "15.3.2",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "next": "14.2.30",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
     "@supabase/supabase-js": "^2.45.0",
     "web-push": "^3.6.7"
   },
