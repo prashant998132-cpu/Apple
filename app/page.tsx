@@ -51,8 +51,15 @@ function getSuggestions(text: string): string[] {
   return ['Aur explain karo', 'Example do', 'Hindi mein samjhao']
 }
 
+// Strip LaTeX $...$ and $...$ — AI sends these but we render plain text
+function stripLatex(text: string): string {
+  return text
+    .replace(/\$\$([^$]+?)\$\$/g, '$1')   // $formula$ → formula
+    .replace(/\$([^$\n]+?)\$/g, '$1')      // $formula$ → formula
+}
+
 function MdText({ text }: { text: string }) {
-  const lines = text.split('\n')
+  const lines = stripLatex(text).split('\n')
   const els: React.ReactNode[] = []
   let codeBlock = false; let codeLang = ''; let codeLines: string[] = []
 
@@ -76,9 +83,9 @@ function MdText({ text }: { text: string }) {
     if (codeBlock) { codeLines.push(line); continue }
     if (line === '') { els.push(<div key={i} style={{ height: '5px' }} />); continue }
 
-    const isBullet = /^[-*•] /.test(line)
+    const isBullet = /^[-*â¢] /.test(line)
     const isNum = /^\d+\. /.test(line)
-    const raw = line.replace(/^[-*•] /,'').replace(/^\d+\. /,'').replace(/^#{1,3} /,'')
+    const raw = line.replace(/^[-*â¢] /,'').replace(/^\d+\. /,'').replace(/^#{1,3} /,'')
     const isH1 = line.startsWith('# '), isH2 = line.startsWith('## '), isH3 = line.startsWith('### ')
     const isHr = line === '---' || line === '***'
 
@@ -97,7 +104,7 @@ function MdText({ text }: { text: string }) {
     else if (isH3) els.push(<div key={i} style={{ fontSize: '14px', fontWeight: 600, color: '#c8dff0', margin: '8px 0 3px' }}>{styled}</div>)
     else if (isBullet || isNum) els.push(
       <div key={i} style={{ display: 'flex', gap: '8px', margin: '3px 0', paddingLeft: '2px', lineHeight: '1.6' }}>
-        <span style={{ color: '#00e5ff55', flexShrink: 0, width: '10px' }}>–</span>
+        <span style={{ color: '#00e5ff55', flexShrink: 0, width: '10px' }}>â</span>
         <span>{styled}</span>
       </div>
     )
@@ -111,7 +118,7 @@ function CopyInline({ text }: { text: string }) {
   return (
     <button onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 1500) }}
       style={{ position: 'absolute', top: '8px', right: '10px', background: ok ? 'rgba(52,211,153,0.15)' : 'rgba(0,229,255,0.07)', border: '1px solid', borderColor: ok ? '#34d39944' : 'rgba(0,229,255,0.12)', borderRadius: '5px', color: ok ? '#34d399' : '#00e5ff77', cursor: 'pointer', fontSize: '10px', padding: '3px 7px', fontFamily: 'monospace' }}>
-      {ok ? '✓' : 'copy'}
+      {ok ? 'â' : 'copy'}
     </button>
   )
 }
@@ -121,7 +128,7 @@ function CopyBtn({ text }: { text: string }) {
   return (
     <button onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }}
       style={{ background: ok ? 'rgba(52,211,153,0.08)' : 'rgba(0,229,255,0.05)', border: '1px solid', borderColor: ok ? '#34d39922' : 'rgba(0,229,255,0.08)', borderRadius: '5px', color: ok ? '#34d399' : '#00e5ff66', cursor: 'pointer', fontSize: '11px', padding: '3px 8px', transition: 'all 0.15s', fontWeight: 500, fontFamily: 'inherit' }}>
-      {ok ? '✓ Copied' : 'Copy'}
+      {ok ? 'â Copied' : 'Copy'}
     </button>
   )
 }
@@ -133,7 +140,7 @@ function ThinkBlock({ text }: { text: string }) {
   return (
     <div style={{ margin: '5px 0' }}>
       <button onClick={() => setOpen(v => !v)} style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: '6px', color: '#a78bfa88', cursor: 'pointer', fontSize: '11px', padding: '3px 9px', fontStyle: 'italic', fontFamily: 'inherit' }}>
-        {open ? '▼ Hide reasoning' : '▶ Show reasoning...'}
+        {open ? 'â¼ Hide reasoning' : 'â¶ Show reasoning...'}
       </button>
       {open && <div style={{ margin: '5px 0', padding: '10px 12px', background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.1)', borderRadius: '8px', color: '#7a7a98', fontSize: '12px', lineHeight: '1.6', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto' }}>{clean}</div>}
     </div>
@@ -148,45 +155,45 @@ function ImageMsg({ url, prompt }: { url: string; prompt: string }) {
       {err && <div style={{ fontSize: '12px', color: '#f87171' }}>Image load failed.</div>}
       <img src={url} alt={prompt} onLoad={() => setLoaded(true)} onError={() => setErr(true)} style={{ width: '100%', borderRadius: '12px', border: '1px solid rgba(0,229,255,0.08)', display: loaded ? 'block' : 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }} />
       {loaded && <div style={{ display: 'flex', gap: '10px', marginTop: '7px' }}>
-        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#00e5ff66' }}>↓ Save</a>
-        <a href={url} download="jarvis-image.jpg" style={{ fontSize: '11px', color: '#00e5ff66' }}>↓ Download</a>
+        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#00e5ff66' }}>â Save</a>
+        <a href={url} download="jarvis-image.jpg" style={{ fontSize: '11px', color: '#00e5ff66' }}>â Download</a>
       </div>}
     </div>
   )
 }
 
 const MODES: Array<{ id: ChatMode; label: string; desc: string; color: string; icon: string }> = [
-  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: '⚡' },
-  { id: 'flash', label: 'Flash', desc: 'Fastest',        color: '#f87171', icon: '🔥' },
-  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: '🧠' },
-  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: '🔭' },
+  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: 'â¡' },
+  { id: 'flash', label: 'Flash', desc: 'Fastest',        color: '#f87171', icon: 'ð¥' },
+  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: 'ð§ ' },
+  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: 'ð­' },
 ]
 
 const CMDS = [
-  { cmd: '/clear',    desc: 'Chat clear karo',      icon: '🗑️' },
-  { cmd: '/pass',     desc: 'Strong password banao', icon: '🔐' },
-  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: '🌸' },
-  { cmd: '/era',      desc: 'Era page pe jao',       icon: '💗' },
-  { cmd: '/mood',     desc: 'Mood tracker',          icon: '😊' },
-  { cmd: '/notes',    desc: 'Quick notes',           icon: '📝' },
-  { cmd: '/timer',    desc: 'Pomodoro timer',        icon: '⏱️' },
-  { cmd: '/dash',     desc: 'Dashboard',             icon: '📊' },
-  { cmd: '/calc',     desc: 'Calculator',            icon: '🔢' },
-  { cmd: '/habits',   desc: 'Habit tracker',         icon: '💪' },
-  { cmd: '/todo',     desc: 'Todo list',             icon: '✅' },
-  { cmd: '/qr',       desc: 'QR generator',          icon: '📱' },
-  { cmd: '/focus',    desc: 'Focus mode',            icon: '🎯' },
+  { cmd: '/clear',    desc: 'Chat clear karo',      icon: 'ðï¸' },
+  { cmd: '/pass',     desc: 'Strong password banao', icon: 'ð' },
+  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: 'ð¸' },
+  { cmd: '/era',      desc: 'Era page pe jao',       icon: 'ð' },
+  { cmd: '/mood',     desc: 'Mood tracker',          icon: 'ð' },
+  { cmd: '/notes',    desc: 'Quick notes',           icon: 'ð' },
+  { cmd: '/timer',    desc: 'Pomodoro timer',        icon: 'â±ï¸' },
+  { cmd: '/dash',     desc: 'Dashboard',             icon: 'ð' },
+  { cmd: '/calc',     desc: 'Calculator',            icon: 'ð¢' },
+  { cmd: '/habits',   desc: 'Habit tracker',         icon: 'ðª' },
+  { cmd: '/todo',     desc: 'Todo list',             icon: 'â' },
+  { cmd: '/qr',       desc: 'QR generator',          icon: 'ð±' },
+  { cmd: '/focus',    desc: 'Focus mode',            icon: 'ð¯' },
 ]
 
 const QUICK_PROMPTS = [
-  { l: '🖼️ Image banao', m: 'image banao ' },
-  { l: '📰 Aaj ki news', m: 'aaj ki latest news kya hai?' },
-  { l: '🌤️ Rewa mausam', m: 'Rewa ka aaj ka mausam kya hai?' },
-  { l: '💻 Python code', m: 'Python mein ' },
-  { l: '🔢 Math solve', m: 'solve karo: ' },
-  { l: '📖 Summary', m: 'samjhao mujhe: ' },
-  { l: '🌍 Translate', m: 'Hindi mein translate karo: ' },
-  { l: '💡 Ideas do', m: 'creative ideas do for: ' },
+  { l: 'ð¼ï¸ Image banao', m: 'image banao ' },
+  { l: 'ð° Aaj ki news', m: 'aaj ki latest news kya hai?' },
+  { l: 'ð¤ï¸ Rewa mausam', m: 'Rewa ka aaj ka mausam kya hai?' },
+  { l: 'ð» Python code', m: 'Python mein ' },
+  { l: 'ð¢ Math solve', m: 'solve karo: ' },
+  { l: 'ð Summary', m: 'samjhao mujhe: ' },
+  { l: 'ð Translate', m: 'Hindi mein translate karo: ' },
+  { l: 'ð¡ Ideas do', m: 'creative ideas do for: ' },
 ]
 
 export default function Home() {
@@ -375,7 +382,7 @@ export default function Home() {
     if (t === '/clear') { clearChat(); return }
     if (t === '/pass' || t === '/password') {
       const p = genPass()
-      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `🔐 **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
+      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `ð **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
       return
     }
     const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus' }
@@ -406,7 +413,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, userName: 'Pranshu' }),
+        body: JSON.stringify({ message: text, history: newMsgs.slice(-12).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, userName: 'Pranshu' }),
         signal: abortRef.current.signal,
       })
       if (!res.ok || !res.body) throw new Error('Stream failed')
@@ -434,7 +441,7 @@ export default function Home() {
       setSuggestions(getSuggestions(full))
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: '⚠️ Network issue — retry karo!', ts: Date.now() }])
+        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: 'â ï¸ Network issue â retry karo!', ts: Date.now() }])
       }
     } finally {
       setStreaming(false); setStreamText(''); setStreamThink(''); setStreamProv('')
@@ -486,9 +493,9 @@ export default function Home() {
               <div style={{ maxWidth: '82%', position: 'relative' }}>
                 {isContextOpen && (
                   <div style={{ position: 'absolute', top: '0', right: '110%', background: 'rgba(8,13,24,0.98)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '10px', padding: '4px', zIndex: 20, display: 'flex', gap: '4px', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>📋 Copy</button>
-                    <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>✏️ Edit</button>
-                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>🗑️</button>
+                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>ð Copy</button>
+                    <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>âï¸ Edit</button>
+                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>ðï¸</button>
                   </div>
                 )}
                 <div onContextMenu={e => { e.preventDefault(); setContextMsg(isContextOpen ? null : msg.id) }}
@@ -511,7 +518,7 @@ export default function Home() {
                 {msg.videoUrl && (
                   <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.12)', borderRadius: '10px', padding: '12px', maxWidth: '280px' }}>
                     <div style={{ fontSize: '13px', marginBottom: '8px', color: '#6a6a88' }}>{msg.content}</div>
-                    <a href={msg.videoUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '6px', padding: '6px 12px', color: '#a78bfa', textDecoration: 'none', fontSize: '12px' }}>▶ Watch Video</a>
+                    <a href={msg.videoUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '6px', padding: '6px 12px', color: '#a78bfa', textDecoration: 'none', fontSize: '12px' }}>â¶ Watch Video</a>
                   </div>
                 )}
                 {!msg.imageUrl && !msg.videoUrl && (
@@ -522,15 +529,21 @@ export default function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '7px', flexWrap: 'wrap' }}>
                   {!msg.imageUrl && !msg.videoUrl && <CopyBtn text={msg.content} />}
                   {tts && !msg.imageUrl && (
-                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>🔊</button>
+                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>ð</button>
                   )}
-                  {['👍','❤️','😂','💯'].map(em => (
+                  {['ð','â¤ï¸','ð','ð¯'].map(em => (
                     <button key={em} onClick={() => addReaction(msg.id, em)}
                       style={{ background: msg.reactions?.includes(em) ? 'rgba(255,255,255,0.1)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', borderRadius: '5px', opacity: msg.reactions?.includes(em) ? 1 : 0.25, transition: 'all 0.12s' }}>
                       {em}
                     </button>
                   ))}
-                  {msg.provider && <span style={{ fontSize: '10px', color: '#1e3248', marginLeft: 'auto' }}>{msg.provider}</span>}
+                  {msg.provider && (
+                    <button onClick={() => setModeMenu(v => !v)}
+                      style={{ fontSize: '10px', color: '#1a3a50', marginLeft: 'auto', background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.06)', borderRadius: '4px', padding: '1px 6px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.1s' }}
+                      title="Tap to change mode">
+                      {msg.provider} ▾
+                    </button>
+                  )}
                   <span style={{ fontSize: '10px', color: '#0e2030' }}>{timeStr(msg.ts)}</span>
                 </div>
                 {msg.reactions && msg.reactions.length > 0 && (
@@ -576,7 +589,7 @@ export default function Home() {
       {isDragging && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,229,255,0.06)', border: '2px dashed rgba(0,229,255,0.3)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{ fontSize: '18px', color: '#00e5ff88', fontWeight: 700, textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🖼️</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>ð¼ï¸</div>
             Drop image here to analyze
           </div>
         </div>
@@ -586,7 +599,7 @@ export default function Home() {
 
       {/* Header */}
       <header style={{ flexShrink: 0, height: '52px', background: 'rgba(6,10,18,0.97)', borderBottom: '1px solid rgba(0,229,255,0.07)', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '10px', zIndex: 10, backdropFilter: 'blur(16px)' }}>
-        <button onClick={() => setSidebar(true)} style={{ background: 'none', border: 'none', color: '#2a5070', cursor: 'pointer', padding: '6px', borderRadius: '8px', fontSize: '18px', lineHeight: 1, fontFamily: 'inherit' }}>☰</button>
+        <button onClick={() => setSidebar(true)} style={{ background: 'none', border: 'none', color: '#2a5070', cursor: 'pointer', padding: '6px', borderRadius: '8px', fontSize: '18px', lineHeight: 1, fontFamily: 'inherit' }}>â°</button>
 
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
@@ -598,7 +611,7 @@ export default function Home() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <button onClick={() => setSearchOpen(v => !v)} className="tool-btn"
-            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">🔍</button>
+            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">ð</button>
           <button onClick={() => setTts(v => !v)} className="tool-btn"
             style={{ background: tts ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: tts ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: tts ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.12s' }}>TTS</button>
           <button onClick={clearChat} className="tool-btn"
@@ -624,8 +637,8 @@ export default function Home() {
               <div style={{ width: '76px', height: '76px', background: 'linear-gradient(135deg, #002fa3, #00e5ff)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 900, color: '#000', boxShadow: '0 0 30px rgba(0,229,255,0.25)' }}>J</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>Namaste Pranshu 👋</div>
-              <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai • Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
+              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>Namaste Pranshu ð</div>
+              <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai â¢ Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', maxWidth: '340px', width: '100%' }}>
               {QUICK_PROMPTS.slice(0, 6).map(q => (
@@ -635,7 +648,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: '10px', color: '#0e2030', textAlign: 'center' }}>Ctrl+K sidebar · Ctrl+F search · Paste image · Drag & drop</div>
+            <div style={{ fontSize: '10px', color: '#0e2030', textAlign: 'center' }}>Ctrl+K sidebar Â· Ctrl+F search Â· Paste image Â· Drag & drop</div>
           </div>
         ) : (
           renderMessages()
@@ -675,7 +688,7 @@ export default function Home() {
                     {s}
                   </button>
                 ))}
-                <button onClick={() => setSuggestions([])} style={{ background: 'none', border: 'none', color: '#1e3248', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', padding: '5px' }}>×</button>
+                <button onClick={() => setSuggestions([])} style={{ background: 'none', border: 'none', color: '#1e3248', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', padding: '5px' }}>Ã</button>
               </div>
             </div>
           </div>
@@ -688,7 +701,7 @@ export default function Home() {
       {showScrollBtn && (
         <button onClick={scrollToBottom}
           style={{ position: 'absolute', bottom: '90px', right: '16px', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e5ff', cursor: 'pointer', fontSize: '16px', zIndex: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-          ↓
+          â
         </button>
       )}
 
@@ -714,7 +727,7 @@ export default function Home() {
               ref={inpRef} value={inp}
               onChange={e => setInp(e.target.value)}
               onKeyDown={handleKey} onPaste={handlePaste}
-              placeholder={recording ? '🎙 Listening...' : 'Message JARVIS... (/ for commands)'}
+              placeholder={recording ? 'ð Listening...' : 'Message JARVIS... (/ for commands)'}
               disabled={streaming} rows={1}
               style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#ddeeff', fontSize: '14px', lineHeight: '1.5', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
@@ -722,27 +735,43 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '4px', position: 'relative' }}>
                 <button onClick={() => setModeMenu(v => !v)}
                   style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
-                  {curMode.icon} {curMode.label} <span style={{ opacity: 0.4, fontSize: '9px' }}>▾</span>
+                  {curMode.icon} {curMode.label} <span style={{ opacity: 0.4, fontSize: '9px' }}>â¾</span>
                 </button>
                 {modeMenu && (
-                  <div style={{ position: 'absolute', bottom: '36px', left: 0, background: 'rgba(5,9,16,0.99)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '12px', padding: '5px', zIndex: 50, minWidth: '185px', boxShadow: '0 8px 32px rgba(0,0,0,0.7)', animation: 'slideDown 0.1s ease' }}>
+                  <div style={{ position: 'absolute', bottom: '36px', left: 0, background: 'rgba(4,8,18,0.99)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '14px', padding: '8px', zIndex: 50, minWidth: '270px', boxShadow: '0 12px 48px rgba(0,0,0,0.8)', animation: 'slideDown 0.12s ease' }}>
+                    <div style={{ fontSize: '9px', color: '#1e3248', letterSpacing: '1.5px', padding: '2px 6px 6px', textTransform: 'uppercase' }}>Select Mode</div>
                     {MODES.map(m => (
-                      <button key={m.id} onClick={() => changeMode(m.id)} className="mode-opt"
-                        style={{ width: '100%', background: chatMode === m.id ? m.color + '10' : 'none', border: 'none', borderRadius: '7px', color: chatMode === m.id ? m.color : '#2a5070', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'inherit', transition: 'background 0.1s' }}>
-                        <span style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
-                          <span>{m.icon}</span><span style={{ fontWeight: chatMode === m.id ? 700 : 400 }}>{m.label}</span>
-                        </span>
-                        <span style={{ fontSize: '10px', opacity: 0.4 }}>{m.desc}</span>
-                      </button>
+                      <div key={m.id}>
+                        <button onClick={() => changeMode(m.id)} className="mode-opt"
+                          style={{ width: '100%', background: chatMode === m.id ? m.color + '12' : 'none', border: chatMode === m.id ? '1px solid ' + m.color + '25' : '1px solid transparent', borderRadius: '9px', color: chatMode === m.id ? m.color : '#2a5070', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'inherit', transition: 'all 0.1s', marginBottom: '1px' }}>
+                          <span style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
+                            <span>{m.icon}</span><span style={{ fontWeight: chatMode === m.id ? 700 : 500 }}>{m.label}</span>
+                          </span>
+                          <span style={{ fontSize: '10px', opacity: 0.45 }}>{m.desc}</span>
+                        </button>
+                        {chatMode === m.id && (
+                          <div style={{ margin: '2px 4px 6px', padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            {m.models.map((mdl, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', fontSize: '10px' }}>
+                                <span style={{ color: i === 0 ? m.color + 'cc' : '#1e3248', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ color: '#1a3048', fontSize: '9px', width: '10px' }}>{i+1}</span>
+                                  {mdl.name}
+                                </span>
+                                <span style={{ color: '#0e2030', fontSize: '9px' }}>{mdl.speed} · {mdl.note}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
                 <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
                 <button onClick={() => photoRef.current?.click()} className="tool-btn"
-                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">📷</button>
+                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">ð·</button>
                 <button onClick={toggleVoice} className="tool-btn"
                   style={{ background: recording ? 'rgba(248,113,113,0.08)' : 'rgba(0,229,255,0.03)', border: '1px solid', borderColor: recording ? 'rgba(248,113,113,0.25)' : 'rgba(0,229,255,0.07)', borderRadius: '6px', color: recording ? '#f87171' : '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', animation: recording ? 'recording 1.5s infinite' : 'none', transition: 'all 0.12s', fontFamily: 'inherit' }}>
-                  {recording ? '⏹' : '🎙'}
+                  {recording ? 'â¹' : 'ð'}
                 </button>
               </div>
 
@@ -754,7 +783,7 @@ export default function Home() {
                 ) : (
                   <button onClick={() => send()} disabled={!inp.trim()} className={inp.trim() ? 'send-btn' : ''}
                     style={{ background: inp.trim() ? `linear-gradient(135deg, #0055cc, #00c8ff)` : 'rgba(0,229,255,0.04)', border: 'none', borderRadius: '8px', color: inp.trim() ? '#000' : '#0e2030', cursor: inp.trim() ? 'pointer' : 'not-allowed', padding: '6px 16px', fontSize: '13px', fontWeight: 700, transition: 'all 0.15s', fontFamily: 'inherit' }}>
-                    Send ↑
+                    Send â
                   </button>
                 )}
               </div>

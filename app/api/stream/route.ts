@@ -1,17 +1,17 @@
-// app/api/stream/route.ts — JARVIS Streaming SSE
-// CASCADE (best → fallback, all free/freemium):
-// 1. Groq          — fastest, llama-3.3-70b (free tier, needs key)
-// 2. Gemini        — Google, 2.0-flash (free tier, needs key)
-// 3. Together AI   — $25 free credits, llama-3-70b
-// 4. Cerebras      — ultra-fast inference (free tier, needs key)
-// 5. Mistral       — mistral-small-latest (free tier, needs key)
-// 6. Cohere        — command-r (free tier, needs key)
-// 7. Fireworks AI  — llama-v3-70b (free tier, needs key)
-// 8. OpenRouter    — free models (no key needed for some)
-// 9. Deepinfra     — meta-llama (free tier, needs key)
-// 10. HuggingFace  — HF Inference API (free, needs key)
-// 11. Pollinations — 100% FREE, no key, no limit
-// 12. Puter AI     — browser-side fallback (client handles)
+// app/api/stream/route.ts â JARVIS Streaming SSE
+// CASCADE (best â fallback, all free/freemium):
+// 1. Groq          â fastest, llama-3.3-70b (free tier, needs key)
+// 2. Gemini        â Google, 2.0-flash (free tier, needs key)
+// 3. Together AI   â $25 free credits, llama-3-70b
+// 4. Cerebras      â ultra-fast inference (free tier, needs key)
+// 5. Mistral       â mistral-small-latest (free tier, needs key)
+// 6. Cohere        â command-r (free tier, needs key)
+// 7. Fireworks AI  â llama-v3-70b (free tier, needs key)
+// 8. OpenRouter    â free models (no key needed for some)
+// 9. Deepinfra     â meta-llama (free tier, needs key)
+// 10. HuggingFace  â HF Inference API (free, needs key)
+// 11. Pollinations â 100% FREE, no key, no limit
+// 12. Puter AI     â browser-side fallback (client handles)
 import { NextRequest } from 'next/server'
 import { routeTools } from '../../../lib/tools/external-router'
 import { getMaxTokens, trimHistory, getCachedResponse, setCachedResponse, shouldSkipProvider, trackProviderUsage, truncateIfNeeded } from '../../../lib/core/resourceManager'
@@ -36,7 +36,7 @@ async function streamOpenAI(
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
         ...extraBody
       }),
-      signal: AbortSignal.timeout(28000)
+      signal: AbortSignal.timeout(35000)
     })
     if (!res.ok || !res.body) return false
     send({ type: 'start', provider: providerName })
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
 
       try {
-        // ── TOOL ROUTING — call relevant APIs first ──────────
+        // ââ TOOL ROUTING â call relevant APIs first ââââââââââ
         let toolContext = ''
         try {
           const toolResults = await routeTools(message)
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
               toolResults.map(r => r.data).join('\n\n') +
               '\n[Use this real data in your response. Do not say you cannot access internet.]'
           }
-        } catch { /* tool routing failed — continue without */ }
+        } catch { /* tool routing failed â continue without */ }
 
         const messages = [
           ...history.slice(-8).map((m: any) => ({
@@ -103,28 +103,28 @@ export async function POST(req: NextRequest) {
         const baseSystem = memoryPrompt ||
           `You are JARVIS, a personal AI assistant for ${userName || 'Boss'}. Respond in Hinglish (Hindi+English mix). Be concise and direct.
 RULES:
-- Never pretend to do physical tasks (coffee, phone calls, etc.) — say "Main ye physically nahi kar sakta, lekin [alternative] kar sakta hoon"
+- Never pretend to do physical tasks (coffee, phone calls, etc.) â say "Main ye physically nahi kar sakta, lekin [alternative] kar sakta hoon"
 - Address user as "${userName || 'Boss'}" occasionally
 - Keep responses short unless detail is needed
-- For math/science formulas use LaTeX: $formula$ inline, $$formula$$ display`
+- Plain text only — no LaTeX, no $formula$, no $formula$. Write formulas as plain text.`
         const systemPrompt = (overrideSystem || baseSystem) + toolContext
 
         const maxTok = getMaxTokens(message)
         let replied = false
 
-        // ── 1. GROQ — fastest streaming ─────────────────────
+        // ââ 1. GROQ â fastest streaming âââââââââââââââââââââ
         if (!replied && process.env.GROQ_API_KEY) {
-          const model = chatMode === 'flash' ? 'llama-3.1-8b-instant'
+          const model = chatMode === 'flash' ? 'llama-4-scout-17b-16e-instruct'
             : chatMode === 'think' ? 'deepseek-r1-distill-llama-70b'
-            : 'llama-3.3-70b-versatile'
+            : 'llama-4-scout-17b-16e-instruct'
           replied = await streamOpenAI(
             'https://api.groq.com/openai/v1/chat/completions',
             process.env.GROQ_API_KEY, model, messages, systemPrompt, maxTok, send,
-            `Groq ${model}`
+            `Groq · ${model.split('-').slice(0,4).join('-')}`
           )
         }
 
-        // ── 2. GEMINI 2.0 Flash — Google, very capable ──────
+        // ââ 2. GEMINI 2.0 Flash â Google, very capable ââââââ
         if (!replied) {
           const gemKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY
           if (gemKey) {
@@ -143,7 +143,7 @@ RULES:
                     contents: gemMsgs,
                     generationConfig: { maxOutputTokens: maxTok }
                   }),
-                  signal: AbortSignal.timeout(28000)
+                  signal: AbortSignal.timeout(35000)
                 }
               )
               if (gemRes.ok && gemRes.body) {
@@ -173,7 +173,7 @@ RULES:
           }
         }
 
-        // ── 3. TOGETHER AI — $25 free credits ───────────────
+        // ââ 3. TOGETHER AI â $25 free credits âââââââââââââââ
         if (!replied && process.env.TOGETHER_API_KEY) {
           replied = await streamOpenAI(
             'https://api.together.xyz/v1/chat/completions',
@@ -183,7 +183,7 @@ RULES:
           )
         }
 
-        // ── 4. CEREBRAS — ultra-fast inference ──────────────
+        // ââ 4. CEREBRAS â ultra-fast inference ââââââââââââââ
         if (!replied && process.env.CEREBRAS_API_KEY) {
           replied = await streamOpenAI(
             'https://api.cerebras.ai/v1/chat/completions',
@@ -193,7 +193,7 @@ RULES:
           )
         }
 
-        // ── 5. MISTRAL — mistral-small (free tier) ──────────
+        // ââ 5. MISTRAL â mistral-small (free tier) ââââââââââ
         if (!replied && process.env.MISTRAL_API_KEY) {
           replied = await streamOpenAI(
             'https://api.mistral.ai/v1/chat/completions',
@@ -203,7 +203,7 @@ RULES:
           )
         }
 
-        // ── 6. COHERE — command-r (free tier) ───────────────
+        // ââ 6. COHERE â command-r (free tier) âââââââââââââââ
         if (!replied && process.env.COHERE_API_KEY) {
           try {
             const coMsg = messages.map((m: any) => ({
@@ -222,7 +222,7 @@ RULES:
                 max_tokens: maxTok,
                 stream: true
               }),
-              signal: AbortSignal.timeout(28000)
+              signal: AbortSignal.timeout(35000)
             })
             if (coRes.ok && coRes.body) {
               replied = true
@@ -249,7 +249,7 @@ RULES:
           } catch { /* Cohere failed */ }
         }
 
-        // ── 7. FIREWORKS AI — fast, free tier ───────────────
+        // ââ 7. FIREWORKS AI â fast, free tier âââââââââââââââ
         if (!replied && process.env.FIREWORKS_API_KEY) {
           replied = await streamOpenAI(
             'https://api.fireworks.ai/inference/v1/chat/completions',
@@ -259,7 +259,7 @@ RULES:
           )
         }
 
-        // ── 8. OPENROUTER — free models available ───────────
+        // ââ 8. OPENROUTER â free models available âââââââââââ
         if (!replied) {
           const orKey = process.env.OPENROUTER_API_KEY
           // Try free model first, then with key
@@ -279,7 +279,7 @@ RULES:
                 max_tokens: maxTok,
                 messages: [{ role: 'system', content: systemPrompt }, ...messages]
               }),
-              signal: AbortSignal.timeout(30000)
+              signal: AbortSignal.timeout(35000)
             })
             if (orRes.ok && orRes.body) {
               replied = true
@@ -307,7 +307,7 @@ RULES:
           } catch { /* OpenRouter failed */ }
         }
 
-        // ── 9. DEEPINFRA — free tier available ──────────────
+        // ââ 9. DEEPINFRA â free tier available ââââââââââââââ
         if (!replied && process.env.DEEPINFRA_API_KEY) {
           replied = await streamOpenAI(
             'https://api.deepinfra.com/v1/openai/chat/completions',
@@ -317,7 +317,7 @@ RULES:
           )
         }
 
-        // ── 10. HUGGINGFACE — Inference API free ────────────
+        // ââ 10. HUGGINGFACE â Inference API free ââââââââââââ
         if (!replied && process.env.HUGGINGFACE_API_KEY) {
           try {
             const hfRes = await fetch(
@@ -333,7 +333,7 @@ RULES:
                   parameters: { max_new_tokens: maxTok, return_full_text: false },
                   stream: false
                 }),
-                signal: AbortSignal.timeout(25000)
+                signal: AbortSignal.timeout(35000)
               }
             )
             if (hfRes.ok) {
@@ -349,7 +349,7 @@ RULES:
           } catch { /* HF failed */ }
         }
 
-        // ── 11. POLLINATIONS — 100% FREE, no key ever ───────
+        // ââ 11. POLLINATIONS â 100% FREE, no key ever âââââââ
         if (!replied) {
           try {
             send({ type: 'start', provider: 'Pollinations AI (free)' })
@@ -363,7 +363,7 @@ RULES:
                 stream: true,
                 seed: Math.floor(Math.random() * 9999)
               }),
-              signal: AbortSignal.timeout(30000)
+              signal: AbortSignal.timeout(35000)
             })
             if (polRes.ok && polRes.body) {
               replied = true
@@ -390,11 +390,11 @@ RULES:
           } catch { /* Pollinations failed */ }
         }
 
-        // ── Pollinations non-stream fallback ────────────────
+        // ââ Pollinations non-stream fallback ââââââââââââââââ
         if (!replied) {
           try {
             const url = `https://text.pollinations.ai/${encodeURIComponent(message)}?model=openai&seed=${Date.now()}&system=${encodeURIComponent(systemPrompt.slice(0,200))}`
-            const r = await fetch(url, { signal: AbortSignal.timeout(25000) })
+            const r = await fetch(url, { signal: AbortSignal.timeout(35000) })
             if (r.ok) {
               const text = await r.text()
               if (text) {
@@ -407,7 +407,7 @@ RULES:
           } catch { /* last resort failed */ }
         }
 
-        // ── 12. CLIENT FALLBACK — tell browser to use Puter ──
+        // ââ 12. CLIENT FALLBACK â tell browser to use Puter ââ
         if (!replied) {
           send({ type: 'fallback', message: 'USE_PUTER' })
           send({ type: 'done' })
