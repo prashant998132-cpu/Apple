@@ -1,677 +1,765 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Sidebar from '../components/shared/Sidebar'
+import { initProactiveScheduler } from '../lib/proactive'
+import { awardXP } from '../lib/xp'
 
 type Role = 'user' | 'assistant'
 type ChatMode = 'auto' | 'flash' | 'think' | 'deep'
 type Msg = {
-  id: string
-  role: Role
-  content: string
-  provider?: string
-  thinking?: string
-  imageUrl?: string
-  videoUrl?: string
-  ts: number
-  ms?: number
-  error?: boolean
-  pinned?: boolean
-  wordCount?: number
+  id: string; role: Role; content: string; provider?: string
+  thinking?: string; imageUrl?: string; videoUrl?: string
+  ts: number; reactions?: string[]
 }
 
-const STORE  = 'j_msgs_v6'
-const MSTORE = 'j_mode_v6'
-const DRAFT  = 'j_draft_v6'
-const FSIZE  = 'j_fsize_v6'
-const THEME  = 'j_theme_v6'
-const LANG   = 'j_lang_v6'
+const STORE = 'j_msgs_v5'
+const MSTORE = 'j_mode_v4'
 
-function uid() { return Math.random().toString(36).slice(2) }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }
 function genPass() {
-  const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from({ length: 16 }, () => c[Math.floor(Math.random() * c.length)]).join('')
-}
-function wordCount(text: string) { return text.trim().split(/\s+/).filter(Boolean).length }
-
-// UPGRADE 1: Time-based greeting
-function getGreeting(name: string): string {
-  const h = new Date().getHours()
-  if (h < 5)  return 'Late night ho gayi ' + name + '!'
-  if (h < 12) return 'Good morning ' + name + '!'
-  if (h < 17) return 'Good afternoon ' + name + '!'
-  if (h < 21) return 'Good evening ' + name + '!'
-  return 'Good night ' + name + '!'
+  const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'
+  return Array.from({ length: 18 }, () => c[Math.floor(Math.random() * c.length)]).join('')
 }
 
-// UPGRADE 3: Multi-language labels
-type Lang = 'hi' | 'en'
-const T: Record<Lang, Record<string, string>> = {
-  hi: {
-    placeholder: 'JARVIS se poocho... (Shift+Enter naya line)',
-    send: 'Bhejo',
-    stop: 'Ruko',
-    clear: 'Saaf karo',
-    photo: 'Photo',
-    mic: 'Mic',
-    recording: 'Sun raha...',
-    copy: 'Copy',
-    copied: 'Ho gaya',
-    pin: 'Pin',
-    unpin: 'Unpin',
-    retry: 'Dobara try',
-    thinking: 'Soch raha...',
-    export: 'Export',
-    search: 'Dhundo',
-  },
-  en: {
-    placeholder: 'Message JARVIS... (Shift+Enter new line)',
-    send: 'Send',
-    stop: 'Stop',
-    clear: 'Clear',
-    photo: 'Photo',
-    mic: 'Mic',
-    recording: 'Listening...',
-    copy: 'Copy',
-    copied: 'Copied',
-    pin: 'Pin',
-    unpin: 'Unpin',
-    retry: 'Retry',
-    thinking: 'Thinking...',
-    export: 'Export',
-    search: 'Search',
-  }
+function dateLabel(ts: number): string {
+  const d = new Date(ts); const t = new Date()
+  if (d.toDateString() === t.toDateString()) return 'Today'
+  const y = new Date(); y.setDate(y.getDate() - 1)
+  if (d.toDateString() === y.toDateString()) return 'Yesterday'
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: d.getFullYear() !== t.getFullYear() ? 'numeric' : undefined })
 }
 
-function MdText({ text, fontSize, collapsed }: { text: string; fontSize: number; collapsed?: boolean }) {
+function timeStr(ts: number) {
+  return new Date(ts).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+// Pattern-based follow-up suggestions
+function getSuggestions(text: string): string[] {
+  const t = text.toLowerCase()
+  if (/```|function|class|def |const |var |import /.test(t))
+    return ['Explain karo line by line', 'Isko optimize karo', 'Test cases do']
+  if (/equation|calculate|solve|formula|math|integral|derivative/.test(t))
+    return ['Step by step dikhao', 'Ek aur example do', 'Formula explain karo']
+  if (/health|disease|medicine|symptoms|doctor|treatment/.test(t))
+    return ['Precautions kya hain?', 'Diet advice do', 'Doctor se kab milein?']
+  if (/recipe|food|cook|ingredients|dish/.test(t))
+    return ['Ingredients list do', 'Tips & tricks batao', 'Alternatives kya hain?']
+  if (/news|politics|economy|government|election/.test(t))
+    return ['Aur details do', 'Impact kya hoga?', 'Background explain karo']
+  if (/mausam|weather|temperature|rain|humidity/.test(t))
+    return ['Kal ka forecast?', 'Week forecast do', 'Is mausam mein kya pehne?']
+  return ['Aur explain karo', 'Example do', 'Hindi mein samjhao']
+}
+
+function MdText({ text }: { text: string }) {
   const lines = text.split('\n')
-  const elements: React.ReactNode[] = []
-  let codeBlock = false
-  let codeLang = ''
-  let codeLines: string[] = []
-  let codeKey = 0
+  const els: React.ReactNode[] = []
+  let codeBlock = false; let codeLang = ''; let codeLines: string[] = []
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (line.startsWith('```')) {
       if (codeBlock) {
-        elements.push(<CodeBlock key={'cb'+codeKey++} code={codeLines.join('\n')} lang={codeLang}/>)
+        els.push(
+          <div key={i} style={{ position: 'relative', margin: '10px 0' }}>
+            {codeLang && <div style={{ position: 'absolute', top: '8px', left: '12px', fontSize: '10px', color: '#00e5ff66', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '1px' }}>{codeLang}</div>}
+            <pre style={{ background: '#04080f', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '10px', padding: codeLang ? '28px 12px 12px' : '12px', overflowX: 'auto', fontSize: '12.5px', color: '#9ac8e8', fontFamily: "'Space Mono','Courier New',monospace", lineHeight: '1.65', whiteSpace: 'pre', margin: 0 }}>
+              {codeLines.join('\n')}
+            </pre>
+            <CopyInline text={codeLines.join('\n')} />
+          </div>
+        )
         codeLines = []; codeLang = ''; codeBlock = false
       } else { codeBlock = true; codeLang = line.slice(3).trim() }
       continue
     }
     if (codeBlock) { codeLines.push(line); continue }
-    if (line === '') { elements.push(<div key={i} style={{ height:'5px' }}/>); continue }
+    if (line === '') { els.push(<div key={i} style={{ height: '5px' }} />); continue }
 
-    const isH1 = line.startsWith('# ')
-    const isH2 = line.startsWith('## ')
-    const isH3 = line.startsWith('### ')
-    const isBullet = /^[-*] /.test(line)
+    const isBullet = /^[-*•] /.test(line)
     const isNum = /^\d+\. /.test(line)
-    const raw = line.replace(/^#{1,3} /,'').replace(/^[-*] /,'').replace(/^\d+\. /,'')
+    const raw = line.replace(/^[-*•] /,'').replace(/^\d+\. /,'').replace(/^#{1,3} /,'')
+    const isH1 = line.startsWith('# '), isH2 = line.startsWith('## '), isH3 = line.startsWith('### ')
+    const isHr = line === '---' || line === '***'
 
-    const inline = (s: string): React.ReactNode[] =>
-      s.split(/(\*\*[^*]+\*\*|`[^`]+`|https?:\/\/[^\s]+)/g).map((p, j) => {
-        if (p.startsWith('**') && p.endsWith('**') && p.length>4) return <strong key={j}>{p.slice(2,-2)}</strong>
-        if (p.startsWith('`') && p.endsWith('`') && p.length>2) return <code key={j} style={{ background:'#161b22', border:'1px solid #30363d', borderRadius:'3px', padding:'1px 5px', fontSize:'12px', fontFamily:'monospace', color:'#79c0ff' }}>{p.slice(1,-1)}</code>
-        if (p.startsWith('http')) return <a key={j} href={p} target="_blank" rel="noreferrer" style={{ color:'#58a6ff', textDecoration:'underline' }}>{p.length>45?p.slice(0,45)+'...':p}</a>
-        return <span key={j}>{p}</span>
-      })
+    if (isHr) { els.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '8px 0' }} />); continue }
 
-    const styled = inline(raw)
-    const base = { margin:'2px 0', lineHeight:'1.65', fontSize:fontSize+'px' }
-    if (isH1) elements.push(<div key={i} style={{ ...base, fontSize:(fontSize+4)+'px', fontWeight:700, color:'#e6edf3', marginTop:'10px' }}>{styled}</div>)
-    else if (isH2) elements.push(<div key={i} style={{ ...base, fontSize:(fontSize+2)+'px', fontWeight:700, color:'#e6edf3', marginTop:'8px' }}>{styled}</div>)
-    else if (isH3) elements.push(<div key={i} style={{ ...base, fontWeight:700, color:'#c9d1d9', marginTop:'6px' }}>{styled}</div>)
-    else if (isBullet||isNum) elements.push(<div key={i} style={{ ...base, display:'flex', gap:'6px', paddingLeft:'4px' }}><span style={{ color:'#58a6ff', flexShrink:0 }}>{isNum?(i+'.'):'- '}</span><span>{styled}</span></div>)
-    else elements.push(<div key={i} style={base}>{styled}</div>)
+    const styled = raw.split(/(\*\*[^*]+\*\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\))/).map((p, j) => {
+      if (p.startsWith('**') && p.endsWith('**') && p.length > 4) return <strong key={j} style={{ color: '#e8f4ff' }}>{p.slice(2,-2)}</strong>
+      if (p.startsWith('`') && p.endsWith('`') && p.length > 2) return <code key={j} style={{ background: 'rgba(0,229,255,0.07)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '4px', padding: '1px 5px', fontSize: '12px', fontFamily: "'Space Mono',monospace", color: '#6dc8f0' }}>{p.slice(1,-1)}</code>
+      const lm = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+      if (lm) return <a key={j} href={lm[2]} target="_blank" rel="noreferrer" style={{ color: '#00e5ff', textDecoration: 'underline' }}>{lm[1]}</a>
+      return <span key={j}>{p}</span>
+    })
+
+    if (isH1) els.push(<div key={i} style={{ fontSize: '17px', fontWeight: 700, color: '#f0f8ff', margin: '14px 0 5px' }}>{styled}</div>)
+    else if (isH2) els.push(<div key={i} style={{ fontSize: '15px', fontWeight: 600, color: '#e0efff', margin: '10px 0 4px' }}>{styled}</div>)
+    else if (isH3) els.push(<div key={i} style={{ fontSize: '14px', fontWeight: 600, color: '#c8dff0', margin: '8px 0 3px' }}>{styled}</div>)
+    else if (isBullet || isNum) els.push(
+      <div key={i} style={{ display: 'flex', gap: '8px', margin: '3px 0', paddingLeft: '2px', lineHeight: '1.6' }}>
+        <span style={{ color: '#00e5ff55', flexShrink: 0, width: '10px' }}>–</span>
+        <span>{styled}</span>
+      </div>
+    )
+    else els.push(<div key={i} style={{ margin: '2px 0', lineHeight: '1.7' }}>{styled}</div>)
   }
-  return <div>{collapsed ? elements.slice(0, 8) : elements}</div>
+  return <div>{els}</div>
 }
 
-function CodeBlock({ code, lang }: { code: string; lang: string }) {
-  const [copied, setCopied] = useState(false)
+function CopyInline({ text }: { text: string }) {
+  const [ok, setOk] = useState(false)
   return (
-    <div style={{ margin:'8px 0', border:'1px solid #30363d', borderRadius:'8px', overflow:'hidden' }}>
-      <div style={{ background:'#161b22', padding:'4px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <span style={{ fontSize:'11px', color:'#8b949e', fontFamily:'monospace' }}>{lang||'code'}</span>
-        <button onClick={()=>{ navigator.clipboard?.writeText(code).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2000) }) }} style={{ background:'none', border:'1px solid #30363d', borderRadius:'4px', color:copied?'#3fb950':'#8b949e', cursor:'pointer', fontSize:'11px', padding:'2px 8px' }}>{copied?'Copied':'Copy'}</button>
-      </div>
-      <pre style={{ background:'#0d1117', padding:'12px', overflowX:'auto', fontSize:'12px', margin:0, color:'#e6edf3', fontFamily:'monospace', whiteSpace:'pre' }}>{code}</pre>
-    </div>
+    <button onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 1500) }}
+      style={{ position: 'absolute', top: '8px', right: '10px', background: ok ? 'rgba(52,211,153,0.15)' : 'rgba(0,229,255,0.07)', border: '1px solid', borderColor: ok ? '#34d39944' : 'rgba(0,229,255,0.12)', borderRadius: '5px', color: ok ? '#34d399' : '#00e5ff77', cursor: 'pointer', fontSize: '10px', padding: '3px 7px', fontFamily: 'monospace' }}>
+      {ok ? '✓' : 'copy'}
+    </button>
+  )
+}
+
+function CopyBtn({ text }: { text: string }) {
+  const [ok, setOk] = useState(false)
+  return (
+    <button onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }}
+      style={{ background: ok ? 'rgba(52,211,153,0.08)' : 'rgba(0,229,255,0.05)', border: '1px solid', borderColor: ok ? '#34d39922' : 'rgba(0,229,255,0.08)', borderRadius: '5px', color: ok ? '#34d399' : '#00e5ff66', cursor: 'pointer', fontSize: '11px', padding: '3px 8px', transition: 'all 0.15s', fontWeight: 500, fontFamily: 'inherit' }}>
+      {ok ? '✓ Copied' : 'Copy'}
+    </button>
   )
 }
 
 function ThinkBlock({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
-  const clean = text.replace(/<\/?think>/g,'').trim()
+  const clean = text.replace(/<\/?think>/g, '').trim()
   if (!clean) return null
   return (
-    <div style={{ margin:'6px 0' }}>
-      <button onClick={()=>setOpen(v=>!v)} style={{ background:'#161b22', border:'1px solid #6e40c9', borderRadius:'6px', color:'#a371f7', cursor:'pointer', fontSize:'12px', padding:'4px 10px', fontStyle:'italic' }}>
-        {open ? 'Hide reasoning' : 'Show reasoning...'}
+    <div style={{ margin: '5px 0' }}>
+      <button onClick={() => setOpen(v => !v)} style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: '6px', color: '#a78bfa88', cursor: 'pointer', fontSize: '11px', padding: '3px 9px', fontStyle: 'italic', fontFamily: 'inherit' }}>
+        {open ? '▼ Hide reasoning' : '▶ Show reasoning...'}
       </button>
-      {open && <div style={{ margin:'6px 0', padding:'10px', background:'#0d1117', border:'1px solid #6e40c944', borderRadius:'8px', color:'#8b949e', fontSize:'12px', lineHeight:'1.6', whiteSpace:'pre-wrap', maxHeight:'180px', overflowY:'auto' }}>{clean}</div>}
+      {open && <div style={{ margin: '5px 0', padding: '10px 12px', background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.1)', borderRadius: '8px', color: '#7a7a98', fontSize: '12px', lineHeight: '1.6', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto' }}>{clean}</div>}
     </div>
   )
 }
 
-function ImageMsg({ url, prompt }: { url:string; prompt:string }) {
-  const [loaded, setLoaded] = useState(false)
-  const [err, setErr] = useState(false)
+function ImageMsg({ url, prompt }: { url: string; prompt: string }) {
+  const [loaded, setLoaded] = useState(false); const [err, setErr] = useState(false)
   return (
-    <div style={{ maxWidth:'300px', margin:'6px 0' }}>
-      <div style={{ fontSize:'11px', color:'#8b949e', marginBottom:'4px' }}>{prompt.slice(0,50)}</div>
-      {!loaded&&!err&&<div style={{ width:'280px', height:'190px', background:'#161b22', border:'1px solid #30363d', borderRadius:'10px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', color:'#58a6ff', fontSize:'12px' }}><div style={{ width:'20px', height:'20px', border:'2px solid #58a6ff', borderTop:'2px solid transparent', borderRadius:'50%', animation:'spin 1s linear infinite' }}/>Generating...</div>}
-      {err && <div style={{ fontSize:'12px', color:'#f85149' }}>Load failed.</div>}
-      <img src={url} alt={prompt} onLoad={()=>setLoaded(true)} onError={()=>setErr(true)} style={{ width:'100%', borderRadius:'10px', border:'1px solid #30363d', display:loaded?'block':'none' }}/>
-      {loaded && <a href={url} target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#58a6ff', marginTop:'4px', display:'inline-block' }}>Save</a>}
+    <div style={{ maxWidth: '320px', margin: '6px 0' }}>
+      {!loaded && !err && <div style={{ width: '300px', height: '200px', background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#00e5ff77', fontSize: '13px' }}><div style={{ width: '22px', height: '22px', border: '2px solid #00e5ff', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />Generating...</div>}
+      {err && <div style={{ fontSize: '12px', color: '#f87171' }}>Image load failed.</div>}
+      <img src={url} alt={prompt} onLoad={() => setLoaded(true)} onError={() => setErr(true)} style={{ width: '100%', borderRadius: '12px', border: '1px solid rgba(0,229,255,0.08)', display: loaded ? 'block' : 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }} />
+      {loaded && <div style={{ display: 'flex', gap: '10px', marginTop: '7px' }}>
+        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#00e5ff66' }}>↓ Save</a>
+        <a href={url} download="jarvis-image.jpg" style={{ fontSize: '11px', color: '#00e5ff66' }}>↓ Download</a>
+      </div>}
     </div>
   )
 }
 
-// UPGRADE 8: Keyboard shortcuts panel
-function ShortcutsPanel({ onClose }: { onClose: ()=>void }) {
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={onClose}>
-      <div style={{ background:'#161b22', border:'1px solid #30363d', borderRadius:'12px', padding:'20px', maxWidth:'320px', width:'90%' }} onClick={e=>e.stopPropagation()}>
-        <div style={{ fontWeight:700, color:'#e6edf3', marginBottom:'14px', fontSize:'14px' }}>Keyboard Shortcuts</div>
-        {[
-          ['Enter', 'Send message'],
-          ['Shift+Enter', 'New line'],
-          ['/clear', 'Clear chat'],
-          ['/pass', 'Generate password'],
-          ['/help', 'Show commands'],
-          ['/luna', 'Open LUNA'],
-          ['/era', 'Open Era'],
-          ['/export', 'Export chat'],
-          ['/pin', 'Pin last message'],
-        ].map(([k,v])=>(
-          <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #21262d', fontSize:'12px' }}>
-            <code style={{ background:'#0d1117', border:'1px solid #30363d', borderRadius:'4px', padding:'1px 6px', color:'#79c0ff', fontFamily:'monospace' }}>{k}</code>
-            <span style={{ color:'#8b949e' }}>{v}</span>
-          </div>
-        ))}
-        <button onClick={onClose} style={{ width:'100%', marginTop:'14px', background:'#21262d', border:'1px solid #30363d', borderRadius:'8px', color:'#e6edf3', cursor:'pointer', padding:'8px', fontSize:'13px' }}>Close</button>
-      </div>
-    </div>
-  )
-}
+const MODES: Array<{ id: ChatMode; label: string; desc: string; color: string; icon: string }> = [
+  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: '⚡' },
+  { id: 'flash', label: 'Flash', desc: 'Fastest',        color: '#f87171', icon: '🔥' },
+  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: '🧠' },
+  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: '🔭' },
+]
 
-// UPGRADE 9: Chat export
-function exportChat(msgs: Msg[]) {
-  const lines = msgs.map(m => {
-    const time = new Date(m.ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })
-    const who = m.role === 'user' ? 'You' : 'JARVIS'
-    return '[' + time + '] ' + who + ': ' + m.content
-  })
-  const blob = new Blob([lines.join('\n\n')], { type:'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = 'jarvis-chat-' + Date.now() + '.txt'; a.click()
-  URL.revokeObjectURL(url)
-}
+const CMDS = [
+  { cmd: '/clear',    desc: 'Chat clear karo',      icon: '🗑️' },
+  { cmd: '/pass',     desc: 'Strong password banao', icon: '🔐' },
+  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: '🌸' },
+  { cmd: '/era',      desc: 'Era page pe jao',       icon: '💗' },
+  { cmd: '/mood',     desc: 'Mood tracker',          icon: '😊' },
+  { cmd: '/notes',    desc: 'Quick notes',           icon: '📝' },
+  { cmd: '/timer',    desc: 'Pomodoro timer',        icon: '⏱️' },
+  { cmd: '/dash',     desc: 'Dashboard',             icon: '📊' },
+  { cmd: '/calc',     desc: 'Calculator',            icon: '🔢' },
+  { cmd: '/habits',   desc: 'Habit tracker',         icon: '💪' },
+  { cmd: '/todo',     desc: 'Todo list',             icon: '✅' },
+  { cmd: '/qr',       desc: 'QR generator',          icon: '📱' },
+  { cmd: '/focus',    desc: 'Focus mode',            icon: '🎯' },
+]
 
-// UPGRADE 6: Message search
-function SearchBar({ msgs, onClose }: { msgs: Msg[]; onClose: ()=>void }) {
-  const [q, setQ] = useState('')
-  const results = q.trim().length > 1 ? msgs.filter(m => m.content.toLowerCase().includes(q.toLowerCase())) : []
-  return (
-    <div style={{ background:'#161b22', borderBottom:'1px solid #21262d', padding:'8px 14px' }}>
-      <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-        <input value={q} onChange={e=>setQ(e.target.value)} autoFocus placeholder="Search in chat..." style={{ flex:1, background:'#0d1117', border:'1px solid #30363d', borderRadius:'8px', color:'#e6edf3', padding:'7px 12px', fontSize:'13px', outline:'none' }}/>
-        <button onClick={onClose} style={{ background:'none', border:'none', color:'#8b949e', cursor:'pointer', fontSize:'13px' }}>Close</button>
-      </div>
-      {q && <div style={{ fontSize:'11px', color:'#58a6ff', marginTop:'4px' }}>{results.length} result{results.length!==1?'s':''}{results.length>0?' -- scroll up to see highlighted':''}</div>}
-    </div>
-  )
-}
-
-const MODES: Array<{id:ChatMode;label:string;desc:string;color:string}> = [
-  { id:'auto',  label:'Auto',  desc:'Smart routing', color:'#58a6ff' },
-  { id:'flash', label:'Flash', desc:'Fastest',        color:'#f78166' },
-  { id:'think', label:'Think', desc:'Reasoning',      color:'#a371f7' },
-  { id:'deep',  label:'Deep',  desc:'46 tools',       color:'#3fb950' },
+const QUICK_PROMPTS = [
+  { l: '🖼️ Image banao', m: 'image banao ' },
+  { l: '📰 Aaj ki news', m: 'aaj ki latest news kya hai?' },
+  { l: '🌤️ Rewa mausam', m: 'Rewa ka aaj ka mausam kya hai?' },
+  { l: '💻 Python code', m: 'Python mein ' },
+  { l: '🔢 Math solve', m: 'solve karo: ' },
+  { l: '📖 Summary', m: 'samjhao mujhe: ' },
+  { l: '🌍 Translate', m: 'Hindi mein translate karo: ' },
+  { l: '💡 Ideas do', m: 'creative ideas do for: ' },
 ]
 
 export default function Home() {
-  const [msgs,        setMsgs]        = useState<Msg[]>([])
-  const [inp,         setInp]         = useState('')
-  const [streaming,   setStreaming]   = useState(false)
-  const [streamText,  setStreamText]  = useState('')
+  const [msgs, setMsgs] = useState<Msg[]>([])
+  const [inp, setInp] = useState('')
+  const [streaming, setStreaming] = useState(false)
+  const [streamText, setStreamText] = useState('')
   const [streamThink, setStreamThink] = useState('')
-  const [streamProv,  setStreamProv]  = useState('')
-  const [chatMode,    setChatMode]    = useState<ChatMode>('auto')
-  const [sidebar,     setSidebar]     = useState(false)
-  const [recording,   setRecording]   = useState(false)
-  const [tts,         setTts]         = useState(false)
-  const [modeMenu,    setModeMenu]    = useState(false)
-  const [fontSize,    setFontSize]    = useState(14)
-  // UPGRADE 2: dark/light theme
-  const [dark,        setDark]        = useState(true)
-  // UPGRADE 3: language
-  const [lang,        setLang]        = useState<Lang>('hi')
-  // UPGRADE 5: scroll to bottom
-  const [showScroll,  setShowScroll]  = useState(false)
-  // UPGRADE 6: search
-  const [showSearch,  setShowSearch]  = useState(false)
-  const [searchQ,     setSearchQ_]    = useState('')
-  // UPGRADE 7: collapsed long messages
-  const [collapsed,   setCollapsed]   = useState<Set<string>>(new Set())
-  // UPGRADE 8: shortcuts panel
-  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [streamProv, setStreamProv] = useState('')
+  const [chatMode, setChatMode] = useState<ChatMode>('auto')
+  const [sidebar, setSidebar] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [tts, setTts] = useState(false)
+  const [modeMenu, setModeMenu] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [isDragging, setIsDragging] = useState(false)
+  const [cmdOpen, setCmdOpen] = useState(false)
+  const [cmdFilter, setCmdFilter] = useState('')
+  const [contextMsg, setContextMsg] = useState<string | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
-  const inpRef    = useRef<HTMLTextAreaElement>(null)
-  const chatRef   = useRef<HTMLDivElement>(null)
-  const mediaRef  = useRef<any>(null)
-  const photoRef  = useRef<HTMLInputElement>(null)
-  const abortRef  = useRef<AbortController|null>(null)
-
-  // Theme colors
-  const BG    = dark ? '#0d1117' : '#ffffff'
-  const CARD  = dark ? '#161b22' : '#f6f8fa'
-  const BORDER = dark ? '#21262d' : '#d0d7de'
-  const TEXT  = dark ? '#e6edf3' : '#1f2328'
-  const MUTED = dark ? '#8b949e' : '#57606a'
-  const USERBG = dark ? '#1f2937' : '#ddf4ff'
-  const USERBORDER = dark ? '#374151' : '#0969da44'
+  const inpRef = useRef<HTMLTextAreaElement>(null)
+  const mediaRef = useRef<any>(null)
+  const photoRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
       const s = localStorage.getItem(STORE)
-      if (s) { const p = JSON.parse(s); if (Array.isArray(p)&&p.length>0) setMsgs(p) }
-      const m = localStorage.getItem(MSTORE) as ChatMode|null
+      if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length > 0) setMsgs(p) }
+      const m = localStorage.getItem(MSTORE) as ChatMode | null
       if (m && ['auto','flash','think','deep'].includes(m)) setChatMode(m)
-      const d = localStorage.getItem(DRAFT); if (d) setInp(d)
-      const f = localStorage.getItem(FSIZE); if (f) setFontSize(parseInt(f))
-      const th = localStorage.getItem(THEME); if (th==='light') setDark(false)
-      const lg = localStorage.getItem(LANG) as Lang|null; if (lg==='en'||lg==='hi') setLang(lg)
     } catch {}
+    try { initProactiveScheduler('Rewa') } catch {}
+
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setSearchOpen(v => !v) }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setSidebar(true) }
+      if (e.key === 'Escape') { setModeMenu(false); setSearchOpen(false); setCmdOpen(false) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  useEffect(() => { try { localStorage.setItem(STORE, JSON.stringify(msgs.slice(-80))) } catch {} }, [msgs])
-  useEffect(() => { try { localStorage.setItem(DRAFT, inp) } catch {}; if (inpRef.current) { inpRef.current.style.height='auto'; inpRef.current.style.height=Math.min(inpRef.current.scrollHeight,120)+'px' } }, [inp])
+  useEffect(() => {
+    try { localStorage.setItem(STORE, JSON.stringify(msgs.slice(-80))) } catch {}
+  }, [msgs])
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }) }, [msgs, streamText])
+  useEffect(() => {
+    if (!streaming && !showScrollBtn) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [msgs, streamText])
 
-  function toggleTheme() { const nd = !dark; setDark(nd); try { localStorage.setItem(THEME, nd?'dark':'light') } catch {} }
-  function toggleLang()  { const nl: Lang = lang==='hi'?'en':'hi'; setLang(nl); try { localStorage.setItem(LANG, nl) } catch {} }
-  function changeMode(m: ChatMode) { setChatMode(m); setModeMenu(false); try { localStorage.setItem(MSTORE, m) } catch {} }
-  function changeFontSize(n: number) { setFontSize(n); try { localStorage.setItem(FSIZE, String(n)) } catch {} }
-  function clearChat() { setMsgs([]); try { localStorage.removeItem(STORE) } catch {} }
-
-  // UPGRADE 4: pin message
-  function togglePin(id: string) { setMsgs(prev => prev.map(m => m.id===id ? { ...m, pinned:!m.pinned } : m)) }
-  // UPGRADE 7: collapse/expand
-  function toggleCollapse(id: string) { setCollapsed(prev => { const s=new Set(prev); s.has(id)?s.delete(id):s.add(id); return s }) }
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inpRef.current) {
+      inpRef.current.style.height = 'auto'
+      inpRef.current.style.height = Math.min(inpRef.current.scrollHeight, 130) + 'px'
+    }
+    // Command palette
+    if (inp.startsWith('/')) {
+      const f = inp.slice(1).toLowerCase()
+      setCmdFilter(f)
+      setCmdOpen(true)
+    } else {
+      setCmdOpen(false)
+    }
+  }, [inp])
 
   function handleScroll() {
-    if (!chatRef.current) return
-    const { scrollTop, scrollHeight, clientHeight } = chatRef.current
-    setShowScroll(scrollHeight - scrollTop - clientHeight > 180)
+    if (!scrollRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+    setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 150)
+  }
+
+  function scrollToBottom() {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setShowScrollBtn(false)
+  }
+
+  function changeMode(m: ChatMode) {
+    setChatMode(m); setModeMenu(false)
+    try { localStorage.setItem(MSTORE, m) } catch {}
+  }
+
+  function clearChat() {
+    setMsgs([]); setSuggestions([])
+    try { localStorage.removeItem(STORE) } catch {}
+  }
+
+  function addReaction(msgId: string, emoji: string) {
+    setMsgs(prev => prev.map(m =>
+      m.id === msgId ? { ...m, reactions: m.reactions?.includes(emoji) ? m.reactions.filter(r => r !== emoji) : [...(m.reactions || []), emoji] } : m
+    ))
+  }
+
+  function deleteMsg(id: string) {
+    setMsgs(prev => prev.filter(m => m.id !== id))
+    setContextMsg(null)
   }
 
   async function speak(text: string) {
     if (!tts) return
-    try { const r = await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text.slice(0,300)})}); if(r.ok){const b=await r.blob();new Audio(URL.createObjectURL(b)).play()} } catch {}
+    try {
+      const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 300) }) })
+      if (r.ok) { const b = await r.blob(); new Audio(URL.createObjectURL(b)).play() }
+    } catch {}
   }
 
   async function toggleVoice() {
     if (recording) { mediaRef.current?.stop(); setRecording(false); return }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true })
-      const mr = new MediaRecorder(stream, { mimeType:'audio/webm' }); const chunks: Blob[] = []
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const chunks: Blob[] = []
       mr.ondataavailable = e => chunks.push(e.data)
       mr.onstop = async () => {
-        stream.getTracks().forEach(t=>t.stop())
-        const fd = new FormData(); fd.append('audio',new Blob(chunks,{type:'audio/webm'}),'audio.webm')
-        try { const r=await fetch('/api/stt',{method:'POST',body:fd}); const d=await r.json(); if(d.text)setInp(d.text) } catch {}
+        stream.getTracks().forEach(t => t.stop())
+        const fd = new FormData(); fd.append('audio', new Blob(chunks, { type: 'audio/webm' }), 'audio.webm')
+        try { const r = await fetch('/api/stt', { method: 'POST', body: fd }); const d = await r.json(); if (d.text) setInp(d.text) } catch {}
       }
-      mr.start(); mediaRef.current=mr; setRecording(true)
-      setTimeout(()=>{ if(mr.state==='recording')mr.stop() }, 10000)
+      mr.start(); mediaRef.current = mr; setRecording(true)
+      setTimeout(() => { if (mr.state === 'recording') mr.stop() }, 10000)
     } catch { alert('Mic permission chahiye!') }
   }
 
-  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file=e.target.files?.[0]; if(!file)return
-    const reader=new FileReader()
-    reader.onload=async()=>{
-      const nm:Msg[]=[...msgs,{id:uid(),role:'user',content:'Photo sent',ts:Date.now()}]
-      setMsgs(nm); setStreaming(true); setStreamProv('Gemini Vision'); const t0=Date.now()
+  async function handleImageFile(file: File) {
+    const question = inp.trim() || 'Is image mein kya dikh raha hai? Hinglish mein batao.'
+    const userLabel = inp.trim() || 'Photo sent for analysis'
+    if (inp.trim()) setInp('')
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const newMsgs: Msg[] = [...msgs, { id: uid(), role: 'user', content: userLabel, ts: Date.now() }]
+      setMsgs(newMsgs); setStreaming(true); setStreamText(''); setStreamProv('Gemini Vision')
       try {
-        const r=await fetch('/api/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:reader.result})})
-        const d=await r.json(); const rep=d.answer||'Could not analyse'
-        setMsgs([...nm,{id:uid(),role:'assistant',content:rep,provider:'Gemini Vision',ts:Date.now(),ms:Date.now()-t0,wordCount:wordCount(rep)}]); speak(rep)
-      } catch { setMsgs([...nm,{id:uid(),role:'assistant',content:'Photo analyse nahi ho payi.',ts:Date.now(),error:true}]) }
+        const r = await fetch('/api/photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: reader.result, question }) })
+        const d = await r.json()
+        const rep = d.answer || 'Could not analyse'
+        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: rep, provider: 'Gemini Vision', ts: Date.now() }])
+        speak(rep)
+      } catch {
+        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: 'Photo analyse nahi ho payi.', ts: Date.now() }])
+      }
       setStreaming(false); setStreamText(''); setStreamProv('')
     }
-    reader.readAsDataURL(file); e.target.value=''
+    reader.readAsDataURL(file)
   }
 
-  async function retryMsg(msgId: string) {
-    const idx=msgs.findIndex(m=>m.id===msgId); if(idx<1)return
-    const userMsg=msgs[idx-1]; if(!userMsg||userMsg.role!=='user')return
-    const trimmed=msgs.slice(0,idx); setMsgs(trimmed)
-    await doSend(userMsg.content, trimmed)
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await handleImageFile(file)
+    e.target.value = ''
   }
 
-  async function doSend(text: string, history: Msg[]) {
-    const t0=Date.now()
-    const userMsg: Msg = { id:uid(), role:'user', content:text, ts:Date.now(), wordCount:wordCount(text) }
-    const newMsgs=[...history,userMsg]; setMsgs(newMsgs)
-
-    if (/image banao|photo banao|generate image|draw|wallpaper/i.test(text)) {
-      const prompt=text.replace(/image banao|photo banao|generate image|draw|wallpaper/gi,'').trim()||text
-      const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?model=flux&width=1024&height=1024&seed='+Math.floor(Math.random()*999999)+'&nologo=true'
-      setMsgs([...newMsgs,{id:uid(),role:'assistant',content:prompt,imageUrl:url,provider:'Pollinations FLUX',ts:Date.now()}]); return
+  // Clipboard paste (Ctrl+V image)
+  function handlePaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (file) handleImageFile(file)
+        return
+      }
     }
-    if (/video banao|clip banao/i.test(text)) {
-      setMsgs([...newMsgs,{id:uid(),role:'assistant',content:'Video generating...',videoUrl:'https://video.pollinations.ai/'+encodeURIComponent(text),provider:'Pollinations',ts:Date.now()}]); return
+  }
+
+  // Drag & drop
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault(); setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) handleImageFile(file)
+  }
+
+  const send = useCallback(async (override?: string) => {
+    const text = (override ?? inp).trim()
+    if (!text || streaming) return
+    setInp(''); setSuggestions([])
+
+    const t = text.toLowerCase()
+    if (t === '/clear') { clearChat(); return }
+    if (t === '/pass' || t === '/password') {
+      const p = genPass()
+      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `🔐 **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
+      return
+    }
+    const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus' }
+    if (PAGE_CMDS[t]) { window.location.href = PAGE_CMDS[t]; return }
+
+    const userMsg: Msg = { id: uid(), role: 'user', content: text, ts: Date.now() }
+    const newMsgs = [...msgs, userMsg]
+    setMsgs(newMsgs)
+
+    if (/image banao|photo banao|generate image|draw|wallpaper|sketch|create image/i.test(t)) {
+      const prompt = text.replace(/image banao|photo banao|generate image|draw|wallpaper|sketch|create image/gi, '').trim() || text
+      const seed = Math.floor(Math.random() * 999999)
+      const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?model=flux&width=1024&height=1024&seed=' + seed + '&nologo=true'
+      setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: prompt, imageUrl: url, provider: 'Pollinations FLUX', ts: Date.now() }])
+      return
+    }
+
+    if (/video banao|clip banao/i.test(t)) {
+      const prompt = text.replace(/video banao|clip banao/gi, '').trim() || text
+      setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: 'Video generating...', videoUrl: 'https://video.pollinations.ai/' + encodeURIComponent(prompt), provider: 'Pollinations Video', ts: Date.now() }])
+      return
     }
 
     setStreaming(true); setStreamText(''); setStreamThink(''); setStreamProv('Connecting...')
-    abortRef.current=new AbortController()
-    let full='', think='', prov=''
+    abortRef.current = new AbortController()
+    let full = '', think = '', prov = ''
+
     try {
-      const res=await fetch('/api/stream',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ message:text, history:newMsgs.slice(-8).map(x=>({role:x.role==='user'?'user':'assistant',content:x.content})), chatMode, userName:'Pranshu' }),
-        signal:abortRef.current.signal,
+      const res = await fetch('/api/stream', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, userName: 'Pranshu' }),
+        signal: abortRef.current.signal,
       })
-      if(!res.ok||!res.body)throw new Error('Stream failed')
-      const reader=res.body.getReader(); const dec=new TextDecoder(); let buf=''
-      while(true){
-        const{done,value}=await reader.read(); if(done)break
-        buf+=dec.decode(value,{stream:true})
-        const lines=buf.split('\n'); buf=lines.pop()||''
-        for(const line of lines){
-          if(!line.startsWith('data: '))continue
-          const raw=line.slice(6).trim(); if(!raw||raw==='[DONE]')continue
-          try{ const ev=JSON.parse(raw); if(ev.type==='start'){prov=ev.provider||'';setStreamProv(prov)} else if(ev.type==='token'){full+=ev.text;setStreamText(full)} else if(ev.type==='think'){think+=ev.text;setStreamThink(think)} }catch{}
+      if (!res.ok || !res.body) throw new Error('Stream failed')
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break
+        buf += dec.decode(value, { stream: true })
+        const lines = buf.split('\n'); buf = lines.pop() || ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim(); if (!raw || raw === '[DONE]') continue
+          try {
+            const ev = JSON.parse(raw)
+            if (ev.type === 'start') { prov = ev.provider || ''; setStreamProv(prov) }
+            else if (ev.type === 'token') { full += ev.text; setStreamText(full) }
+            else if (ev.type === 'think') { think += ev.text; setStreamThink(think) }
+          } catch {}
         }
       }
-      const elapsed=Date.now()-t0
-      const wc=wordCount(full)
-      const fin: Msg={id:uid(),role:'assistant',content:full||'No response',thinking:think.replace(/<\/?think>/g,'').trim()||undefined,provider:prov||undefined,ts:Date.now(),ms:elapsed,wordCount:wc}
-      setMsgs([...newMsgs,fin]); speak(full)
-    } catch(err:any){
-      if(err?.name!=='AbortError') setMsgs([...newMsgs,{id:uid(),role:'assistant',content:'Network issue - retry karo!',ts:Date.now(),error:true}])
-    } finally { setStreaming(false); setStreamText(''); setStreamThink(''); setStreamProv('') }
-  }
-
-  const send=useCallback(async(override?: string)=>{
-    const text=(override??inp).trim(); if(!text||streaming)return
-    setInp('')
-    if(text==='/clear'){clearChat();return}
-    if(text==='/export'){exportChat(msgs);return}
-    if(text==='/shortcuts'||text==='/keys'){setShowShortcuts(true);return}
-    if(text==='/search'){setShowSearch(v=>!v);return}
-    if(text==='/pin'){ const last=msgs.filter(m=>m.role==='assistant').slice(-1)[0]; if(last)togglePin(last.id); return }
-    if(text==='/help'){
-      setMsgs(m=>[...m,{id:uid(),role:'user',content:'/help',ts:Date.now()},{id:uid(),role:'assistant',content:'**Commands:**\n/clear - Chat clear\n/pass - Password banao\n/export - Chat download karo\n/search - Chat mein dhundo\n/pin - Last AI message pin karo\n/shortcuts - Keyboard shortcuts\n/luna - LUNA\n/era - Era\n\nMode: Auto Flash Think Deep',ts:Date.now()}])
-      return
+      const finalMsg: Msg = { id: uid(), role: 'assistant', content: full || 'No response', thinking: think.replace(/<\/?think>/g, '').trim() || undefined, provider: prov || undefined, ts: Date.now() }
+      setMsgs([...newMsgs, finalMsg])
+      speak(full)
+      awardXP('chat_message')
+      // Generate follow-up suggestions
+      setSuggestions(getSuggestions(full))
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: '⚠️ Network issue — retry karo!', ts: Date.now() }])
+      }
+    } finally {
+      setStreaming(false); setStreamText(''); setStreamThink(''); setStreamProv('')
     }
-    if(text==='/pass'||text==='/password'){
-      const p=genPass()
-      setMsgs(m=>[...m,{id:uid(),role:'user',content:text,ts:Date.now()},{id:uid(),role:'assistant',content:'Password: '+p+'\n\nStrong 16-char. Copy karo!',ts:Date.now()}])
-      return
-    }
-    if(text==='/luna'){window.location.href='/luna';return}
-    if(text==='/era'){window.location.href='/era';return}
-    await doSend(text, msgs)
-  },[inp,streaming,msgs,chatMode,tts])
+  }, [inp, streaming, msgs, chatMode, tts])
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+    if (e.key === 'Escape') { setCmdOpen(false) }
   }
 
-  // UPGRADE 10: share message
-  async function shareMsg(content: string) {
-    if (navigator.share) {
-      try { await navigator.share({ title:'JARVIS', text:content }) } catch {}
-    } else {
-      navigator.clipboard?.writeText(content)
-    }
+  function selectCmd(cmd: string) {
+    setInp(cmd + ' '); setCmdOpen(false)
+    setTimeout(() => { inpRef.current?.focus() }, 50)
   }
 
-  const curMode=MODES.find(m=>m.id===chatMode)||MODES[0]
-  const pinnedMsgs=msgs.filter(m=>m.pinned)
-  const searchResults=searchQ.trim().length>1 ? msgs.filter(m=>m.content.toLowerCase().includes(searchQ.toLowerCase())) : []
+  const curMode = MODES.find(m => m.id === chatMode) || MODES[0]
+  const filteredCmds = CMDS.filter(c => c.cmd.slice(1).includes(cmdFilter) || c.desc.toLowerCase().includes(cmdFilter))
+  const displayMsgs = search.trim() ? msgs.filter(m => m.content.toLowerCase().includes(search.toLowerCase())) : msgs
+
+  // Group messages by date + consecutive sender
+  function renderMessages() {
+    const els: React.ReactNode[] = []
+    let lastDate = ''
+    let lastRole = ''
+
+    displayMsgs.forEach((msg, idx) => {
+      const msgDate = dateLabel(msg.ts)
+      if (msgDate !== lastDate) {
+        els.push(
+          <div key={'d-' + idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', margin: '4px 0' }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+            <span style={{ fontSize: '11px', color: '#1e3248', fontWeight: 600, letterSpacing: '0.5px', padding: '3px 10px', background: 'rgba(0,229,255,0.03)', borderRadius: '10px', border: '1px solid rgba(0,229,255,0.05)' }}>{msgDate}</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+          </div>
+        )
+        lastDate = msgDate
+      }
+
+      const isGrouped = lastRole === msg.role && msg.role === 'user'
+      lastRole = msg.role
+
+      const isContextOpen = contextMsg === msg.id
+
+      if (msg.role === 'user') {
+        els.push(
+          <div key={msg.id} style={{ padding: '2px 14px', animation: 'fadeUp 0.15s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ maxWidth: '82%', position: 'relative' }}>
+                {isContextOpen && (
+                  <div style={{ position: 'absolute', top: '0', right: '110%', background: 'rgba(8,13,24,0.98)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '10px', padding: '4px', zIndex: 20, display: 'flex', gap: '4px', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
+                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>📋 Copy</button>
+                    <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>✏️ Edit</button>
+                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>🗑️</button>
+                  </div>
+                )}
+                <div onContextMenu={e => { e.preventDefault(); setContextMsg(isContextOpen ? null : msg.id) }}
+                  style={{ background: 'linear-gradient(135deg, rgba(0,80,180,0.2), rgba(0,119,255,0.15))', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '16px 16px 3px 16px', padding: '9px 14px', fontSize: '14px', color: '#ddeeff', lineHeight: '1.65', cursor: 'default', wordBreak: 'break-word' }}>
+                  {msg.content}
+                </div>
+                <div style={{ fontSize: '10px', color: '#1e3248', textAlign: 'right', marginTop: '3px', paddingRight: '2px' }}>{timeStr(msg.ts)}</div>
+              </div>
+            </div>
+          </div>
+        )
+      } else {
+        els.push(
+          <div key={msg.id} style={{ padding: '5px 14px', animation: 'fadeUp 0.15s ease' }}>
+            <div style={{ display: 'flex', gap: '9px', maxWidth: '820px', margin: '0 auto' }}>
+              <div style={{ width: '26px', height: '26px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900, color: '#000', flexShrink: 0, marginTop: '2px', boxShadow: '0 2px 8px rgba(0,229,255,0.2)' }}>J</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {msg.thinking && <ThinkBlock text={msg.thinking} />}
+                {msg.imageUrl && <ImageMsg url={msg.imageUrl} prompt={msg.content} />}
+                {msg.videoUrl && (
+                  <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.12)', borderRadius: '10px', padding: '12px', maxWidth: '280px' }}>
+                    <div style={{ fontSize: '13px', marginBottom: '8px', color: '#6a6a88' }}>{msg.content}</div>
+                    <a href={msg.videoUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '6px', padding: '6px 12px', color: '#a78bfa', textDecoration: 'none', fontSize: '12px' }}>▶ Watch Video</a>
+                  </div>
+                )}
+                {!msg.imageUrl && !msg.videoUrl && (
+                  <div style={{ fontSize: '14px', color: '#c4dff0', lineHeight: '1.75' }}>
+                    <MdText text={msg.content} />
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '7px', flexWrap: 'wrap' }}>
+                  {!msg.imageUrl && !msg.videoUrl && <CopyBtn text={msg.content} />}
+                  {tts && !msg.imageUrl && (
+                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>🔊</button>
+                  )}
+                  {['👍','❤️','😂','💯'].map(em => (
+                    <button key={em} onClick={() => addReaction(msg.id, em)}
+                      style={{ background: msg.reactions?.includes(em) ? 'rgba(255,255,255,0.1)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', borderRadius: '5px', opacity: msg.reactions?.includes(em) ? 1 : 0.25, transition: 'all 0.12s' }}>
+                      {em}
+                    </button>
+                  ))}
+                  {msg.provider && <span style={{ fontSize: '10px', color: '#1e3248', marginLeft: 'auto' }}>{msg.provider}</span>}
+                  <span style={{ fontSize: '10px', color: '#0e2030' }}>{timeStr(msg.ts)}</span>
+                </div>
+                {msg.reactions && msg.reactions.length > 0 && (
+                  <div style={{ marginTop: '5px', fontSize: '14px', letterSpacing: '2px' }}>{msg.reactions.join('')}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
+    })
+    return els
+  }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:BG, color:TEXT, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif', display:'flex', flexDirection:'column' }}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: '#080d18', color: '#ddeeff', fontFamily: "'Inter','Noto Sans Devanagari',sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDrop}
+    >
       <style>{`
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-        *{box-sizing:border-box}
-        ::-webkit-scrollbar{width:4px}
-        ::-webkit-scrollbar-thumb{background:${dark?'#30363d':'#d0d7de'};border-radius:2px}
-        textarea{resize:none}
-        textarea::placeholder{color:${MUTED}44}
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(5px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes slideDown { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes recording { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0)} 50%{box-shadow:0 0 0 6px rgba(248,113,113,0.15)} }
+        * { box-sizing: border-box }
+        ::-webkit-scrollbar { width: 3px }
+        ::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.15); border-radius: 3px }
+        textarea { resize: none; }
+        textarea::placeholder { color: #1a3048; }
+        .tool-btn:hover { background: rgba(0,229,255,0.1) !important; color: #00e5ff !important; }
+        .send-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+        .send-btn:active { transform: scale(0.97); }
+        .mode-opt:hover { background: rgba(255,255,255,0.04) !important; }
+        .cmd-opt:hover { background: rgba(0,229,255,0.06) !important; }
+        .quick-btn:hover { border-color: rgba(0,229,255,0.25) !important; background: rgba(0,229,255,0.05) !important; }
+        .suggest-btn:hover { background: rgba(0,229,255,0.12) !important; border-color: rgba(0,229,255,0.3) !important; }
       `}</style>
 
-      <Sidebar isOpen={sidebar} onClose={()=>setSidebar(false)}/>
-      {showShortcuts && <ShortcutsPanel onClose={()=>setShowShortcuts(false)}/>}
+      {/* Drag overlay */}
+      {isDragging && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,229,255,0.06)', border: '2px dashed rgba(0,229,255,0.3)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{ fontSize: '18px', color: '#00e5ff88', fontWeight: 700, textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🖼️</div>
+            Drop image here to analyze
+          </div>
+        </div>
+      )}
 
-      {/* HEADER */}
-      <header style={{ flexShrink:0, height:'50px', background:CARD, borderBottom:'1px solid '+BORDER, display:'flex', alignItems:'center', padding:'0 12px', gap:'8px', zIndex:10 }}>
-        <button onClick={()=>setSidebar(true)} style={{ background:'none', border:'none', color:MUTED, cursor:'pointer', padding:'5px', borderRadius:'6px', fontSize:'18px' }}>{String.fromCharCode(9776)}</button>
-        <div style={{ width:'26px', height:'26px', background:'linear-gradient(135deg,#58a6ff,#a371f7)', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:800, color:'#0d1117', flexShrink:0 }}>J</div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:'13px', fontWeight:700, color:TEXT }}>JARVIS</div>
-          <div style={{ fontSize:'9px', color:MUTED }}>v10.49</div>
+      <Sidebar isOpen={sidebar} onClose={() => setSidebar(false)} />
+
+      {/* Header */}
+      <header style={{ flexShrink: 0, height: '52px', background: 'rgba(6,10,18,0.97)', borderBottom: '1px solid rgba(0,229,255,0.07)', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '10px', zIndex: 10, backdropFilter: 'blur(16px)' }}>
+        <button onClick={() => setSidebar(true)} style={{ background: 'none', border: 'none', color: '#2a5070', cursor: 'pointer', padding: '6px', borderRadius: '8px', fontSize: '18px', lineHeight: 1, fontFamily: 'inherit' }}>☰</button>
+
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v11</div>
+          </div>
         </div>
-        {/* Font size */}
-        <div style={{ display:'flex', gap:'2px' }}>
-          {[12,14,16].map(n=>(
-            <button key={n} onClick={()=>changeFontSize(n)} style={{ background:fontSize===n?CARD:'none', border:'1px solid', borderColor:fontSize===n?'#58a6ff':'transparent', borderRadius:'4px', color:fontSize===n?'#58a6ff':MUTED, cursor:'pointer', padding:'2px 5px', fontSize:'10px', fontWeight:700 }}>
-              {n===12?'S':n===14?'M':'L'}
-            </button>
-          ))}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <button onClick={() => setSearchOpen(v => !v)} className="tool-btn"
+            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">🔍</button>
+          <button onClick={() => setTts(v => !v)} className="tool-btn"
+            style={{ background: tts ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: tts ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: tts ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.12s' }}>TTS</button>
+          <button onClick={clearChat} className="tool-btn"
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
         </div>
-        {/* UPGRADE 3: Lang toggle */}
-        <button onClick={toggleLang} style={{ background:'none', border:'1px solid '+BORDER, borderRadius:'6px', color:MUTED, cursor:'pointer', padding:'3px 7px', fontSize:'11px', fontWeight:700 }}>{lang.toUpperCase()}</button>
-        {/* UPGRADE 2: Theme toggle */}
-        <button onClick={toggleTheme} style={{ background:'none', border:'1px solid '+BORDER, borderRadius:'6px', color:MUTED, cursor:'pointer', padding:'3px 7px', fontSize:'11px' }}>{dark?'Day':'Dark'}</button>
-        <button onClick={()=>setTts(v=>!v)} style={{ background:tts?'#1f293788':'none', border:'1px solid', borderColor:tts?'#58a6ff':'transparent', borderRadius:'6px', color:tts?'#58a6ff':MUTED, cursor:'pointer', padding:'3px 7px', fontSize:'11px' }}>TTS</button>
-        <button onClick={clearChat} style={{ background:'none', border:'1px solid '+BORDER, borderRadius:'6px', color:MUTED, cursor:'pointer', padding:'3px 7px', fontSize:'11px' }}>{T[lang].clear}</button>
       </header>
 
-      {/* UPGRADE 4: Pinned bar */}
-      {pinnedMsgs.length > 0 && (
-        <div style={{ flexShrink:0, background:dark?'#1c2128':'#fff8c5', borderBottom:'1px solid '+BORDER, padding:'6px 14px', display:'flex', gap:'8px', alignItems:'center', overflowX:'auto' }}>
-          <span style={{ fontSize:'11px', color:'#f78166', fontWeight:700, flexShrink:0 }}>Pinned:</span>
-          {pinnedMsgs.map(m=>(
-            <span key={m.id} style={{ fontSize:'11px', color:TEXT, background:CARD, border:'1px solid '+BORDER, borderRadius:'6px', padding:'2px 8px', whiteSpace:'nowrap', maxWidth:'180px', overflow:'hidden', textOverflow:'ellipsis' }}>{m.content.slice(0,40)}</span>
-          ))}
+      {/* Search bar */}
+      {searchOpen && (
+        <div style={{ flexShrink: 0, padding: '7px 12px', background: 'rgba(6,10,18,0.95)', borderBottom: '1px solid rgba(0,229,255,0.06)', animation: 'slideDown 0.12s ease' }}>
+          <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Messages mein search karo..."
+            style={{ background: 'rgba(0,229,255,0.04)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '8px', color: '#ddeeff', padding: '7px 12px', fontSize: '13px', width: '100%', outline: 'none', fontFamily: 'inherit' }} />
+          {search && <div style={{ fontSize: '10px', color: '#1e3248', marginTop: '3px' }}>{displayMsgs.length} result{displayMsgs.length !== 1 ? 's' : ''}</div>}
         </div>
       )}
 
-      {/* UPGRADE 6: Search bar */}
-      {showSearch && (
-        <div style={{ flexShrink:0, background:CARD, borderBottom:'1px solid '+BORDER, padding:'8px 14px' }}>
-          <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-            <input value={searchQ} onChange={e=>setSearchQ_(e.target.value)} autoFocus placeholder="Search in chat..." style={{ flex:1, background:BG, border:'1px solid '+BORDER, borderRadius:'8px', color:TEXT, padding:'7px 12px', fontSize:'13px', outline:'none' }}/>
-            <button onClick={()=>{ setShowSearch(false); setSearchQ_('') }} style={{ background:'none', border:'none', color:MUTED, cursor:'pointer', fontSize:'13px' }}>Close</button>
-          </div>
-          {searchQ && <div style={{ fontSize:'11px', color:'#58a6ff', marginTop:'4px' }}>{searchResults.length} result{searchResults.length!==1?'s':''}</div>}
-        </div>
-      )}
-
-      {/* MESSAGES */}
-      <div ref={chatRef} onScroll={handleScroll} style={{ flex:1, overflowY:'auto', padding:'10px 0' }}>
-        {msgs.length===0 && !streaming && (
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:'18px', padding:'20px' }}>
-            <div style={{ width:'58px', height:'58px', background:'linear-gradient(135deg,#58a6ff,#a371f7)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px', fontWeight:800, color:'#0d1117' }}>J</div>
-            <div style={{ textAlign:'center' }}>
-              {/* UPGRADE 1: time-based greeting */}
-              <div style={{ fontSize:'19px', fontWeight:700, color:TEXT, marginBottom:'5px' }}>{getGreeting('Pranshu')}</div>
-              <div style={{ fontSize:'13px', color:MUTED }}>JARVIS ready hai. Kya karna hai aaj?</div>
+      {/* Messages */}
+      <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '8px 0 4px', scrollBehavior: 'smooth' }}>
+        {msgs.length === 0 && !streaming ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '20px', animation: 'fadeUp 0.3s ease' }}>
+            <div style={{ position: 'relative', width: '76px', height: '76px' }}>
+              <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', border: '1px solid rgba(0,229,255,0.1)', animation: 'recording 3s ease-in-out infinite' }} />
+              <div style={{ width: '76px', height: '76px', background: 'linear-gradient(135deg, #002fa3, #00e5ff)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 900, color: '#000', boxShadow: '0 0 30px rgba(0,229,255,0.25)' }}>J</div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', maxWidth:'310px', width:'100%' }}>
-              {[
-                { l:'Image banao', m:'image banao ' },
-                { l:'Aaj ki news', m:'aaj ki news kya hai' },
-                { l:'Rewa mausam', m:'Rewa ka mausam batao' },
-                { l:'Code likhna', m:'Python mein ' },
-              ].map(q=>(
-                <button key={q.l} onClick={()=>{ if(q.m.endsWith(' '))setInp(q.m); else send(q.m) }} style={{ background:CARD, border:'1px solid '+BORDER, borderRadius:'10px', color:TEXT, cursor:'pointer', padding:'11px', fontSize:'13px', textAlign:'left' }}>{q.l}</button>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>Namaste Pranshu 👋</div>
+              <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai • Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', maxWidth: '340px', width: '100%' }}>
+              {QUICK_PROMPTS.slice(0, 6).map(q => (
+                <button key={q.l} className="quick-btn" onClick={() => { if (q.m.endsWith(' ') || q.m === '') setInp(q.m); else send(q.m) }}
+                  style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '10px', color: '#4a7090', cursor: 'pointer', padding: '10px 12px', fontSize: '12px', textAlign: 'left', transition: 'all 0.12s', fontFamily: 'inherit' }}>
+                  {q.l}
+                </button>
               ))}
             </div>
-            <div style={{ fontSize:'11px', color:MUTED }}>Type /help or /shortcuts for more</div>
+            <div style={{ fontSize: '10px', color: '#0e2030', textAlign: 'center' }}>Ctrl+K sidebar · Ctrl+F search · Paste image · Drag & drop</div>
           </div>
+        ) : (
+          renderMessages()
         )}
 
-        {msgs.map((msg) => {
-          const isCollapsed = collapsed.has(msg.id)
-          const isLong = msg.content.split('\n').length > 10 || msg.content.length > 600
-          const highlight = searchQ.trim().length>1 && msg.content.toLowerCase().includes(searchQ.toLowerCase())
-          return (
-            <div key={msg.id} style={{ padding:'3px 0', animation:'fadeIn 0.18s ease', outline: highlight?'2px solid #f7816644':'none', borderRadius:highlight?'6px':'0' }}>
-              {msg.role==='user' ? (
-                <div style={{ display:'flex', justifyContent:'flex-end', padding:'3px 14px' }}>
-                  <div style={{ maxWidth:'82%' }}>
-                    <div style={{ background:USERBG, border:'1px solid '+USERBORDER, borderRadius:'18px 18px 4px 18px', padding:'10px 14px', fontSize:fontSize+'px', color:TEXT, lineHeight:'1.6', wordBreak:'break-word' }}>
-                      {msg.content}
-                    </div>
-                    <div style={{ textAlign:'right', marginTop:'2px', display:'flex', gap:'6px', justifyContent:'flex-end', alignItems:'center' }}>
-                      {/* UPGRADE 11: word count */}
-                      {msg.wordCount && msg.wordCount > 5 && <span style={{ fontSize:'10px', color:MUTED }}>{msg.wordCount}w</span>}
-                      <span style={{ fontSize:'10px', color:MUTED }}>{new Date(msg.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding:'5px 14px' }}>
-                  <div style={{ display:'flex', gap:'8px', maxWidth:'780px', margin:'0 auto' }}>
-                    <div style={{ width:'26px', height:'26px', background:msg.error?'#f8514922':'linear-gradient(135deg,#58a6ff,#a371f7)', border:msg.error?'1px solid #f85149':'none', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:800, color:msg.error?'#f85149':'#0d1117', flexShrink:0, marginTop:'2px' }}>J</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      {/* UPGRADE 4: pin indicator */}
-                      {msg.pinned && <div style={{ fontSize:'10px', color:'#f78166', marginBottom:'3px' }}>Pinned</div>}
-                      {msg.thinking && <ThinkBlock text={msg.thinking}/>}
-                      {msg.imageUrl && <ImageMsg url={msg.imageUrl} prompt={msg.content}/>}
-                      {msg.videoUrl && (
-                        <div style={{ background:CARD, border:'1px solid '+BORDER, borderRadius:'10px', padding:'12px', maxWidth:'260px' }}>
-                          <div style={{ fontSize:'13px', marginBottom:'8px', color:MUTED }}>{msg.content}</div>
-                          <a href={msg.videoUrl} target="_blank" rel="noreferrer" style={{ display:'inline-block', background:'#6e40c922', border:'1px solid #a371f7', borderRadius:'6px', padding:'5px 10px', color:'#a371f7', textDecoration:'none', fontSize:'12px' }}>Watch</a>
-                        </div>
-                      )}
-                      {!msg.imageUrl && !msg.videoUrl && (
-                        <div style={{ fontSize:fontSize+'px', color:msg.error?'#f85149':TEXT, lineHeight:'1.7', wordBreak:'break-word' }}>
-                          {/* UPGRADE 7: collapse long messages */}
-                          <MdText text={msg.content} fontSize={fontSize} collapsed={isLong && isCollapsed}/>
-                          {isLong && (
-                            <button onClick={()=>toggleCollapse(msg.id)} style={{ background:'none', border:'none', color:'#58a6ff', cursor:'pointer', fontSize:'12px', padding:'2px 0', marginTop:'2px' }}>
-                              {isCollapsed ? 'Show more...' : 'Show less'}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {/* Action bar */}
-                      <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'5px', flexWrap:'wrap' }}>
-                        {!msg.imageUrl&&!msg.videoUrl && (
-                          <button onClick={()=>{ navigator.clipboard?.writeText(msg.content) }} style={{ background:'none', border:'1px solid '+BORDER, borderRadius:'5px', color:MUTED, cursor:'pointer', fontSize:'11px', padding:'2px 7px' }}>{T[lang].copy}</button>
-                        )}
-                        {/* UPGRADE 4: pin */}
-                        <button onClick={()=>togglePin(msg.id)} style={{ background:msg.pinned?'#f7816622':'none', border:'1px solid', borderColor:msg.pinned?'#f78166':BORDER, borderRadius:'5px', color:msg.pinned?'#f78166':MUTED, cursor:'pointer', fontSize:'11px', padding:'2px 7px' }}>{msg.pinned?T[lang].unpin:T[lang].pin}</button>
-                        {/* UPGRADE 10: share */}
-                        <button onClick={()=>shareMsg(msg.content)} style={{ background:'none', border:'1px solid '+BORDER, borderRadius:'5px', color:MUTED, cursor:'pointer', fontSize:'11px', padding:'2px 7px' }}>Share</button>
-                        {/* UPGRADE 5: retry on error */}
-                        {msg.error && <button onClick={()=>retryMsg(msg.id)} style={{ background:'#f8514922', border:'1px solid #f85149', borderRadius:'5px', color:'#f85149', cursor:'pointer', fontSize:'11px', padding:'2px 7px' }}>{T[lang].retry}</button>}
-                        {msg.provider && <span style={{ fontSize:'10px', color:MUTED }}>{msg.provider}</span>}
-                        {/* UPGRADE 11: response time + word count */}
-                        {msg.ms && <span style={{ fontSize:'10px', color:MUTED }}>{msg.ms}ms</span>}
-                        {msg.wordCount && <span style={{ fontSize:'10px', color:MUTED }}>{msg.wordCount}w</span>}
-                        <span style={{ fontSize:'10px', color:MUTED }}>{new Date(msg.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
-                        {tts && !msg.imageUrl && <button onClick={()=>speak(msg.content)} style={{ background:'none', border:'none', color:MUTED, cursor:'pointer', fontSize:'11px' }}>Listen</button>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
-
+        {/* Streaming indicator */}
         {streaming && (
-          <div style={{ padding:'5px 14px', animation:'fadeIn 0.18s ease' }}>
-            <div style={{ display:'flex', gap:'8px', maxWidth:'780px', margin:'0 auto' }}>
-              <div style={{ width:'26px', height:'26px', background:'linear-gradient(135deg,#58a6ff,#a371f7)', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:800, color:'#0d1117', flexShrink:0, marginTop:'2px' }}>J</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                {streamThink && <ThinkBlock text={streamThink}/>}
-                <div style={{ fontSize:fontSize+'px', color:TEXT, lineHeight:'1.7' }}>
-                  {streamText
-                    ? <><MdText text={streamText} fontSize={fontSize}/><span style={{ display:'inline-block', width:'2px', height:'14px', background:'#58a6ff', marginLeft:'2px', animation:'blink 1s infinite', verticalAlign:'middle' }}/></>
-                    : <span style={{ color:curMode.color, fontSize:'13px' }}>{streamProv||T[lang].thinking}</span>
-                  }
+          <div style={{ padding: '5px 14px', animation: 'fadeUp 0.15s ease' }}>
+            <div style={{ display: 'flex', gap: '9px', maxWidth: '820px', margin: '0 auto' }}>
+              <div style={{ width: '26px', height: '26px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900, color: '#000', flexShrink: 0, marginTop: '2px' }}>J</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {streamThink && <ThinkBlock text={streamThink} />}
+                <div style={{ fontSize: '14px', color: '#c4dff0', lineHeight: '1.75' }}>
+                  {streamText ? (
+                    <><MdText text={streamText} /><span style={{ display: 'inline-block', width: '2px', height: '13px', background: '#00e5ff', marginLeft: '2px', animation: 'blink 0.7s infinite', verticalAlign: 'middle' }} /></>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0' }}>
+                      {[0,1,2].map(i => <div key={i} style={{ width: '5px', height: '5px', borderRadius: '50%', background: curMode.color, animation: `blink 1.3s infinite ${i * 0.22}s` }} />)}
+                      <span style={{ fontSize: '12px', color: '#1a3048' }}>{streamProv || curMode.icon + ' ' + curMode.label}...</span>
+                    </div>
+                  )}
                 </div>
-                {streamProv&&streamText&&<div style={{ fontSize:'10px', color:MUTED, marginTop:'3px' }}>{streamProv}</div>}
+                {streamProv && streamText && <div style={{ fontSize: '10px', color: '#0e2030', marginTop: '4px' }}>{streamProv}</div>}
               </div>
             </div>
           </div>
         )}
-        <div ref={bottomRef}/>
+
+        {/* Follow-up suggestions */}
+        {!streaming && suggestions.length > 0 && msgs.length > 0 && (
+          <div style={{ padding: '6px 14px 2px', animation: 'fadeUp 0.2s ease' }}>
+            <div style={{ maxWidth: '820px', margin: '0 auto', paddingLeft: '35px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {suggestions.map(s => (
+                  <button key={s} className="suggest-btn" onClick={() => { send(s); setSuggestions([]) }}
+                    style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '20px', color: '#00e5ff88', cursor: 'pointer', fontSize: '12px', padding: '5px 12px', transition: 'all 0.12s', fontFamily: 'inherit' }}>
+                    {s}
+                  </button>
+                ))}
+                <button onClick={() => setSuggestions([])} style={{ background: 'none', border: 'none', color: '#1e3248', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', padding: '5px' }}>×</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={bottomRef} style={{ height: '4px' }} />
       </div>
 
-      {/* UPGRADE 5: scroll to bottom */}
-      {showScroll && (
-        <button onClick={()=>bottomRef.current?.scrollIntoView({behavior:'smooth'})} style={{ position:'fixed', bottom:'130px', right:'14px', background:CARD, border:'1px solid '+BORDER, borderRadius:'50%', width:'34px', height:'34px', color:MUTED, cursor:'pointer', fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(0,0,0,0.3)', zIndex:30 }}>v</button>
+      {/* Scroll to bottom */}
+      {showScrollBtn && (
+        <button onClick={scrollToBottom}
+          style={{ position: 'absolute', bottom: '90px', right: '16px', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e5ff', cursor: 'pointer', fontSize: '16px', zIndex: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+          ↓
+        </button>
       )}
 
-      {/* INPUT */}
-      <div style={{ flexShrink:0, background:CARD, borderTop:'1px solid '+BORDER, padding:'10px 12px 16px' }}>
-        <div style={{ maxWidth:'780px', margin:'0 auto' }}>
-          <div style={{ background:BG, border:'1px solid', borderColor:streaming?curMode.color:inp?'#58a6ff44':BORDER, borderRadius:'12px', padding:'9px 12px', transition:'border-color 0.2s' }}>
+      {/* Input area */}
+      <div style={{ flexShrink: 0, background: 'rgba(5,9,16,0.97)', borderTop: '1px solid rgba(0,229,255,0.06)', padding: '9px 12px 14px', backdropFilter: 'blur(16px)' }}>
+        <div style={{ maxWidth: '820px', margin: '0 auto' }}>
+          {/* Command palette */}
+          {cmdOpen && filteredCmds.length > 0 && (
+            <div style={{ background: 'rgba(5,9,16,0.99)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '12px', padding: '5px', marginBottom: '8px', maxHeight: '220px', overflowY: 'auto', boxShadow: '0 -8px 32px rgba(0,0,0,0.6)', animation: 'slideDown 0.1s ease' }}>
+              {filteredCmds.map(c => (
+                <button key={c.cmd} className="cmd-opt" onClick={() => send(c.cmd)}
+                  style={{ width: '100%', background: 'none', border: 'none', borderRadius: '7px', color: '#00e5ff88', cursor: 'pointer', padding: '7px 10px', fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'inherit', transition: 'background 0.1s' }}>
+                  <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>{c.icon}</span>
+                  <span style={{ color: '#00e5ff', fontWeight: 600 }}>{c.cmd}</span>
+                  <span style={{ color: '#1e3248', fontSize: '12px' }}>{c.desc}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div style={{ background: 'rgba(10,18,30,0.95)', border: '1px solid', borderColor: streaming ? curMode.color + '33' : inp ? 'rgba(0,229,255,0.18)' : 'rgba(0,229,255,0.07)', borderRadius: '14px', padding: '10px 11px', transition: 'border-color 0.2s', boxShadow: inp ? `0 0 0 1px rgba(0,229,255,0.03)` : 'none' }}>
             <textarea
-              ref={inpRef}
-              value={inp}
-              onChange={e=>setInp(e.target.value.slice(0,4000))}
-              onKeyDown={handleKey}
-              placeholder={recording ? T[lang].recording : T[lang].placeholder}
-              disabled={streaming}
-              rows={1}
-              style={{ width:'100%', background:'transparent', border:'none', outline:'none', color:TEXT, fontSize:fontSize+'px', lineHeight:'1.5', maxHeight:'120px', overflowY:'auto', fontFamily:'inherit' }}
+              ref={inpRef} value={inp}
+              onChange={e => setInp(e.target.value)}
+              onKeyDown={handleKey} onPaste={handlePaste}
+              placeholder={recording ? '🎙 Listening...' : 'Message JARVIS... (/ for commands)'}
+              disabled={streaming} rows={1}
+              style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#ddeeff', fontSize: '14px', lineHeight: '1.5', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:'7px', gap:'5px' }}>
-              <div style={{ display:'flex', gap:'4px', position:'relative', flexWrap:'wrap' }}>
-                <button onClick={()=>setModeMenu(v=>!v)} style={{ background:curMode.color+'22', border:'1px solid '+curMode.color+'44', borderRadius:'6px', color:curMode.color, cursor:'pointer', padding:'4px 9px', fontSize:'12px', fontWeight:600 }}>{curMode.label}</button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '7px' }}>
+              <div style={{ display: 'flex', gap: '4px', position: 'relative' }}>
+                <button onClick={() => setModeMenu(v => !v)}
+                  style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
+                  {curMode.icon} {curMode.label} <span style={{ opacity: 0.4, fontSize: '9px' }}>▾</span>
+                </button>
                 {modeMenu && (
-                  <div style={{ position:'absolute', bottom:'32px', left:0, background:CARD, border:'1px solid '+BORDER, borderRadius:'10px', padding:'4px', zIndex:50, minWidth:'175px', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}>
-                    {MODES.map(m=>(
-                      <button key={m.id} onClick={()=>changeMode(m.id)} style={{ width:'100%', background:chatMode===m.id?m.color+'22':'none', border:'none', borderRadius:'6px', color:chatMode===m.id?m.color:MUTED, cursor:'pointer', padding:'7px 10px', fontSize:'12px', textAlign:'left', display:'flex', justifyContent:'space-between' }}>
-                        <span style={{ fontWeight:chatMode===m.id?700:400 }}>{m.label}</span>
-                        <span style={{ fontSize:'10px', opacity:0.7 }}>{m.desc}</span>
+                  <div style={{ position: 'absolute', bottom: '36px', left: 0, background: 'rgba(5,9,16,0.99)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '12px', padding: '5px', zIndex: 50, minWidth: '185px', boxShadow: '0 8px 32px rgba(0,0,0,0.7)', animation: 'slideDown 0.1s ease' }}>
+                    {MODES.map(m => (
+                      <button key={m.id} onClick={() => changeMode(m.id)} className="mode-opt"
+                        style={{ width: '100%', background: chatMode === m.id ? m.color + '10' : 'none', border: 'none', borderRadius: '7px', color: chatMode === m.id ? m.color : '#2a5070', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'inherit', transition: 'background 0.1s' }}>
+                        <span style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
+                          <span>{m.icon}</span><span style={{ fontWeight: chatMode === m.id ? 700 : 400 }}>{m.label}</span>
+                        </span>
+                        <span style={{ fontSize: '10px', opacity: 0.4 }}>{m.desc}</span>
                       </button>
                     ))}
                   </div>
                 )}
-                <input ref={photoRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handlePhoto}/>
-                <button onClick={()=>photoRef.current?.click()} style={{ background:dark?'#21262d':BORDER, border:'1px solid '+BORDER, borderRadius:'6px', color:MUTED, cursor:'pointer', padding:'4px 8px', fontSize:'12px' }}>{T[lang].photo}</button>
-                <button onClick={toggleVoice} style={{ background:recording?'#f8514922':dark?'#21262d':BORDER, border:'1px solid', borderColor:recording?'#f85149':BORDER, borderRadius:'6px', color:recording?'#f85149':MUTED, cursor:'pointer', padding:'4px 8px', fontSize:'12px' }}>
-                  {recording ? T[lang].recording.slice(0,4)+'...' : T[lang].mic}
+                <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
+                <button onClick={() => photoRef.current?.click()} className="tool-btn"
+                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">📷</button>
+                <button onClick={toggleVoice} className="tool-btn"
+                  style={{ background: recording ? 'rgba(248,113,113,0.08)' : 'rgba(0,229,255,0.03)', border: '1px solid', borderColor: recording ? 'rgba(248,113,113,0.25)' : 'rgba(0,229,255,0.07)', borderRadius: '6px', color: recording ? '#f87171' : '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', animation: recording ? 'recording 1.5s infinite' : 'none', transition: 'all 0.12s', fontFamily: 'inherit' }}>
+                  {recording ? '⏹' : '🎙'}
                 </button>
-                {/* UPGRADE 6: search button */}
-                <button onClick={()=>setShowSearch(v=>!v)} style={{ background:showSearch?'#58a6ff22':dark?'#21262d':BORDER, border:'1px solid', borderColor:showSearch?'#58a6ff':BORDER, borderRadius:'6px', color:showSearch?'#58a6ff':MUTED, cursor:'pointer', padding:'4px 8px', fontSize:'12px' }}>{T[lang].search}</button>
-                {/* UPGRADE 8: shortcuts */}
-                <button onClick={()=>setShowShortcuts(true)} style={{ background:dark?'#21262d':BORDER, border:'1px solid '+BORDER, borderRadius:'6px', color:MUTED, cursor:'pointer', padding:'4px 8px', fontSize:'12px' }}>Keys</button>
-                {/* UPGRADE 9: export */}
-                <button onClick={()=>exportChat(msgs)} style={{ background:dark?'#21262d':BORDER, border:'1px solid '+BORDER, borderRadius:'6px', color:MUTED, cursor:'pointer', padding:'4px 8px', fontSize:'12px' }}>{T[lang].export}</button>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:'5px', flexShrink:0 }}>
-                {inp.length>100 && <span style={{ fontSize:'10px', color:inp.length>3500?'#f85149':MUTED }}>{inp.length}/4000</span>}
-                {streaming
-                  ? <button onClick={()=>abortRef.current?.abort()} style={{ background:'#f8514922', border:'1px solid #f85149', borderRadius:'8px', color:'#f85149', cursor:'pointer', padding:'5px 12px', fontSize:'13px', fontWeight:600 }}>{T[lang].stop}</button>
-                  : <button onClick={()=>send()} disabled={!inp.trim()} style={{ background:inp.trim()?'linear-gradient(135deg,#58a6ff,#a371f7)':'#21262d', border:'none', borderRadius:'8px', color:inp.trim()?'#0d1117':MUTED, cursor:inp.trim()?'pointer':'not-allowed', padding:'5px 14px', fontSize:'13px', fontWeight:700, transition:'all 0.2s' }}>{T[lang].send}</button>
-                }
+
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {inp.length > 60 && <span style={{ fontSize: '10px', color: '#1a3048' }}>{inp.length}</span>}
+                {streaming ? (
+                  <button onClick={() => abortRef.current?.abort()}
+                    style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '8px', color: '#f87171', cursor: 'pointer', padding: '5px 13px', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit' }}>Stop</button>
+                ) : (
+                  <button onClick={() => send()} disabled={!inp.trim()} className={inp.trim() ? 'send-btn' : ''}
+                    style={{ background: inp.trim() ? `linear-gradient(135deg, #0055cc, #00c8ff)` : 'rgba(0,229,255,0.04)', border: 'none', borderRadius: '8px', color: inp.trim() ? '#000' : '#0e2030', cursor: inp.trim() ? 'pointer' : 'not-allowed', padding: '6px 16px', fontSize: '13px', fontWeight: 700, transition: 'all 0.15s', fontFamily: 'inherit' }}>
+                    Send ↑
+                  </button>
+                )}
               </div>
             </div>
           </div>
-          {msgs.length>0 && (
-            <div style={{ fontSize:'10px', color:MUTED, textAlign:'center', marginTop:'4px' }}>
-              {msgs.length} messages  |  /help  /shortcuts  /export
-            </div>
-          )}
         </div>
       </div>
     </div>
