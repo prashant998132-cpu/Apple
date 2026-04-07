@@ -33,7 +33,6 @@ function timeStr(ts: number) {
   return new Date(ts).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
-// Pattern-based follow-up suggestions
 function getSuggestions(text: string): string[] {
   const t = text.toLowerCase()
   if (/```|function|class|def |const |var |import /.test(t))
@@ -51,11 +50,11 @@ function getSuggestions(text: string): string[] {
   return ['Aur explain karo', 'Example do', 'Hindi mein samjhao']
 }
 
-// Strip LaTeX $...$ and $...$ — AI sends these but we render plain text
+// Strip LaTeX markers: $$...$$ and $...$ → plain text
 function stripLatex(text: string): string {
   return text
-    .replace(/\$\$([^$]+?)\$\$/g, '$1')   // $formula$ → formula
-    .replace(/\$([^$\n]+?)\$/g, '$1')      // $formula$ → formula
+    .replace(/\$\$([^$\n]+?)\$\$/g, (_, m) => m.trim())
+    .replace(/\$([^$\n]{1,80}?)\$/g, (_, m) => m.trim())
 }
 
 function MdText({ text }: { text: string }) {
@@ -83,9 +82,9 @@ function MdText({ text }: { text: string }) {
     if (codeBlock) { codeLines.push(line); continue }
     if (line === '') { els.push(<div key={i} style={{ height: '5px' }} />); continue }
 
-    const isBullet = /^[-*â¢] /.test(line)
+    const isBullet = /^[-*•] /.test(line)
     const isNum = /^\d+\. /.test(line)
-    const raw = line.replace(/^[-*â¢] /,'').replace(/^\d+\. /,'').replace(/^#{1,3} /,'')
+    const raw = line.replace(/^[-*•] /,'').replace(/^\d+\. /,'').replace(/^#{1,3} /,'')
     const isH1 = line.startsWith('# '), isH2 = line.startsWith('## '), isH3 = line.startsWith('### ')
     const isHr = line === '---' || line === '***'
 
@@ -104,7 +103,7 @@ function MdText({ text }: { text: string }) {
     else if (isH3) els.push(<div key={i} style={{ fontSize: '14px', fontWeight: 600, color: '#c8dff0', margin: '8px 0 3px' }}>{styled}</div>)
     else if (isBullet || isNum) els.push(
       <div key={i} style={{ display: 'flex', gap: '8px', margin: '3px 0', paddingLeft: '2px', lineHeight: '1.6' }}>
-        <span style={{ color: '#00e5ff55', flexShrink: 0, width: '10px' }}>â</span>
+        <span style={{ color: '#00e5ff55', flexShrink: 0, width: '10px' }}>–</span>
         <span>{styled}</span>
       </div>
     )
@@ -118,7 +117,7 @@ function CopyInline({ text }: { text: string }) {
   return (
     <button onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 1500) }}
       style={{ position: 'absolute', top: '8px', right: '10px', background: ok ? 'rgba(52,211,153,0.15)' : 'rgba(0,229,255,0.07)', border: '1px solid', borderColor: ok ? '#34d39944' : 'rgba(0,229,255,0.12)', borderRadius: '5px', color: ok ? '#34d399' : '#00e5ff77', cursor: 'pointer', fontSize: '10px', padding: '3px 7px', fontFamily: 'monospace' }}>
-      {ok ? 'â' : 'copy'}
+      {ok ? '✓' : 'copy'}
     </button>
   )
 }
@@ -128,7 +127,7 @@ function CopyBtn({ text }: { text: string }) {
   return (
     <button onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }}
       style={{ background: ok ? 'rgba(52,211,153,0.08)' : 'rgba(0,229,255,0.05)', border: '1px solid', borderColor: ok ? '#34d39922' : 'rgba(0,229,255,0.08)', borderRadius: '5px', color: ok ? '#34d399' : '#00e5ff66', cursor: 'pointer', fontSize: '11px', padding: '3px 8px', transition: 'all 0.15s', fontWeight: 500, fontFamily: 'inherit' }}>
-      {ok ? 'â Copied' : 'Copy'}
+      {ok ? '✓ Copied' : 'Copy'}
     </button>
   )
 }
@@ -140,7 +139,7 @@ function ThinkBlock({ text }: { text: string }) {
   return (
     <div style={{ margin: '5px 0' }}>
       <button onClick={() => setOpen(v => !v)} style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: '6px', color: '#a78bfa88', cursor: 'pointer', fontSize: '11px', padding: '3px 9px', fontStyle: 'italic', fontFamily: 'inherit' }}>
-        {open ? 'â¼ Hide reasoning' : 'â¶ Show reasoning...'}
+        {open ? '▼ Hide reasoning' : '▶ Show reasoning...'}
       </button>
       {open && <div style={{ margin: '5px 0', padding: '10px 12px', background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.1)', borderRadius: '8px', color: '#7a7a98', fontSize: '12px', lineHeight: '1.6', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto' }}>{clean}</div>}
     </div>
@@ -155,45 +154,108 @@ function ImageMsg({ url, prompt }: { url: string; prompt: string }) {
       {err && <div style={{ fontSize: '12px', color: '#f87171' }}>Image load failed.</div>}
       <img src={url} alt={prompt} onLoad={() => setLoaded(true)} onError={() => setErr(true)} style={{ width: '100%', borderRadius: '12px', border: '1px solid rgba(0,229,255,0.08)', display: loaded ? 'block' : 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }} />
       {loaded && <div style={{ display: 'flex', gap: '10px', marginTop: '7px' }}>
-        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#00e5ff66' }}>â Save</a>
-        <a href={url} download="jarvis-image.jpg" style={{ fontSize: '11px', color: '#00e5ff66' }}>â Download</a>
+        <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#00e5ff66' }}>↓ Save</a>
+        <a href={url} download="jarvis-image.jpg" style={{ fontSize: '11px', color: '#00e5ff66' }}>↓ Download</a>
       </div>}
     </div>
   )
 }
 
 const MODES: Array<{ id: ChatMode; label: string; desc: string; color: string; icon: string }> = [
-  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: 'â¡' },
-  { id: 'flash', label: 'Flash', desc: 'Fastest',        color: '#f87171', icon: 'ð¥' },
-  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: 'ð§ ' },
-  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: 'ð­' },
+  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: '🤖' },
+  { id: 'flash', label: 'Flash', desc: 'Fastest speed',  color: '#f87171', icon: '⚡' },
+  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: '🧠' },
+  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: '🔬' },
 ]
 
+const CASCADES: Record<ChatMode, Array<{ num: number; model: string; speed: string; note: string }>> = {
+  auto: [
+    { num: 1, model: 'Groq · Llama 3.3 70B', speed: '~1s', note: 'Default best' },
+    { num: 2, model: 'Gemini 2.5 Flash', speed: '~2s', note: 'Google fallback' },
+    { num: 3, model: 'Together · Llama 3.3 70B', speed: '~3s', note: 'Alt fallback' },
+    { num: 4, model: 'Pollinations AI', speed: '~5s', note: 'No key needed' },
+    { num: 5, model: 'Puter · GPT-4o-mini', speed: '~6s', note: 'Last resort' },
+  ],
+  flash: [
+    { num: 1, model: 'Groq · Llama 4 Scout 17B', speed: '~1s', note: 'Fastest — server key' },
+    { num: 2, model: 'Together · Llama 3.3 70B', speed: '~2s', note: 'Fallback' },
+    { num: 3, model: 'Gemini 2.5 Flash', speed: '~3s', note: 'Google fallback' },
+    { num: 4, model: 'Pollinations (OpenAI)', speed: '~5s', note: 'No key, browser direct' },
+    { num: 5, model: 'Puter · GPT-4o-mini', speed: '~6s', note: 'Last resort' },
+  ],
+  think: [
+    { num: 1, model: 'Groq · DeepSeek R1 70B', speed: '~3s', note: 'Best reasoning' },
+    { num: 2, model: 'Gemini 2.5 Flash', speed: '~4s', note: 'Google thinking' },
+    { num: 3, model: 'Pollinations AI', speed: '~6s', note: 'No key needed' },
+    { num: 4, model: 'Puter · GPT-4o-mini', speed: '~8s', note: 'Last resort' },
+  ],
+  deep: [
+    { num: 1, model: 'Gemini 2.5 Flash + Tools', speed: '~4s', note: 'Weather/news/images' },
+    { num: 2, model: 'Pollinations AI', speed: '~6s', note: 'No key fallback' },
+    { num: 3, model: 'Puter · GPT-4o-mini', speed: '~8s', note: 'Last resort' },
+  ],
+}
+
+function CascadeDrawer({ mode, onClose, onChange }: { mode: ChatMode; onClose: () => void; onChange: (m: ChatMode) => void }) {
+  const curMode = MODES.find(m => m.id === mode)!
+  const cascade = CASCADES[mode]
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.55)' }} onClick={onClose}>
+      <div style={{ background: 'rgba(4,8,16,0.98)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '18px 18px 0 0', padding: '14px 14px 30px', backdropFilter: 'blur(20px)', boxShadow: '0 -8px 40px rgba(0,0,0,0.8)', animation: 'slideUp 0.2s ease' }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: '36px', height: '3px', background: 'rgba(255,255,255,0.12)', borderRadius: '2px', margin: '0 auto 14px' }} />
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '2px' }}>
+          {MODES.map(m => (
+            <button key={m.id} onClick={() => onChange(m.id)}
+              style={{ flexShrink: 0, background: mode === m.id ? m.color + '18' : 'rgba(255,255,255,0.02)', border: '1px solid', borderColor: mode === m.id ? m.color + '55' : 'rgba(255,255,255,0.06)', borderRadius: '20px', color: mode === m.id ? m.color : '#2a5070', cursor: 'pointer', padding: '6px 14px', fontSize: '12px', fontWeight: mode === m.id ? 700 : 400, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {m.icon} {m.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ background: curMode.color + '08', border: '1px solid ' + curMode.color + '20', borderRadius: '10px', padding: '9px 12px', marginBottom: '11px' }}>
+          <div style={{ fontSize: '12px', color: curMode.color, fontWeight: 700, marginBottom: '2px' }}>{curMode.icon} {curMode.label} Mode — Cascade Priority</div>
+          <div style={{ fontSize: '11px', color: '#1e3248' }}>Best available provider → auto-fallback on error</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {cascade.map(c => (
+            <div key={c.num} style={{ display: 'grid', gridTemplateColumns: '22px 1fr 36px 1fr', alignItems: 'center', gap: '8px', padding: '8px 10px', background: c.num === 1 ? curMode.color + '07' : 'rgba(255,255,255,0.015)', borderRadius: '8px', border: '1px solid ' + (c.num === 1 ? curMode.color + '18' : 'rgba(255,255,255,0.03)') }}>
+              <span style={{ width: '20px', height: '20px', background: c.num === 1 ? curMode.color + '22' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (c.num === 1 ? curMode.color + '44' : 'rgba(255,255,255,0.06)'), borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: c.num === 1 ? curMode.color : '#2a5070', fontWeight: 700 }}>{c.num}</span>
+              <span style={{ fontSize: '13px', color: c.num === 1 ? '#c4dff0' : '#3a6080', fontWeight: c.num === 1 ? 600 : 400 }}>{c.model}</span>
+              <span style={{ fontSize: '11px', color: '#1e3248', textAlign: 'right' }}>{c.speed}</span>
+              <span style={{ fontSize: '10px', color: '#0e2030', textAlign: 'right' }}>{c.note}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: '10px', fontSize: '10px', color: '#0a1820', textAlign: 'center' }}>Tap outside to close</div>
+      </div>
+    </div>
+  )
+}
+
 const CMDS = [
-  { cmd: '/clear',    desc: 'Chat clear karo',      icon: 'ðï¸' },
-  { cmd: '/pass',     desc: 'Strong password banao', icon: 'ð' },
-  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: 'ð¸' },
-  { cmd: '/era',      desc: 'Era page pe jao',       icon: 'ð' },
-  { cmd: '/mood',     desc: 'Mood tracker',          icon: 'ð' },
-  { cmd: '/notes',    desc: 'Quick notes',           icon: 'ð' },
-  { cmd: '/timer',    desc: 'Pomodoro timer',        icon: 'â±ï¸' },
-  { cmd: '/dash',     desc: 'Dashboard',             icon: 'ð' },
-  { cmd: '/calc',     desc: 'Calculator',            icon: 'ð¢' },
-  { cmd: '/habits',   desc: 'Habit tracker',         icon: 'ðª' },
-  { cmd: '/todo',     desc: 'Todo list',             icon: 'â' },
-  { cmd: '/qr',       desc: 'QR generator',          icon: 'ð±' },
-  { cmd: '/focus',    desc: 'Focus mode',            icon: 'ð¯' },
+  { cmd: '/clear',    desc: 'Chat clear karo',      icon: '🗑️' },
+  { cmd: '/pass',     desc: 'Strong password banao', icon: '🔐' },
+  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: '🌸' },
+  { cmd: '/era',      desc: 'Era page pe jao',       icon: '💗' },
+  { cmd: '/mood',     desc: 'Mood tracker',          icon: '😊' },
+  { cmd: '/notes',    desc: 'Quick notes',           icon: '📝' },
+  { cmd: '/timer',    desc: 'Pomodoro timer',        icon: '⏱️' },
+  { cmd: '/dash',     desc: 'Dashboard',             icon: '📊' },
+  { cmd: '/calc',     desc: 'Calculator',            icon: '🔢' },
+  { cmd: '/habits',   desc: 'Habit tracker',         icon: '💪' },
+  { cmd: '/todo',     desc: 'Todo list',             icon: '✅' },
+  { cmd: '/qr',       desc: 'QR generator',          icon: '📱' },
+  { cmd: '/focus',    desc: 'Focus mode',            icon: '🎯' },
 ]
 
 const QUICK_PROMPTS = [
-  { l: 'ð¼ï¸ Image banao', m: 'image banao ' },
-  { l: 'ð° Aaj ki news', m: 'aaj ki latest news kya hai?' },
-  { l: 'ð¤ï¸ Rewa mausam', m: 'Rewa ka aaj ka mausam kya hai?' },
-  { l: 'ð» Python code', m: 'Python mein ' },
-  { l: 'ð¢ Math solve', m: 'solve karo: ' },
-  { l: 'ð Summary', m: 'samjhao mujhe: ' },
-  { l: 'ð Translate', m: 'Hindi mein translate karo: ' },
-  { l: 'ð¡ Ideas do', m: 'creative ideas do for: ' },
+  { l: '🖼️ Image banao', m: 'image banao ' },
+  { l: '📰 Aaj ki news', m: 'aaj ki latest news kya hai?' },
+  { l: '🌤️ Rewa mausam', m: 'Rewa ka aaj ka mausam kya hai?' },
+  { l: '💻 Python code', m: 'Python mein ' },
+  { l: '🔢 Math solve', m: 'solve karo: ' },
+  { l: '📖 Summary', m: 'samjhao mujhe: ' },
+  { l: '🌍 Translate', m: 'Hindi mein translate karo: ' },
+  { l: '💡 Ideas do', m: 'creative ideas do for: ' },
 ]
 
 export default function Home() {
@@ -207,7 +269,7 @@ export default function Home() {
   const [sidebar, setSidebar] = useState(false)
   const [recording, setRecording] = useState(false)
   const [tts, setTts] = useState(false)
-  const [modeMenu, setModeMenu] = useState(false)
+  const [cascadeOpen, setCascadeOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [showScrollBtn, setShowScrollBtn] = useState(false)
@@ -230,13 +292,15 @@ export default function Home() {
       if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length > 0) setMsgs(p) }
       const m = localStorage.getItem(MSTORE) as ChatMode | null
       if (m && ['auto','flash','think','deep'].includes(m)) setChatMode(m)
+      const t = localStorage.getItem('j_tts')
+      if (t === '1') setTts(true)
     } catch {}
     try { initProactiveScheduler('Rewa') } catch {}
 
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setSearchOpen(v => !v) }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setSidebar(true) }
-      if (e.key === 'Escape') { setModeMenu(false); setSearchOpen(false); setCmdOpen(false) }
+      if (e.key === 'Escape') { setCascadeOpen(false); setSearchOpen(false); setCmdOpen(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -250,13 +314,11 @@ export default function Home() {
     if (!streaming && !showScrollBtn) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs, streamText])
 
-  // Auto-resize textarea
   useEffect(() => {
     if (inpRef.current) {
       inpRef.current.style.height = 'auto'
       inpRef.current.style.height = Math.min(inpRef.current.scrollHeight, 130) + 'px'
     }
-    // Command palette
     if (inp.startsWith('/')) {
       const f = inp.slice(1).toLowerCase()
       setCmdFilter(f)
@@ -278,8 +340,13 @@ export default function Home() {
   }
 
   function changeMode(m: ChatMode) {
-    setChatMode(m); setModeMenu(false)
+    setChatMode(m); setCascadeOpen(false)
     try { localStorage.setItem(MSTORE, m) } catch {}
+  }
+
+  function toggleTts() {
+    const nv = !tts; setTts(nv)
+    try { localStorage.setItem('j_tts', nv ? '1' : '0') } catch {}
   }
 
   function clearChat() {
@@ -352,7 +419,6 @@ export default function Home() {
     e.target.value = ''
   }
 
-  // Clipboard paste (Ctrl+V image)
   function handlePaste(e: React.ClipboardEvent) {
     const items = e.clipboardData?.items
     if (!items) return
@@ -366,7 +432,6 @@ export default function Home() {
     }
   }
 
-  // Drag & drop
   function handleDrop(e: React.DragEvent) {
     e.preventDefault(); setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
@@ -382,7 +447,7 @@ export default function Home() {
     if (t === '/clear') { clearChat(); return }
     if (t === '/pass' || t === '/password') {
       const p = genPass()
-      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `ð **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
+      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `🔐 **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
       return
     }
     const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus' }
@@ -413,7 +478,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: newMsgs.slice(-12).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, userName: 'Pranshu' }),
+        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, userName: 'Pranshu' }),
         signal: abortRef.current.signal,
       })
       if (!res.ok || !res.body) throw new Error('Stream failed')
@@ -437,11 +502,10 @@ export default function Home() {
       setMsgs([...newMsgs, finalMsg])
       speak(full)
       awardXP('chat_message')
-      // Generate follow-up suggestions
       setSuggestions(getSuggestions(full))
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: 'â ï¸ Network issue â retry karo!', ts: Date.now() }])
+        setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: '⚠️ Network issue — retry karo!', ts: Date.now() }])
       }
     } finally {
       setStreaming(false); setStreamText(''); setStreamThink(''); setStreamProv('')
@@ -462,7 +526,6 @@ export default function Home() {
   const filteredCmds = CMDS.filter(c => c.cmd.slice(1).includes(cmdFilter) || c.desc.toLowerCase().includes(cmdFilter))
   const displayMsgs = search.trim() ? msgs.filter(m => m.content.toLowerCase().includes(search.toLowerCase())) : msgs
 
-  // Group messages by date + consecutive sender
   function renderMessages() {
     const els: React.ReactNode[] = []
     let lastDate = ''
@@ -481,10 +544,8 @@ export default function Home() {
         lastDate = msgDate
       }
 
-      const isGrouped = lastRole === msg.role && msg.role === 'user'
-      lastRole = msg.role
-
       const isContextOpen = contextMsg === msg.id
+      lastRole = msg.role
 
       if (msg.role === 'user') {
         els.push(
@@ -493,9 +554,9 @@ export default function Home() {
               <div style={{ maxWidth: '82%', position: 'relative' }}>
                 {isContextOpen && (
                   <div style={{ position: 'absolute', top: '0', right: '110%', background: 'rgba(8,13,24,0.98)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '10px', padding: '4px', zIndex: 20, display: 'flex', gap: '4px', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>ð Copy</button>
-                    <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>âï¸ Edit</button>
-                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>ðï¸</button>
+                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>📋 Copy</button>
+                    <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>✏️ Edit</button>
+                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>🗑️</button>
                   </div>
                 )}
                 <div onContextMenu={e => { e.preventDefault(); setContextMsg(isContextOpen ? null : msg.id) }}
@@ -518,7 +579,7 @@ export default function Home() {
                 {msg.videoUrl && (
                   <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.12)', borderRadius: '10px', padding: '12px', maxWidth: '280px' }}>
                     <div style={{ fontSize: '13px', marginBottom: '8px', color: '#6a6a88' }}>{msg.content}</div>
-                    <a href={msg.videoUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '6px', padding: '6px 12px', color: '#a78bfa', textDecoration: 'none', fontSize: '12px' }}>â¶ Watch Video</a>
+                    <a href={msg.videoUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: '6px', padding: '6px 12px', color: '#a78bfa', textDecoration: 'none', fontSize: '12px' }}>▶ Watch Video</a>
                   </div>
                 )}
                 {!msg.imageUrl && !msg.videoUrl && (
@@ -529,22 +590,22 @@ export default function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '7px', flexWrap: 'wrap' }}>
                   {!msg.imageUrl && !msg.videoUrl && <CopyBtn text={msg.content} />}
                   {tts && !msg.imageUrl && (
-                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>ð</button>
+                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>🔊 Suno</button>
                   )}
-                  {['ð','â¤ï¸','ð','ð¯'].map(em => (
+                  {['👍','❤️','😂','💯'].map(em => (
                     <button key={em} onClick={() => addReaction(msg.id, em)}
                       style={{ background: msg.reactions?.includes(em) ? 'rgba(255,255,255,0.1)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', borderRadius: '5px', opacity: msg.reactions?.includes(em) ? 1 : 0.25, transition: 'all 0.12s' }}>
                       {em}
                     </button>
                   ))}
                   {msg.provider && (
-                    <button onClick={() => setModeMenu(v => !v)}
-                      style={{ fontSize: '10px', color: '#1a3a50', marginLeft: 'auto', background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.06)', borderRadius: '4px', padding: '1px 6px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.1s' }}
-                      title="Tap to change mode">
-                      {msg.provider} ▾
+                    <button onClick={() => setCascadeOpen(true)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#1e3248', marginLeft: 'auto', padding: '2px 5px', borderRadius: '4px', fontFamily: 'inherit', transition: 'color 0.1s' }}
+                      title="Model cascade">
+                      🤖 {msg.provider} ▾
                     </button>
                   )}
-                  <span style={{ fontSize: '10px', color: '#0e2030' }}>{timeStr(msg.ts)}</span>
+                  {!msg.provider && <span style={{ fontSize: '10px', color: '#0e2030', marginLeft: 'auto' }}>{timeStr(msg.ts)}</span>}
                 </div>
                 {msg.reactions && msg.reactions.length > 0 && (
                   <div style={{ marginTop: '5px', fontSize: '14px', letterSpacing: '2px' }}>{msg.reactions.join('')}</div>
@@ -570,6 +631,7 @@ export default function Home() {
         @keyframes fadeUp { from { opacity:0; transform:translateY(5px) } to { opacity:1; transform:translateY(0) } }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         @keyframes slideDown { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
         @keyframes recording { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0)} 50%{box-shadow:0 0 0 6px rgba(248,113,113,0.15)} }
         * { box-sizing: border-box }
         ::-webkit-scrollbar { width: 3px }
@@ -579,47 +641,47 @@ export default function Home() {
         .tool-btn:hover { background: rgba(0,229,255,0.1) !important; color: #00e5ff !important; }
         .send-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
         .send-btn:active { transform: scale(0.97); }
-        .mode-opt:hover { background: rgba(255,255,255,0.04) !important; }
         .cmd-opt:hover { background: rgba(0,229,255,0.06) !important; }
         .quick-btn:hover { border-color: rgba(0,229,255,0.25) !important; background: rgba(0,229,255,0.05) !important; }
         .suggest-btn:hover { background: rgba(0,229,255,0.12) !important; border-color: rgba(0,229,255,0.3) !important; }
       `}</style>
 
-      {/* Drag overlay */}
       {isDragging && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,229,255,0.06)', border: '2px dashed rgba(0,229,255,0.3)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{ fontSize: '18px', color: '#00e5ff88', fontWeight: 700, textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>ð¼ï¸</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🖼️</div>
             Drop image here to analyze
           </div>
         </div>
       )}
 
+      {cascadeOpen && <CascadeDrawer mode={chatMode} onClose={() => setCascadeOpen(false)} onChange={changeMode} />}
+
       <Sidebar isOpen={sidebar} onClose={() => setSidebar(false)} />
 
-      {/* Header */}
       <header style={{ flexShrink: 0, height: '52px', background: 'rgba(6,10,18,0.97)', borderBottom: '1px solid rgba(0,229,255,0.07)', display: 'flex', alignItems: 'center', padding: '0 12px', gap: '10px', zIndex: 10, backdropFilter: 'blur(16px)' }}>
-        <button onClick={() => setSidebar(true)} style={{ background: 'none', border: 'none', color: '#2a5070', cursor: 'pointer', padding: '6px', borderRadius: '8px', fontSize: '18px', lineHeight: 1, fontFamily: 'inherit' }}>â°</button>
+        <button onClick={() => setSidebar(true)} style={{ background: 'none', border: 'none', color: '#2a5070', cursor: 'pointer', padding: '6px', borderRadius: '8px', fontSize: '18px', lineHeight: 1, fontFamily: 'inherit' }}>☰</button>
 
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v11</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v12</div>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <button onClick={() => setSearchOpen(v => !v)} className="tool-btn"
-            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">ð</button>
-          <button onClick={() => setTts(v => !v)} className="tool-btn"
-            style={{ background: tts ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: tts ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: tts ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.12s' }}>TTS</button>
+            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">🔍</button>
+          <button onClick={toggleTts} className="tool-btn"
+            style={{ background: tts ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: tts ? 'rgba(0,229,255,0.2)' : 'rgba(255,255,255,0.04)', borderRadius: '6px', color: tts ? '#00e5ff' : '#1e3248', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.12s' }}>
+            {tts ? '🔊 ON' : '🔇 TTS'}
+          </button>
           <button onClick={clearChat} className="tool-btn"
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
         </div>
       </header>
 
-      {/* Search bar */}
       {searchOpen && (
         <div style={{ flexShrink: 0, padding: '7px 12px', background: 'rgba(6,10,18,0.95)', borderBottom: '1px solid rgba(0,229,255,0.06)', animation: 'slideDown 0.12s ease' }}>
           <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Messages mein search karo..."
@@ -628,7 +690,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Messages */}
       <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '8px 0 4px', scrollBehavior: 'smooth' }}>
         {msgs.length === 0 && !streaming ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '20px', animation: 'fadeUp 0.3s ease' }}>
@@ -637,8 +698,8 @@ export default function Home() {
               <div style={{ width: '76px', height: '76px', background: 'linear-gradient(135deg, #002fa3, #00e5ff)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 900, color: '#000', boxShadow: '0 0 30px rgba(0,229,255,0.25)' }}>J</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>Namaste Pranshu ð</div>
-              <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai â¢ Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
+              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>Namaste Pranshu 👋</div>
+              <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai • Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', maxWidth: '340px', width: '100%' }}>
               {QUICK_PROMPTS.slice(0, 6).map(q => (
@@ -648,13 +709,12 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: '10px', color: '#0e2030', textAlign: 'center' }}>Ctrl+K sidebar Â· Ctrl+F search Â· Paste image Â· Drag & drop</div>
+            <div style={{ fontSize: '10px', color: '#0e2030', textAlign: 'center' }}>Ctrl+K sidebar · Ctrl+F search · Paste image · Drag & drop</div>
           </div>
         ) : (
           renderMessages()
         )}
 
-        {/* Streaming indicator */}
         {streaming && (
           <div style={{ padding: '5px 14px', animation: 'fadeUp 0.15s ease' }}>
             <div style={{ display: 'flex', gap: '9px', maxWidth: '820px', margin: '0 auto' }}>
@@ -677,7 +737,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Follow-up suggestions */}
         {!streaming && suggestions.length > 0 && msgs.length > 0 && (
           <div style={{ padding: '6px 14px 2px', animation: 'fadeUp 0.2s ease' }}>
             <div style={{ maxWidth: '820px', margin: '0 auto', paddingLeft: '35px' }}>
@@ -688,7 +747,7 @@ export default function Home() {
                     {s}
                   </button>
                 ))}
-                <button onClick={() => setSuggestions([])} style={{ background: 'none', border: 'none', color: '#1e3248', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', padding: '5px' }}>Ã</button>
+                <button onClick={() => setSuggestions([])} style={{ background: 'none', border: 'none', color: '#1e3248', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', padding: '5px' }}>×</button>
               </div>
             </div>
           </div>
@@ -697,18 +756,15 @@ export default function Home() {
         <div ref={bottomRef} style={{ height: '4px' }} />
       </div>
 
-      {/* Scroll to bottom */}
       {showScrollBtn && (
         <button onClick={scrollToBottom}
           style={{ position: 'absolute', bottom: '90px', right: '16px', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e5ff', cursor: 'pointer', fontSize: '16px', zIndex: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-          â
+          ↓
         </button>
       )}
 
-      {/* Input area */}
       <div style={{ flexShrink: 0, background: 'rgba(5,9,16,0.97)', borderTop: '1px solid rgba(0,229,255,0.06)', padding: '9px 12px 14px', backdropFilter: 'blur(16px)' }}>
         <div style={{ maxWidth: '820px', margin: '0 auto' }}>
-          {/* Command palette */}
           {cmdOpen && filteredCmds.length > 0 && (
             <div style={{ background: 'rgba(5,9,16,0.99)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '12px', padding: '5px', marginBottom: '8px', maxHeight: '220px', overflowY: 'auto', boxShadow: '0 -8px 32px rgba(0,0,0,0.6)', animation: 'slideDown 0.1s ease' }}>
               {filteredCmds.map(c => (
@@ -722,56 +778,27 @@ export default function Home() {
             </div>
           )}
 
-          <div style={{ background: 'rgba(10,18,30,0.95)', border: '1px solid', borderColor: streaming ? curMode.color + '33' : inp ? 'rgba(0,229,255,0.18)' : 'rgba(0,229,255,0.07)', borderRadius: '14px', padding: '10px 11px', transition: 'border-color 0.2s', boxShadow: inp ? `0 0 0 1px rgba(0,229,255,0.03)` : 'none' }}>
+          <div style={{ background: 'rgba(10,18,30,0.95)', border: '1px solid', borderColor: streaming ? curMode.color + '33' : inp ? 'rgba(0,229,255,0.18)' : 'rgba(0,229,255,0.07)', borderRadius: '14px', padding: '10px 11px', transition: 'border-color 0.2s' }}>
             <textarea
               ref={inpRef} value={inp}
               onChange={e => setInp(e.target.value)}
               onKeyDown={handleKey} onPaste={handlePaste}
-              placeholder={recording ? 'ð Listening...' : 'Message JARVIS... (/ for commands)'}
+              placeholder={recording ? '🎙 Listening...' : 'Message JARVIS... (/ for commands)'}
               disabled={streaming} rows={1}
               style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#ddeeff', fontSize: '14px', lineHeight: '1.5', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '7px' }}>
-              <div style={{ display: 'flex', gap: '4px', position: 'relative' }}>
-                <button onClick={() => setModeMenu(v => !v)}
-                  style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
-                  {curMode.icon} {curMode.label} <span style={{ opacity: 0.4, fontSize: '9px' }}>â¾</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button onClick={() => setCascadeOpen(true)}
+                  style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
+                  {curMode.icon} {curMode.label} <span style={{ opacity: 0.4, fontSize: '9px' }}>▾</span>
                 </button>
-                {modeMenu && (
-                  <div style={{ position: 'absolute', bottom: '36px', left: 0, background: 'rgba(4,8,18,0.99)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '14px', padding: '8px', zIndex: 50, minWidth: '270px', boxShadow: '0 12px 48px rgba(0,0,0,0.8)', animation: 'slideDown 0.12s ease' }}>
-                    <div style={{ fontSize: '9px', color: '#1e3248', letterSpacing: '1.5px', padding: '2px 6px 6px', textTransform: 'uppercase' }}>Select Mode</div>
-                    {MODES.map(m => (
-                      <div key={m.id}>
-                        <button onClick={() => changeMode(m.id)} className="mode-opt"
-                          style={{ width: '100%', background: chatMode === m.id ? m.color + '12' : 'none', border: chatMode === m.id ? '1px solid ' + m.color + '25' : '1px solid transparent', borderRadius: '9px', color: chatMode === m.id ? m.color : '#2a5070', cursor: 'pointer', padding: '8px 10px', fontSize: '13px', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'inherit', transition: 'all 0.1s', marginBottom: '1px' }}>
-                          <span style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
-                            <span>{m.icon}</span><span style={{ fontWeight: chatMode === m.id ? 700 : 500 }}>{m.label}</span>
-                          </span>
-                          <span style={{ fontSize: '10px', opacity: 0.45 }}>{m.desc}</span>
-                        </button>
-                        {chatMode === m.id && (
-                          <div style={{ margin: '2px 4px 6px', padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                            {m.models.map((mdl, i) => (
-                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', fontSize: '10px' }}>
-                                <span style={{ color: i === 0 ? m.color + 'cc' : '#1e3248', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <span style={{ color: '#1a3048', fontSize: '9px', width: '10px' }}>{i+1}</span>
-                                  {mdl.name}
-                                </span>
-                                <span style={{ color: '#0e2030', fontSize: '9px' }}>{mdl.speed} · {mdl.note}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
                 <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
                 <button onClick={() => photoRef.current?.click()} className="tool-btn"
-                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">ð·</button>
+                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">📷</button>
                 <button onClick={toggleVoice} className="tool-btn"
                   style={{ background: recording ? 'rgba(248,113,113,0.08)' : 'rgba(0,229,255,0.03)', border: '1px solid', borderColor: recording ? 'rgba(248,113,113,0.25)' : 'rgba(0,229,255,0.07)', borderRadius: '6px', color: recording ? '#f87171' : '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', animation: recording ? 'recording 1.5s infinite' : 'none', transition: 'all 0.12s', fontFamily: 'inherit' }}>
-                  {recording ? 'â¹' : 'ð'}
+                  {recording ? '⏹' : '🎙'}
                 </button>
               </div>
 
@@ -783,7 +810,7 @@ export default function Home() {
                 ) : (
                   <button onClick={() => send()} disabled={!inp.trim()} className={inp.trim() ? 'send-btn' : ''}
                     style={{ background: inp.trim() ? `linear-gradient(135deg, #0055cc, #00c8ff)` : 'rgba(0,229,255,0.04)', border: 'none', borderRadius: '8px', color: inp.trim() ? '#000' : '#0e2030', cursor: inp.trim() ? 'pointer' : 'not-allowed', padding: '6px 16px', fontSize: '13px', fontWeight: 700, transition: 'all 0.15s', fontFamily: 'inherit' }}>
-                    Send â
+                    Send ↑
                   </button>
                 )}
               </div>
