@@ -409,7 +409,6 @@ export default function Home() {
   const [recording, setRecording] = useState(false)
   const [tts, setTts] = useState(false)
   const [forcedProvider, setForcedProvider] = useState<string | null>(null)
-  const [forcedProvider, setForcedProvider] = useState<string | null>(null)
   const [cascadeOpen, setCascadeOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
