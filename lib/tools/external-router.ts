@@ -43,6 +43,8 @@ export function detectIntent(msg: string): string[] {
   if (m.match(/reddit|subreddit|post|upvote/)) intents.push('reddit')
   if (m.match(/urban dictionary|slang|street meaning|internet slang|kya slang|urban dict/)) intents.push('urban')
   if (m.match(/github profile|github user|github.*kaun|github.*stats|github.*info/)) intents.push('ghprofile')
+  if (m.match(/urban dictionary|slang|street meaning|internet slang|kya slang|urban dict/)) intents.push('urban')
+  if (m.match(/github profile|github user|github.*kaun|github.*stats|github.*info/)) intents.push('ghprofile')
   if (m.match(/sunrise|sunset|sun time|suraj/)) intents.push('sun')
   if (m.match(/qr code|qr banana|generate qr/)) intents.push('qr')
   if (m.match(/bored|kya karu|kuch karna|activity suggest/)) intents.push('bored')
@@ -1041,6 +1043,90 @@ async function getJinaReader(q: string): Promise<ToolResult> {
     const text = await r.text()
     return { tool:'jina', success:true, data:`📄 URL Content:\n${text.slice(0, 1500)}${text.length > 1500 ? '\n...[truncated]' : ''}` }
   } catch(e: any) { return { tool:'jina', success:false, data:'URL read failed: ' + e.message } }
+}
+
+async function getRedditFeed(q: string): Promise<ToolResult> {
+  try {
+    const sub = q.match(/r\/([\w]+)/i)?.[1] ||
+      (q.match(/bollywood|film|movie|cinema/) ? 'bollywood' :
+       q.match(/cricket|ipl|sports/) ? 'Cricket' :
+       q.match(/tech|programming|code|developer/) ? 'programming' :
+       q.match(/india|desh|government|politics|news/) ? 'india' : 'popular')
+    const r = await fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=5&raw_json=1`, {
+      headers: { 'User-Agent': 'JARVIS-AI/1.0' },
+      signal: AbortSignal.timeout(7000)
+    })
+    const d = await r.json()
+    const posts = d.data?.children
+      ?.filter((c: any) => !c.data.stickied)
+      ?.slice(0, 5)
+      ?.map((c: any) => `• ${c.data.title} (↑${c.data.score})`)
+      .join('\n') || 'No posts found'
+    return { tool: 'reddit', success: true, data: `📱 r/${sub} Hot Posts:\n${posts}` }
+  } catch (e: any) { return { tool: 'reddit', success: false, data: 'Reddit unavailable: ' + e.message } }
+}
+
+async function getUrbanDictionary(q: string): Promise<ToolResult> {
+  try {
+    const term = q.replace(/urban dictionary|meaning of|define|kya matlab|urban dict/gi, '').trim() || q.trim()
+    if (!term) return { tool: 'urban', success: false, data: 'Term nahi mila query mein.' }
+    const r = await fetch(`https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`, {
+      signal: AbortSignal.timeout(5000)
+    })
+    const d = await r.json()
+    const def = d.list?.[0]
+    if (!def) return { tool: 'urban', success: false, data: `"${term}" — Urban Dictionary mein nahi mila.` }
+    const definition = def.definition?.replace(/\[|\]/g, '')?.slice(0, 300) || ''
+    const example = def.example?.replace(/\[|\]/g, '')?.slice(0, 150) || ''
+    return {
+      tool: 'urban', success: true,
+      data: `📖 **${def.word}** (Urban Dictionary)\nDefinition: ${definition}\n${example ? `Example: ${example}` : ''}\n👍 ${def.thumbs_up} | 👎 ${def.thumbs_down}`
+    }
+  } catch (e: any) { return { tool: 'urban', success: false, data: 'Urban Dict unavailable: ' + e.message } }
+}
+
+async function getGitHubProfile(q: string): Promise<ToolResult> {
+  try {
+    const fromUrl = q.match(/github\.com\/([\w-]+)/i)?.[1]
+    const fromAt  = q.match(/@([\w-]{3,39})/)?.[1]
+    const fromKw  = q.match(/github\s+(?:profile|user|stats|info)\s+(?:of\s+)?([\w-]+)/i)?.[1]
+    const user = fromUrl || fromAt || fromKw || q.trim().split(/\s+/).slice(-1)[0]
+    if (!user || user.length < 2) return { tool: 'ghprofile', success: false, data: 'GitHub username nahi mila.' }
+    const r = await fetch(`https://api.github.com/users/${user}`, { signal: AbortSignal.timeout(6000) })
+    const d = await r.json()
+    if (d.message) return { tool: 'ghprofile', success: false, data: `User "${user}" not found: ${d.message}` }
+    const reposR = await fetch(`https://api.github.com/users/${user}/repos?sort=stars&per_page=3`, { signal: AbortSignal.timeout(5000) })
+    const repos = await reposR.json()
+    const topRepos = Array.isArray(repos) ? repos.map((r: any) => `⭐${r.stargazers_count} ${r.name}`).join(', ') : ''
+    return {
+      tool: 'ghprofile', success: true,
+      data: `👨‍💻 **${d.name || d.login}** (@${d.login})\n📍 ${d.location || 'N/A'} | 🏢 ${d.company || 'N/A'}\n📦 Repos: ${d.public_repos} | 👥 Followers: ${d.followers} | Following: ${d.following}\nBio: ${d.bio?.slice(0, 120) || 'No bio'}\nTop Repos: ${topRepos || 'N/A'}\n🔗 ${d.html_url}`
+    }
+  } catch (e: any) { return { tool: 'ghprofile', success: false, data: 'GitHub profile fetch failed: ' + e.message } }
+}
+
+async function getSportsNews(q: string): Promise<ToolResult> {
+  try {
+    const sport =
+      q.match(/cricket|ipl|test match|wicket|batting|bowling/) ? 'Cricket' :
+      q.match(/football|fifa|epl|premier league|mls/) ? 'soccer' :
+      q.match(/f1|formula 1|grand prix|racing/) ? 'formula1' :
+      q.match(/tennis|wimbledon|us open/) ? 'tennis' : 'sports'
+    const r = await fetch(`https://www.reddit.com/r/${sport}/hot.json?limit=5&raw_json=1`, {
+      headers: { 'User-Agent': 'JARVIS-AI/1.0' },
+      signal: AbortSignal.timeout(7000)
+    })
+    const d = await r.json()
+    const posts = d.data?.children
+      ?.filter((c: any) => !c.data.stickied)
+      ?.slice(0, 4)
+      ?.map((c: any) => `• ${c.data.title}`)
+      .join('\n') || ''
+    return {
+      tool: 'sports', success: true,
+      data: `🏆 Latest ${sport.toUpperCase()} News (via Reddit):\n${posts || 'No news found. Try again later.'}`
+    }
+  } catch (e: any) { return { tool: 'sports', success: false, data: 'Sports news unavailable: ' + e.message } }
 }
 
 async function getRedditFeed(q: string): Promise<ToolResult> {

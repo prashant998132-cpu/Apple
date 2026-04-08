@@ -369,6 +369,21 @@ export default function Home() {
     URL.revokeObjectURL(a.href)
   }
 
+  function exportChat() {
+    if (!msgs.length) return
+    const lines = msgs.map(m => {
+      const ts  = new Date(m.ts).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+      const who = m.role === 'user' ? '👤 You' : '🤖 JARVIS'
+      return '[' + ts + '] ' + who + ':\n' + m.content
+    }).join('\n\n---\n\n')
+    const blob = new Blob([lines], { type: 'text/plain; charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'JARVIS-' + new Date().toISOString().slice(0, 10) + '.txt'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   function addReaction(msgId: string, emoji: string) {
     setMsgs(prev => prev.map(m =>
       m.id === msgId ? { ...m, reactions: m.reactions?.includes(emoji) ? m.reactions.filter(r => r !== emoji) : [...(m.reactions || []), emoji] } : m
@@ -694,6 +709,8 @@ export default function Home() {
           </button>
           <button onClick={clearChat} className="tool-btn"
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
+          <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
+            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
             style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
         </div>
