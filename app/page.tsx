@@ -276,16 +276,126 @@ const CMDS = [
   { cmd: '/focus',    desc: 'Focus mode',            icon: '🎯' },
 ]
 
-const QUICK_PROMPTS = [
-  { l: '🖼️ Image banao', m: 'image banao ' },
-  { l: '📰 Aaj ki news', m: 'aaj ki latest news kya hai?' },
-  { l: '🌤️ Rewa mausam', m: 'Rewa ka aaj ka mausam kya hai?' },
-  { l: '💻 Python code', m: 'Python mein ' },
-  { l: '🔢 Math solve', m: 'solve karo: ' },
-  { l: '📖 Summary', m: 'samjhao mujhe: ' },
-  { l: '🌍 Translate', m: 'Hindi mein translate karo: ' },
-  { l: '💡 Ideas do', m: 'creative ideas do for: ' },
-]
+// ── Smart Dynamic Prompts — time/day aware ─────────────
+// All prompt pools by context
+const ALL_PROMPTS = {
+  morning: [
+    { l: '🌅 Subah ki news',      m: 'aaj subah ki top headlines kya hain?',          cat: 'news' },
+    { l: '☀️ Rewa mausam',         m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
+    { l: '💪 Motivation do',       m: 'mujhe aaj ke liye ek powerful motivation do',   cat: 'motivation' },
+    { l: '📅 Aaj ka plan',         m: 'mera aaj ka productive schedule banao',         cat: 'planning' },
+    { l: '🧘 Morning routine',     m: 'best morning routine batao jo energy de',       cat: 'health' },
+    { l: '📰 Headlines summary',   m: 'aaj ki top 5 khabar short mein batao',          cat: 'news' },
+    { l: '☕ Nashta idea',          m: 'quick healthy breakfast idea batao',            cat: 'health' },
+    { l: '💡 Aaj ka thought',      m: 'ek powerful thought of the day do',             cat: 'motivation' },
+  ],
+  afternoon: [
+    { l: '🔢 Math solve',          m: 'solve karo: ',                                  cat: 'study' },
+    { l: '💻 Python code',         m: 'Python mein ',                                  cat: 'code' },
+    { l: '📖 Topic samjhao',       m: 'samjhao mujhe: ',                               cat: 'study' },
+    { l: '🌍 Translate karo',      m: 'Hindi mein translate karo: ',                   cat: 'language' },
+    { l: '🖼️ Image banao',         m: 'image banao ',                                  cat: 'creative' },
+    { l: '⚡ Code debug karo',     m: 'ye code fix karo: ',                            cat: 'code' },
+    { l: '📝 Essay likhao',        m: 'ek short essay likho topic: ',                  cat: 'study' },
+    { l: '🧪 Science explain',     m: 'science concept explain karo: ',                cat: 'study' },
+  ],
+  evening: [
+    { l: '📰 Sham ki news',        m: 'aaj ki top news kya rahi?',                     cat: 'news' },
+    { l: '🎬 Movie recommend',     m: 'aaj raat ke liye ek achhi movie recommend karo', cat: 'entertainment' },
+    { l: '🍽️ Dinner idea',         m: 'aaj raat kya banayein? simple recipe batao',    cat: 'health' },
+    { l: '🖼️ Art banao',           m: 'ek creative wallpaper image banao: ',           cat: 'creative' },
+    { l: '💡 New ideas do',        m: 'mujhe ek creative project idea do',             cat: 'creative' },
+    { l: '🎵 Music mood',          m: 'iske liye songs suggest karo: ',                cat: 'entertainment' },
+    { l: '💪 Workout plan',        m: 'aaj raat ke liye quick workout plan do',        cat: 'health' },
+    { l: '🌐 Tech news',           m: 'aaj ki latest tech news kya hai?',              cat: 'news' },
+  ],
+  night: [
+    { l: '🌙 Raat ki baat',        m: 'koi interesting fact batao jo mind blow kare',  cat: 'fun' },
+    { l: '📚 Story sunao',         m: 'mujhe ek interesting short story sunao',        cat: 'entertainment' },
+    { l: '🧠 Quiz khelo',          m: 'mujhse ek interesting quiz lo',                 cat: 'fun' },
+    { l: '💭 Deep question',       m: 'ek deep philosophical question ka jawab do: ',  cat: 'philosophy' },
+    { l: '🌌 Space baat',          m: 'universe ke baare mein kuch mind-blowing batao', cat: 'science' },
+    { l: '🖼️ Dream image',        m: 'ek surreal dreamy night sky image banao',        cat: 'creative' },
+    { l: '🎭 Poem likho',          m: 'ek beautiful Hinglish poem likho: ',            cat: 'creative' },
+    { l: '😴 Neend tips',          m: 'achhi neend ke liye tips do',                   cat: 'health' },
+  ],
+  // day-specific bonus prompts
+  monday: [
+    { l: '📋 Week plan banao',     m: 'is hafte ka productive plan banao mere liye',   cat: 'planning' },
+    { l: '🎯 Goals set karo',      m: 'is hafte ke top 3 goals set karne mein help karo', cat: 'planning' },
+  ],
+  friday: [
+    { l: '🎉 Weekend plan',        m: 'is weekend ke liye fun plan do',                cat: 'entertainment' },
+    { l: '🎬 Binge list',          m: 'weekend mein dekhne layak web series recommend karo', cat: 'entertainment' },
+  ],
+  saturday: [
+    { l: '🏖️ Outing idea',        m: 'aaj ghumne ke liye Rewa ke aas paas koi jagah batao', cat: 'travel' },
+    { l: '📸 Photo idea',          m: 'ek creative photo wallpaper banao sunset theme',  cat: 'creative' },
+  ],
+  sunday: [
+    { l: '🔮 Week ahead',          m: 'aane wale hafte ki tayari kaise karein?',        cat: 'planning' },
+    { l: '🧹 Organize karo',       m: 'apni life organize karne ke tips do',            cat: 'planning' },
+  ],
+  // always-available utility
+  utility: [
+    { l: '🌡️ Mausam batao',        m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
+    { l: '💱 Crypto rate',         m: 'Bitcoin aur Ethereum ka aaj ka rate kya hai?',  cat: 'finance' },
+    { l: '📊 Stock market',        m: 'aaj Sensex aur Nifty kaise hai?',               cat: 'finance' },
+    { l: '🔐 Password banao',      m: '/pass',                                          cat: 'utility' },
+    { l: '🌍 Translate',           m: 'Hindi mein translate karo: ',                   cat: 'language' },
+    { l: '🖼️ Image banao',         m: 'image banao ',                                  cat: 'creative' },
+    { l: '📰 Aaj ki khabar',       m: 'aaj ki top news kya hai?',                      cat: 'news' },
+    { l: '🔢 Math solve',          m: 'solve karo: ',                                  cat: 'study' },
+  ]
+}
+
+function getSmartPrompts(): Array<{ l: string; m: string; cat: string }> {
+  const now   = new Date()
+  const hour  = now.getHours()
+  const day   = now.getDay() // 0=Sun,1=Mon,...,6=Sat
+
+  // Pick time pool
+  const timePool =
+    hour >= 5  && hour < 12 ? ALL_PROMPTS.morning   :
+    hour >= 12 && hour < 17 ? ALL_PROMPTS.afternoon :
+    hour >= 17 && hour < 21 ? ALL_PROMPTS.evening   : ALL_PROMPTS.night
+
+  // Pick day-specific bonus
+  const dayPool =
+    day === 1 ? ALL_PROMPTS.monday   :
+    day === 5 ? ALL_PROMPTS.friday   :
+    day === 6 ? ALL_PROMPTS.saturday :
+    day === 0 ? ALL_PROMPTS.sunday   : []
+
+  // Shuffle time pool deterministically based on date+hour (changes every hour)
+  const seed = now.getFullYear() * 1000 + now.getMonth() * 30 + now.getDate() + hour
+  const shuffled = [...timePool].sort((a, b) => {
+    const ha = Math.sin(seed + a.l.charCodeAt(0)) * 10000
+    const hb = Math.sin(seed + b.l.charCodeAt(0)) * 10000
+    return (ha - Math.floor(ha)) - (hb - Math.floor(hb))
+  })
+
+  // Merge: 4 from time pool + 1 day bonus (if exists) + 1 utility
+  const picks: Array<{ l: string; m: string; cat: string }> = []
+  const cats = new Set<string>()
+
+  for (const p of shuffled) {
+    if (picks.length >= 4) break
+    if (!cats.has(p.cat)) { picks.push(p); cats.add(p.cat) }
+  }
+  // pad if needed
+  for (const p of shuffled) {
+    if (picks.length >= 4) break
+    if (!picks.includes(p)) picks.push(p)
+  }
+
+  if (dayPool.length) picks.push(dayPool[Math.floor(Math.random() * dayPool.length)])
+
+  const utilPick = ALL_PROMPTS.utility.find(u => !cats.has(u.cat))
+  if (utilPick) picks.push(utilPick)
+
+  return picks.slice(0, 6)
+}
 
 export default function Home() {
   const [msgs, setMsgs] = useState<Msg[]>([])
@@ -763,18 +873,35 @@ export default function Home() {
               <div style={{ width: '76px', height: '76px', background: 'linear-gradient(135deg, #002fa3, #00e5ff)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 900, color: '#000', boxShadow: '0 0 30px rgba(0,229,255,0.25)' }}>J</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>Namaste Pranshu 👋</div>
+              <div style={{ fontSize: '21px', fontWeight: 700, color: '#ddeeff', marginBottom: '5px' }}>
+  {(() => {
+    const h = new Date().getHours()
+    return h >= 5 && h < 12 ? 'Subah Bakhair Pranshu ☀️' :
+           h >= 12 && h < 17 ? 'Namaste Pranshu 👋' :
+           h >= 17 && h < 21 ? 'Shubh Sham Pranshu 🌆' : 'Raat Mubarak Pranshu 🌙'
+  })()}
+</div>
               <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai • Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', maxWidth: '340px', width: '100%' }}>
-              {QUICK_PROMPTS.slice(0, 6).map(q => (
-                <button key={q.l} className="quick-btn" onClick={() => { if (q.m.endsWith(' ') || q.m === '') setInp(q.m); else send(q.m) }}
-                  style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '10px', color: '#4a7090', cursor: 'pointer', padding: '10px 12px', fontSize: '12px', textAlign: 'left', transition: 'all 0.12s', fontFamily: 'inherit' }}>
+              {getSmartPrompts().map(q => (
+                <button key={q.l} className="quick-btn"
+                  onClick={() => { if (q.m.endsWith(' ') || q.m === '/pass') { if (q.m === '/pass') send('/pass'); else setInp(q.m) } else send(q.m) }}
+                  title={q.cat}
+                  style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '10px', color: '#4a7090', cursor: 'pointer', padding: '10px 12px', fontSize: '12px', textAlign: 'left', transition: 'all 0.12s', fontFamily: 'inherit', position: 'relative' }}>
                   {q.l}
+                  <span style={{ position: 'absolute', top: '3px', right: '5px', fontSize: '8px', color: '#0e2030', opacity: 0.6 }}>{q.cat}</span>
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: '10px', color: '#0e2030', textAlign: 'center' }}>Ctrl+K sidebar · Ctrl+F search · Paste image · Drag & drop</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+              <div style={{ fontSize: '10px', color: '#0e2030' }}>Ctrl+K · Ctrl+F · Paste image</div>
+              <button onClick={() => { /* force re-render by toggling dummy state */ setSuggestions([]) }}
+                title="Prompts refresh karo"
+                style={{ background: 'none', border: '1px solid rgba(0,229,255,0.06)', borderRadius: '6px', color: '#0e2030', cursor: 'pointer', padding: '2px 7px', fontSize: '10px', fontFamily: 'inherit' }}>
+                ↻ refresh
+              </button>
+            </div>
           </div>
         ) : (
           renderMessages()
