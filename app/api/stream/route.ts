@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
   if (!message?.trim()) return new Response('No message', { status: 400 })
   // forcedProvider: skip cascade, only run this provider
   const shouldRun = (key: string) => !forcedProvider || forcedProvider === key
+  // forcedProvider: skip cascade, only run this provider
+  const shouldRun = (key: string) => !forcedProvider || forcedProvider === key
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
