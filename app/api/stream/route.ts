@@ -123,14 +123,16 @@ RULES:
         if (!replied && shouldRun('gemini')) {
           const gemKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY
           if (gemKey) {
+            // Try gemini-2.5-flash first, auto-fallback to 1.5-flash
+            for (const gemModel of ['gemini-2.5-flash-preview-04-17', 'gemini-1.5-flash']) {
             try {
-              const gemModel = 'gemini-2.5-flash-preview-04-17'
+              const _gemModel = gemModel
               const gemMsgs = messages.map((m: any) => ({
                 role: m.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: m.content }]
               }))
               const gemRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${gemModel}:streamGenerateContent?key=${gemKey}&alt=sse`,
+                `https://generativelanguage.googleapis.com/v1beta/models/${_gemModel}:streamGenerateContent?key=${gemKey}&alt=sse`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -144,7 +146,7 @@ RULES:
               )
               if (gemRes.ok && gemRes.body) {
                 replied = true
-                send({ type: 'start', provider: 'Gemini 2.5 Flash' })
+                send({ type: 'start', provider: _gemModel.includes('2.5') ? 'Gemini 2.5 Flash' : 'Gemini 1.5 Flash' })
                 const reader = gemRes.body.getReader()
                 const dec = new TextDecoder()
                 let buf = ''
@@ -165,7 +167,9 @@ RULES:
                 }
                 send({ type: 'done' })
               }
-            } catch { /* Gemini failed */ }
+            } catch { /* this gemini model failed, try next */ }
+            if (replied) break
+            } // end for gemModel
           }
         }
 

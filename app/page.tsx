@@ -51,14 +51,23 @@ function getSuggestions(text: string): string[] {
 }
 
 // Strip LaTeX markers: $$...$$ and $...$ → plain text
-function stripLatex(text: string): string {
+// Render LaTeX inline: $$...$$ block, $...$ inline → styled span
+function renderInlineMath(text: string): string {
+  // Block math $$...$$
+  text = text.replace(/\$\$([^$]+?)\$\$/g, (_, m) =>
+    '<span class="math-block">' + m.trim() + '</span>'
+  )
+  // Inline math $...$  (skip $$ already replaced, skip lone $)
+  text = text.replace(/(?<!\$)\$([^$\n]{1,120}?)\$(?!\$)/g, (_, m) =>
+    '<span class="math-inline">' + m.trim() + '</span>'
+  )
   return text
-    .replace(/\$\$([^$\n]+?)\$\$/g, (_, m) => m.trim())
-    .replace(/\$([^$\n]{1,80}?)\$/g, (_, m) => m.trim())
 }
+// Keep stripLatex as alias for backward compat
+function stripLatex(text: string): string { return text }
 
 function MdText({ text }: { text: string }) {
-  const lines = stripLatex(text).split('\n')
+  const lines = renderInlineMath(text).split('\n')
   const els: React.ReactNode[] = []
   let codeBlock = false; let codeLang = ''; let codeLines: string[] = []
 
@@ -89,12 +98,14 @@ function MdText({ text }: { text: string }) {
     const isHr = line === '---' || line === '***'
 
     if (isHr) { els.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '8px 0' }} />); continue }
+    if (line.includes('<span class="math-block')) { els.push(<div key={i} dangerouslySetInnerHTML={{ __html: line }} />); continue }
 
     const styled = raw.split(/(\*\*[^*]+\*\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\))/).map((p, j) => {
       if (p.startsWith('**') && p.endsWith('**') && p.length > 4) return <strong key={j} style={{ color: '#e8f4ff' }}>{p.slice(2,-2)}</strong>
       if (p.startsWith('`') && p.endsWith('`') && p.length > 2) return <code key={j} style={{ background: 'rgba(0,229,255,0.07)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '4px', padding: '1px 5px', fontSize: '12px', fontFamily: "'Space Mono',monospace", color: '#6dc8f0' }}>{p.slice(1,-1)}</code>
       const lm = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
       if (lm) return <a key={j} href={lm[2]} target="_blank" rel="noreferrer" style={{ color: '#00e5ff', textDecoration: 'underline' }}>{lm[1]}</a>
+      if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
       return <span key={j}>{p}</span>
     })
 
@@ -665,6 +676,25 @@ export default function Home() {
             if (ev.type === 'start') { prov = ev.provider || ''; setStreamProv(prov) }
             else if (ev.type === 'token') { full += ev.text; setStreamText(full) }
             else if (ev.type === 'think') { think += ev.text; setStreamThink(think) }
+            else if (ev.type === 'fallback' && ev.message === 'USE_PUTER') {
+              // Puter.js client-side fallback
+              try {
+                prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
+                const puter = (window as any).puter
+                if (puter?.ai?.chat) {
+                  const sysMsg = 'You are JARVIS, personal AI for Pranshu. Hinglish mein baat karo. Short answers.'
+                  const puterResp = await puter.ai.chat(sysMsg + '\n\nUser: ' + text)
+                  full = typeof puterResp === 'string' ? puterResp : puterResp?.message?.content?.[0]?.text || 'Puter response empty'
+                  setStreamText(full)
+                } else {
+                  full = '⚠️ Puter.js load nahi hua. Retry karo ya provider change karo.'
+                  setStreamText(full)
+                }
+              } catch (pe) {
+                full = '⚠️ Sab providers fail ho gaye. Internet check karo.'
+                setStreamText(full)
+              }
+            }
           } catch {}
         }
       }
@@ -780,6 +810,15 @@ export default function Home() {
                 {msg.reactions && msg.reactions.length > 0 && (
                   <div style={{ marginTop: '5px', fontSize: '14px', letterSpacing: '2px' }}>{msg.reactions.join('')}</div>
                 )}
+                {idx === displayMsgs.length - 1 && msg.role === 'assistant' && !streaming && (
+                  <button onClick={() => {
+                    const lastUser = [...msgs].reverse().find(m => m.role === 'user')
+                    if (lastUser) { setMsgs(prev => prev.slice(0, -1)); send(lastUser.content) }
+                  }}
+                    style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '8px', color: '#1e3a52', cursor: 'pointer', padding: '5px 10px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
+                    ↺ Regenerate
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -798,6 +837,8 @@ export default function Home() {
     >
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
+        .math-block { display: block; text-align: center; font-family: 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
+        .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(5px) } to { opacity:1; transform:translateY(0) } }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         @keyframes slideDown { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
