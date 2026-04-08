@@ -168,35 +168,39 @@ const MODES: Array<{ id: ChatMode; label: string; desc: string; color: string; i
   { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: '🔬' },
 ]
 
-const CASCADES: Record<ChatMode, Array<{ num: number; model: string; speed: string; note: string }>> = {
+const CASCADES: Record<ChatMode, Array<{ num: number; key: string; model: string; speed: string; note: string }>> = {
   auto: [
-    { num: 1, model: 'Groq · Llama 3.3 70B', speed: '~1s', note: 'Default best' },
-    { num: 2, model: 'Gemini 2.5 Flash', speed: '~2s', note: 'Google fallback' },
-    { num: 3, model: 'Together · Llama 3.3 70B', speed: '~3s', note: 'Alt fallback' },
-    { num: 4, model: 'Pollinations AI', speed: '~5s', note: 'No key needed' },
-    { num: 5, model: 'Puter · GPT-4o-mini', speed: '~6s', note: 'Last resort' },
+    { num: 1, key: 'groq',         model: 'Groq · Llama 3.3 70B',     speed: '~1s', note: 'Default best' },
+    { num: 2, key: 'gemini',       model: 'Gemini 2.5 Flash',          speed: '~2s', note: 'Google fallback' },
+    { num: 3, key: 'together',     model: 'Together · Llama 3.3 70B',  speed: '~3s', note: 'Alt fallback' },
+    { num: 4, key: 'pollinations', model: 'Pollinations AI',           speed: '~5s', note: 'No key needed' },
+    { num: 5, key: 'puter',        model: 'Puter · GPT-4o-mini',       speed: '~6s', note: 'Last resort' },
   ],
   flash: [
-    { num: 1, model: 'Groq · Llama 4 Scout 17B', speed: '~1s', note: 'Fastest — server key' },
-    { num: 2, model: 'Together · Llama 3.3 70B', speed: '~2s', note: 'Fallback' },
-    { num: 3, model: 'Gemini 2.5 Flash', speed: '~3s', note: 'Google fallback' },
-    { num: 4, model: 'Pollinations (OpenAI)', speed: '~5s', note: 'No key, browser direct' },
-    { num: 5, model: 'Puter · GPT-4o-mini', speed: '~6s', note: 'Last resort' },
+    { num: 1, key: 'groq',         model: 'Groq · Llama 4 Scout 17B',  speed: '~1s', note: 'Fastest — server key' },
+    { num: 2, key: 'together',     model: 'Together · Llama 3.3 70B',  speed: '~2s', note: 'Fallback' },
+    { num: 3, key: 'gemini',       model: 'Gemini 2.5 Flash',          speed: '~3s', note: 'Google fallback' },
+    { num: 4, key: 'pollinations', model: 'Pollinations (OpenAI)',      speed: '~5s', note: 'No key, browser direct' },
+    { num: 5, key: 'puter',        model: 'Puter · GPT-4o-mini',       speed: '~6s', note: 'Last resort' },
   ],
   think: [
-    { num: 1, model: 'Groq · DeepSeek R1 70B', speed: '~3s', note: 'Best reasoning' },
-    { num: 2, model: 'Gemini 2.5 Flash', speed: '~4s', note: 'Google thinking' },
-    { num: 3, model: 'Pollinations AI', speed: '~6s', note: 'No key needed' },
-    { num: 4, model: 'Puter · GPT-4o-mini', speed: '~8s', note: 'Last resort' },
+    { num: 1, key: 'groq',         model: 'Groq · DeepSeek R1 70B',    speed: '~3s', note: 'Best reasoning' },
+    { num: 2, key: 'gemini',       model: 'Gemini 2.5 Flash',          speed: '~4s', note: 'Google thinking' },
+    { num: 3, key: 'openrouter',   model: 'OpenRouter DeepSeek R1',    speed: '~5s', note: 'Free key' },
+    { num: 4, key: 'pollinations', model: 'Pollinations AI',           speed: '~6s', note: 'No key needed' },
+    { num: 5, key: 'puter',        model: 'Puter · GPT-4o-mini',       speed: '~8s', note: 'Last resort' },
   ],
   deep: [
-    { num: 1, model: 'Gemini 2.5 Flash + Tools', speed: '~4s', note: 'Weather/news/images' },
-    { num: 2, model: 'Pollinations AI', speed: '~6s', note: 'No key fallback' },
-    { num: 3, model: 'Puter · GPT-4o-mini', speed: '~8s', note: 'Last resort' },
+    { num: 1, key: 'gemini',       model: 'Gemini 2.5 Flash + Tools',  speed: '~4s', note: 'Weather/news/images' },
+    { num: 2, key: 'pollinations', model: 'Pollinations AI',           speed: '~6s', note: 'No key fallback' },
+    { num: 3, key: 'puter',        model: 'Puter · GPT-4o-mini',       speed: '~8s', note: 'Last resort' },
   ],
 }
 
-function CascadeDrawer({ mode, onClose, onChange }: { mode: ChatMode; onClose: () => void; onChange: (m: ChatMode) => void }) {
+function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvider }: {
+  mode: ChatMode; onClose: () => void; onChange: (m: ChatMode) => void
+  forcedProvider: string | null; onForceProvider: (p: string | null) => void
+}) {
   const curMode = MODES.find(m => m.id === mode)!
   const cascade = CASCADES[mode]
   return (
@@ -205,7 +209,7 @@ function CascadeDrawer({ mode, onClose, onChange }: { mode: ChatMode; onClose: (
         <div style={{ width: '36px', height: '3px', background: 'rgba(255,255,255,0.12)', borderRadius: '2px', margin: '0 auto 14px' }} />
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '2px' }}>
           {MODES.map(m => (
-            <button key={m.id} onClick={() => onChange(m.id)}
+            <button key={m.id} onClick={() => { onChange(m.id); onForceProvider(null) }}
               style={{ flexShrink: 0, background: mode === m.id ? m.color + '18' : 'rgba(255,255,255,0.02)', border: '1px solid', borderColor: mode === m.id ? m.color + '55' : 'rgba(255,255,255,0.06)', borderRadius: '20px', color: mode === m.id ? m.color : '#2a5070', cursor: 'pointer', padding: '6px 14px', fontSize: '12px', fontWeight: mode === m.id ? 700 : 400, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '5px' }}>
               {m.icon} {m.label}
             </button>
@@ -213,19 +217,44 @@ function CascadeDrawer({ mode, onClose, onChange }: { mode: ChatMode; onClose: (
         </div>
         <div style={{ background: curMode.color + '08', border: '1px solid ' + curMode.color + '20', borderRadius: '10px', padding: '9px 12px', marginBottom: '11px' }}>
           <div style={{ fontSize: '12px', color: curMode.color, fontWeight: 700, marginBottom: '2px' }}>{curMode.icon} {curMode.label} Mode — Cascade Priority</div>
-          <div style={{ fontSize: '11px', color: '#1e3248' }}>Best available provider → auto-fallback on error</div>
+          <div style={{ fontSize: '11px', color: '#1e3248' }}>
+            {forcedProvider
+              ? '📌 Provider locked — tap row again to unlock'
+              : 'Tap a provider to pin/force it • auto-fallback on error'}
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {cascade.map(c => (
-            <div key={c.num} style={{ display: 'grid', gridTemplateColumns: '22px 1fr 36px 1fr', alignItems: 'center', gap: '8px', padding: '8px 10px', background: c.num === 1 ? curMode.color + '07' : 'rgba(255,255,255,0.015)', borderRadius: '8px', border: '1px solid ' + (c.num === 1 ? curMode.color + '18' : 'rgba(255,255,255,0.03)') }}>
-              <span style={{ width: '20px', height: '20px', background: c.num === 1 ? curMode.color + '22' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (c.num === 1 ? curMode.color + '44' : 'rgba(255,255,255,0.06)'), borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: c.num === 1 ? curMode.color : '#2a5070', fontWeight: 700 }}>{c.num}</span>
-              <span style={{ fontSize: '13px', color: c.num === 1 ? '#c4dff0' : '#3a6080', fontWeight: c.num === 1 ? 600 : 400 }}>{c.model}</span>
-              <span style={{ fontSize: '11px', color: '#1e3248', textAlign: 'right' }}>{c.speed}</span>
-              <span style={{ fontSize: '10px', color: '#0e2030', textAlign: 'right' }}>{c.note}</span>
-            </div>
-          ))}
+          {cascade.map(c => {
+            const isPinned = forcedProvider === c.key
+            return (
+              <div key={c.num} onClick={() => onForceProvider(isPinned ? null : c.key)}
+                style={{ display: 'grid', gridTemplateColumns: '22px 1fr 36px 40px', alignItems: 'center', gap: '8px', padding: '8px 10px', cursor: 'pointer', transition: 'all 0.15s',
+                  background: isPinned ? curMode.color + '18' : c.num === 1 ? curMode.color + '07' : 'rgba(255,255,255,0.015)',
+                  borderRadius: '8px',
+                  border: '1px solid ' + (isPinned ? curMode.color + '55' : c.num === 1 ? curMode.color + '18' : 'rgba(255,255,255,0.03)'),
+                  boxShadow: isPinned ? '0 0 10px ' + curMode.color + '22' : 'none'
+                }}>
+                <span style={{ width: '20px', height: '20px',
+                  background: isPinned ? curMode.color + '33' : c.num === 1 ? curMode.color + '22' : 'rgba(255,255,255,0.04)',
+                  border: '1px solid ' + (isPinned ? curMode.color : c.num === 1 ? curMode.color + '44' : 'rgba(255,255,255,0.06)'),
+                  borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '10px', color: isPinned ? curMode.color : c.num === 1 ? curMode.color : '#2a5070', fontWeight: 700 }}>
+                  {c.num}
+                </span>
+                <span style={{ fontSize: '13px', color: isPinned ? '#e8f4ff' : c.num === 1 ? '#c4dff0' : '#3a6080', fontWeight: isPinned ? 700 : c.num === 1 ? 600 : 400 }}>{c.model}</span>
+                <span style={{ fontSize: '11px', color: isPinned ? curMode.color + 'aa' : '#1e3248', textAlign: 'right' }}>{c.speed}</span>
+                <span style={{ fontSize: '13px', textAlign: 'right', color: isPinned ? curMode.color : '#1a2a38' }}>{isPinned ? '📌' : '·'}</span>
+              </div>
+            )
+          })}
         </div>
-        <div style={{ marginTop: '10px', fontSize: '10px', color: '#0a1820', textAlign: 'center' }}>Tap outside to close</div>
+        {forcedProvider && (
+          <button onClick={() => onForceProvider(null)}
+            style={{ marginTop: '10px', width: '100%', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.18)', borderRadius: '8px', color: '#f87171', cursor: 'pointer', padding: '8px', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }}>
+            🔓 Unlock — resume auto cascade
+          </button>
+        )}
+        <div style={{ marginTop: '8px', fontSize: '10px', color: '#0a1820', textAlign: 'center' }}>Tap outside to close</div>
       </div>
     </div>
   )
@@ -269,6 +298,7 @@ export default function Home() {
   const [sidebar, setSidebar] = useState(false)
   const [recording, setRecording] = useState(false)
   const [tts, setTts] = useState(false)
+  const [forcedProvider, setForcedProvider] = useState<string | null>(null)
   const [cascadeOpen, setCascadeOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -508,7 +538,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, userName: 'Pranshu' }),
+        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, forcedProvider: forcedProvider || undefined, userName: 'Pranshu' }),
         signal: abortRef.current.signal,
       })
       if (!res.ok || !res.body) throw new Error('Stream failed')
@@ -685,7 +715,7 @@ export default function Home() {
         </div>
       )}
 
-      {cascadeOpen && <CascadeDrawer mode={chatMode} onClose={() => setCascadeOpen(false)} onChange={changeMode} />}
+      {cascadeOpen && <CascadeDrawer mode={chatMode} onClose={() => setCascadeOpen(false)} onChange={changeMode} forcedProvider={forcedProvider} onForceProvider={p => { setForcedProvider(p); setCascadeOpen(false) }} />}
 
       <Sidebar isOpen={sidebar} onClose={() => setSidebar(false)} />
 
@@ -825,7 +855,7 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button onClick={() => setCascadeOpen(true)}
                   style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
-                  {curMode.icon} {curMode.label} <span style={{ opacity: 0.4, fontSize: '9px' }}>▾</span>
+                  {curMode.icon} {curMode.label}{forcedProvider ? <span style={{ fontSize: '9px', background: curMode.color + '22', borderRadius: '4px', padding: '1px 4px', color: curMode.color, marginLeft: '2px' }}>📌</span> : <span style={{ opacity: 0.4, fontSize: '9px' }}>▾</span>}
                 </button>
                 <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
                 <button onClick={() => photoRef.current?.click()} className="tool-btn"

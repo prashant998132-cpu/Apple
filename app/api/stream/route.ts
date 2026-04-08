@@ -60,8 +60,10 @@ async function streamOpenAI(
 }
 
 export async function POST(req: NextRequest) {
-  const { message, history = [], memoryPrompt, chatMode = 'auto', userName = 'Boss', systemPrompt: overrideSystem } = await req.json()
+  const { message, history = [], memoryPrompt, chatMode = 'auto', forcedProvider, userName = 'Boss', systemPrompt: overrideSystem } = await req.json()
   if (!message?.trim()) return new Response('No message', { status: 400 })
+  // forcedProvider: skip cascade, only run this provider
+  const shouldRun = (key: string) => !forcedProvider || forcedProvider === key
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -102,7 +104,7 @@ RULES:
         let replied = false
 
         // ── 1. GROQ — fastest, model varies by mode ─────────
-        if (!replied && process.env.GROQ_API_KEY) {
+        if (!replied && shouldRun('groq') && process.env.GROQ_API_KEY) {
           const model = chatMode === 'flash'
             ? 'meta-llama/llama-4-scout-17b-16e-instruct'
             : chatMode === 'think'
@@ -118,7 +120,7 @@ RULES:
         }
 
         // ── 2. GEMINI 2.5 Flash ──────────────────────────────
-        if (!replied) {
+        if (!replied && shouldRun('gemini')) {
           const gemKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY
           if (gemKey) {
             try {
@@ -168,7 +170,7 @@ RULES:
         }
 
         // ── 3. TOGETHER AI — Llama 3.3 70B ──────────────────
-        if (!replied && process.env.TOGETHER_API_KEY) {
+        if (!replied && shouldRun('together') && process.env.TOGETHER_API_KEY) {
           replied = await streamOpenAI(
             'https://api.together.xyz/v1/chat/completions',
             process.env.TOGETHER_API_KEY,
@@ -178,7 +180,7 @@ RULES:
         }
 
         // ── 4. CEREBRAS ──────────────────────────────────────
-        if (!replied && process.env.CEREBRAS_API_KEY) {
+        if (!replied && shouldRun('cerebras') && process.env.CEREBRAS_API_KEY) {
           replied = await streamOpenAI(
             'https://api.cerebras.ai/v1/chat/completions',
             process.env.CEREBRAS_API_KEY, 'llama3.1-70b',
@@ -187,7 +189,7 @@ RULES:
         }
 
         // ── 5. MISTRAL ───────────────────────────────────────
-        if (!replied && process.env.MISTRAL_API_KEY) {
+        if (!replied && shouldRun('mistral') && process.env.MISTRAL_API_KEY) {
           replied = await streamOpenAI(
             'https://api.mistral.ai/v1/chat/completions',
             process.env.MISTRAL_API_KEY, 'mistral-small-latest',
@@ -252,7 +254,7 @@ RULES:
         }
 
         // ── 8. OPENROUTER ────────────────────────────────────
-        if (!replied) {
+        if (!replied && shouldRun('openrouter')) {
           const orKey = process.env.OPENROUTER_API_KEY
           const orModel = orKey ? 'meta-llama/llama-3-70b-instruct' : 'meta-llama/llama-3.2-3b-instruct:free'
           try {
@@ -336,7 +338,7 @@ RULES:
         }
 
         // ── 11. POLLINATIONS — always free ───────────────────
-        if (!replied) {
+        if (!replied && shouldRun('pollinations')) {
           try {
             send({ type: 'start', provider: 'Pollinations AI' })
             const polRes = await fetch('https://text.pollinations.ai/openai', {
@@ -375,7 +377,7 @@ RULES:
         }
 
         // ── Pollinations non-stream fallback ─────────────────
-        if (!replied) {
+        if (!replied && shouldRun('pollinations')) {
           try {
             const url = `https://text.pollinations.ai/${encodeURIComponent(message)}?model=openai&seed=${Date.now()}&system=${encodeURIComponent(systemPrompt.slice(0,200))}`
             const r = await fetch(url, { signal: AbortSignal.timeout(25000) })
@@ -392,7 +394,7 @@ RULES:
         }
 
         // ── 12. CLIENT FALLBACK — Puter.js ───────────────────
-        if (!replied) {
+        if (!replied && shouldRun('puter')) {
           send({ type: 'fallback', message: 'USE_PUTER' })
           send({ type: 'done' })
         }
