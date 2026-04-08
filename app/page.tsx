@@ -354,6 +354,21 @@ export default function Home() {
     try { localStorage.removeItem(STORE) } catch {}
   }
 
+  function exportChat() {
+    if (!msgs.length) return
+    const lines = msgs.map(m => {
+      const ts  = new Date(m.ts).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+      const who = m.role === 'user' ? '👤 You' : '🤖 JARVIS'
+      return '[' + ts + '] ' + who + ':\n' + m.content
+    }).join('\n\n---\n\n')
+    const blob = new Blob([lines], { type: 'text/plain; charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'JARVIS-' + new Date().toISOString().slice(0, 10) + '.txt'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   function addReaction(msgId: string, emoji: string) {
     setMsgs(prev => prev.map(m =>
       m.id === msgId ? { ...m, reactions: m.reactions?.includes(emoji) ? m.reactions.filter(r => r !== emoji) : [...(m.reactions || []), emoji] } : m
@@ -666,7 +681,7 @@ export default function Home() {
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v12</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.49</div>
           </div>
         </div>
 
@@ -679,6 +694,8 @@ export default function Home() {
           </button>
           <button onClick={clearChat} className="tool-btn"
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
+          <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
+            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
         </div>
       </header>
 
@@ -803,7 +820,7 @@ export default function Home() {
               </div>
 
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                {inp.length > 60 && <span style={{ fontSize: '10px', color: '#1a3048' }}>{inp.length}</span>}
+                {inp.length > 20 && <span style={{ fontSize: '10px', color: '#1a3048' }}>{inp.trim().split(/\s+/).filter(Boolean).length}w · {inp.length}c</span>}
                 {streaming ? (
                   <button onClick={() => abortRef.current?.abort()}
                     style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '8px', color: '#f87171', cursor: 'pointer', padding: '5px 13px', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit' }}>Stop</button>

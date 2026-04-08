@@ -8,9 +8,9 @@ import * as NoKeyTools from '../tools/no-key';
 import * as FreeKeyTools from '../tools/free-key';
 import type { GeminiMessage, UserProfile, ToolResult } from '../../types/jarvis.types';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash-preview-04-17';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const MAX_ROUNDS = 5;
+const MAX_ROUNDS = 8;
 
 // ─── System Prompt ────────────────────────────────────────
 function buildSystemPrompt(user: UserProfile, memoryContext?: string): string {
