@@ -14,6 +14,7 @@ type Msg = {
 
 const STORE = 'j_msgs_v5'
 const MSTORE = 'j_mode_v4'
+const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }
 function genPass() {
@@ -33,22 +34,63 @@ function timeStr(ts: number) {
   return new Date(ts).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
-function getSuggestions(text: string): string[] {
-  const t = text.toLowerCase()
-  if (/```|function|class|def |const |var |import /.test(t))
-    return ['Explain karo line by line', 'Isko optimize karo', 'Test cases do']
-  if (/equation|calculate|solve|formula|math|integral|derivative/.test(t))
-    return ['Step by step dikhao', 'Ek aur example do', 'Formula explain karo']
-  if (/health|disease|medicine|symptoms|doctor|treatment/.test(t))
-    return ['Precautions kya hain?', 'Diet advice do', 'Doctor se kab milein?']
-  if (/recipe|food|cook|ingredients|dish/.test(t))
-    return ['Ingredients list do', 'Tips & tricks batao', 'Alternatives kya hain?']
-  if (/news|politics|economy|government|election/.test(t))
-    return ['Aur details do', 'Impact kya hoga?', 'Background explain karo']
-  if (/mausam|weather|temperature|rain|humidity/.test(t))
-    return ['Kal ka forecast?', 'Week forecast do', 'Is mausam mein kya pehne?']
-  return ['Aur explain karo', 'Example do', 'Hindi mein samjhao']
+// Smart context-aware suggestions based on BOTH AI response + user query
+function getSmartSuggestions(aiReply: string, userQuery: string): string[] {
+  const r = aiReply.toLowerCase()
+  const q = userQuery.toLowerCase()
+
+  // Code-related
+  if (/```|function|class|def |const |var |import |async |await /.test(r))
+    return ['Explain line by line', 'Optimize karo', 'Test cases do', 'Edge cases kya hain?']
+
+  // Math / formula
+  if (/equation|formula|integral|derivative|theorem|proof|solve|calculate/.test(r))
+    return ['Step by step dikhao', 'Ek aur example do', 'Iska real-life use kya hai?']
+
+  // Health
+  if (/symptoms|disease|medicine|treatment|doctor|health|diet/.test(r))
+    return ['Precautions kya hain?', 'Natural remedy batao', 'Doctor kab zaruri hai?']
+
+  // News / current events
+  if (/news|khabar|headline|politics|government|election|economy/.test(r))
+    return ['Background batao', 'Impact kya hoga?', 'Different perspectives do']
+
+  // Weather
+  if (/weather|mausam|temperature|rain|celsius|forecast|humidity/.test(r))
+    return ['Kal ka forecast?', 'Week forecast do', 'Kya pehnen is mausam mein?']
+
+  // Travel / places
+  if (/travel|visit|city|country|tourism|flight|hotel|trip/.test(r))
+    return ['Best time to visit?', 'Budget estimate do', 'Must-see places?']
+
+  // Food / recipe
+  if (/recipe|ingredient|cook|dish|food|khana|banana/.test(r))
+    return ['Quick version batao', 'Substitutes kya hain?', 'Nutrition info do']
+
+  // Study / exam
+  if (/study|exam|syllabus|chapter|topic|neet|jee|concept/.test(r))
+    return ['Short notes banao', 'Previous year questions?', 'Tricks yaad karne ke liye?']
+
+  // Finance
+  if (/stock|crypto|bitcoin|price|invest|mutual fund|sip|return/.test(r))
+    return ['Risk kya hai?', 'Beginner ke liye guide?', '5 saal mein kya hoga?']
+
+  // Image generated
+  if (/image|photo|picture|wallpaper|generated|banaya/.test(q))
+    return ['Aur variations do', 'Different style mein banao', 'HD version chahiye']
+
+  // Story / creative
+  if (/story|poem|creative|write|likhao|kahani/.test(r))
+    return ['Aage kya hua?', 'Different ending do', 'Shorter version chahiye']
+
+  // Default — smart based on response length
+  if (aiReply.length > 500)
+    return ['Summary do', 'Simplify karo', 'Key points list mein do']
+  return ['Aur detail mein batao', 'Example do', 'Hindi mein samjhao']
 }
+
+// Legacy alias (used in some places)
+function getSuggestions(text: string): string[] { return getSmartSuggestions(text, '') }
 
 // Strip LaTeX markers: $$...$$ and $...$ → plain text
 // Render LaTeX inline: $$...$$ block, $...$ inline → styled span
@@ -433,6 +475,8 @@ export default function Home() {
   const [cmdOpen, setCmdOpen] = useState(false)
   const [cmdFilter, setCmdFilter] = useState('')
   const [contextMsg, setContextMsg] = useState<string | null>(null)
+  const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
+  const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inpRef = useRef<HTMLTextAreaElement>(null)
@@ -504,6 +548,40 @@ export default function Home() {
     try { localStorage.setItem('j_tts', nv ? '1' : '0') } catch {}
   }
 
+  async function extractAndSaveMemory(recentMsgs: Msg[]) {
+    try {
+      const conversation = recentMsgs
+        .map(m => (m.role === 'user' ? 'User' : 'JARVIS') + ': ' + m.content.slice(0, 200))
+        .join('
+')
+      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].
+
+' + conversation
+      const r = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'openai',
+          messages: [{ role: 'system', content: 'Return only a JSON array. No markdown, no explanation.' }, { role: 'user', content: prompt }],
+          max_tokens: 150
+        })
+      })
+      const d = await r.json()
+      const raw = d.choices?.[0]?.message?.content || '[]'
+      const match = raw.match(/[[sS]*]/)
+      if (!match) return
+      const facts: string[] = JSON.parse(match[0])
+      if (!facts.length) return
+      setAutoMemory(prev => {
+        const merged = [...new Set([...prev, ...facts])].slice(0, 20)
+        try { localStorage.setItem(MEMSTORE, JSON.stringify(merged)) } catch {}
+        return merged
+      })
+      setMemBadge(true)
+      setTimeout(() => setMemBadge(false), 3000)
+    } catch {}
+  }
+
   function clearChat() {
     setMsgs([]); setSuggestions([])
     try { localStorage.removeItem(STORE) } catch {}
@@ -559,20 +637,68 @@ export default function Home() {
   }
 
   async function toggleVoice() {
-    if (recording) { mediaRef.current?.stop(); setRecording(false); return }
+    if (recording) {
+      // Stop: try WebSpeech first, then MediaRecorder
+      const ws = (window as any)._jarvisWSR
+      if (ws) { ws.stop(); (window as any)._jarvisWSR = null }
+      mediaRef.current?.stop()
+      setRecording(false)
+      return
+    }
+    // Try Web Speech API first (no server needed, instant, Hindi support)
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SpeechRecognition) {
+      try {
+        const sr = new SpeechRecognition()
+        sr.lang = 'hi-IN'           // Hindi primary
+        sr.interimResults = true
+        sr.continuous = false
+        sr.maxAlternatives = 1
+        setRecording(true)
+        let finalText = ''
+        sr.onresult = (e: any) => {
+          const transcript = Array.from(e.results)
+            .map((r: any) => r[0].transcript).join('')
+          setInp(transcript)
+          if (e.results[e.results.length - 1].isFinal) finalText = transcript
+        }
+        sr.onerror = () => { setRecording(false); (window as any)._jarvisWSR = null }
+        sr.onend = () => {
+          setRecording(false)
+          ;(window as any)._jarvisWSR = null
+          if (finalText.trim()) setTimeout(() => send(finalText.trim()), 200)
+        }
+        sr.start()
+        ;(window as any)._jarvisWSR = sr
+        // Auto-stop after 15s
+        setTimeout(() => { try { sr.stop() } catch {} }, 15000)
+        return
+      } catch {}
+    }
+    // Fallback: MediaRecorder → /api/stt (Groq Whisper)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
+      const mr = new MediaRecorder(stream, { mimeType })
       const chunks: Blob[] = []
-      mr.ondataavailable = e => chunks.push(e.data)
+      mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
-        const fd = new FormData(); fd.append('audio', new Blob(chunks, { type: 'audio/webm' }), 'audio.webm')
-        try { const r = await fetch('/api/stt', { method: 'POST', body: fd }); const d = await r.json(); if (d.text) setInp(d.text) } catch {}
+        setInp('🎙 Transcribing...')
+        const fd = new FormData()
+        fd.append('audio', new Blob(chunks, { type: mimeType }), 'audio.webm')
+        try {
+          const r = await fetch('/api/stt', { method: 'POST', body: fd })
+          const d = await r.json()
+          if (d.text) { setInp(d.text); setTimeout(() => send(d.text), 200) }
+          else setInp('')
+        } catch { setInp('') }
       }
-      mr.start(); mediaRef.current = mr; setRecording(true)
-      setTimeout(() => { if (mr.state === 'recording') mr.stop() }, 10000)
-    } catch { alert('Mic permission chahiye!') }
+      mr.start(250)  // collect chunks every 250ms
+      mediaRef.current = mr
+      setRecording(true)
+      setTimeout(() => { if (mr.state === 'recording') mr.stop() }, 15000)
+    } catch { alert('Mic permission chahiye! Browser settings mein allow karo.') }
   }
 
   async function handleImageFile(file: File) {
@@ -666,7 +792,18 @@ export default function Home() {
     try {
       const res = await fetch('/api/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode: effectiveMode, forcedProvider: forcedProvider || undefined, userName: 'Pranshu' }),
+        body: JSON.stringify({
+            message: text,
+            history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })),
+            chatMode: effectiveMode,
+            forcedProvider: forcedProvider || undefined,
+            userName: 'Pranshu',
+            memoryPrompt: autoMemory.length
+              ? 'JARVIS ko pata hai user ke baare mein:
+' + autoMemory.map(f => '• ' + f).join('
+')
+              : undefined
+          }),
         signal: abortRef.current.signal,
       })
       if (!res.ok || !res.body) throw new Error('Stream failed')
@@ -747,7 +884,13 @@ export default function Home() {
       setMsgs([...newMsgs, finalMsg])
       speak(full)
       awardXP('chat_message')
-      setSuggestions(getSuggestions(full))
+      setSuggestions(getSmartSuggestions(full, text))
+
+      // Auto-memory: extract facts every 6 messages
+      const allMsgs = [...newMsgs, { role: 'assistant', content: full }]
+      if (allMsgs.length > 0 && allMsgs.length % 6 === 0) {
+        extractAndSaveMemory(allMsgs.slice(-12))
+      }
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         setMsgs([...newMsgs, { id: uid(), role: 'assistant', content: '⚠️ Network issue — retry karo!', ts: Date.now() }])
@@ -959,8 +1102,18 @@ export default function Home() {
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
             style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
+          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
+            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
+            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
+            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
+          </button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
             style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
+          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
+            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
+            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
+            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
+          </button>
         </div>
       </header>
 
