@@ -145,7 +145,6 @@ function MdText({ text }: { text: string }) {
       const lm = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
       if (lm) return <a key={j} href={lm[2]} target="_blank" rel="noreferrer" style={{ color: '#00e5ff', textDecoration: 'underline' }}>{lm[1]}</a>
       if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
-      if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
       return <span key={j}>{p}</span>
     })
 
