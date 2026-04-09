@@ -15,9 +15,6 @@ type Msg = {
 const STORE = 'j_msgs_v5'
 const MSTORE = 'j_mode_v4'
 const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
-const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
-const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
-const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }
 function genPass() {
@@ -324,6 +321,10 @@ const CMDS = [
   { cmd: '/todo',     desc: 'Todo list',             icon: '✅' },
   { cmd: '/qr',       desc: 'QR generator',          icon: '📱' },
   { cmd: '/focus',    desc: 'Focus mode',            icon: '🎯' },
+  { cmd: '/study',    desc: 'Study mode',            icon: '📚' },
+  { cmd: '/xp',       desc: 'XP & Level',            icon: '⭐' },
+  { cmd: '/tools',    desc: 'All Tools',             icon: '🛠️' },
+  { cmd: '/write',    desc: 'AI Writer',             icon: '✍️' },
 ]
 
 // ── Smart Dynamic Prompts — time/day aware ─────────────
@@ -470,12 +471,6 @@ export default function Home() {
   const [contextMsg, setContextMsg] = useState<string | null>(null)
   const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
   const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
-  const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
-  const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
-  const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
-  const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
-  const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
-  const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inpRef = useRef<HTMLTextAreaElement>(null)
@@ -581,106 +576,10 @@ export default function Home() {
     } catch {}
   }
 
-  async function extractAndSaveMemory(recentMsgs: Msg[]) {
-    try {
-      const conversation = recentMsgs
-        .map(m => (m.role === 'user' ? 'User' : 'JARVIS') + ': ' + m.content.slice(0, 200))
-        .join('
-')
-      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].
-
-' + conversation
-      const r = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'openai',
-          messages: [{ role: 'system', content: 'Return only a JSON array. No markdown, no explanation.' }, { role: 'user', content: prompt }],
-          max_tokens: 150
-        })
-      })
-      const d = await r.json()
-      const raw = d.choices?.[0]?.message?.content || '[]'
-      const match = raw.match(/[[sS]*]/)
-      if (!match) return
-      const facts: string[] = JSON.parse(match[0])
-      if (!facts.length) return
-      setAutoMemory(prev => {
-        const merged = [...new Set([...prev, ...facts])].slice(0, 20)
-        try { localStorage.setItem(MEMSTORE, JSON.stringify(merged)) } catch {}
-        return merged
-      })
-      setMemBadge(true)
-      setTimeout(() => setMemBadge(false), 3000)
-    } catch {}
   }
 
-  async function extractAndSaveMemory(recentMsgs: Msg[]) {
-    try {
-      const conversation = recentMsgs
-        .map(m => (m.role === 'user' ? 'User' : 'JARVIS') + ': ' + m.content.slice(0, 200))
-        .join('
-')
-      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].
-
-' + conversation
-      const r = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'openai',
-          messages: [{ role: 'system', content: 'Return only a JSON array. No markdown, no explanation.' }, { role: 'user', content: prompt }],
-          max_tokens: 150
-        })
-      })
-      const d = await r.json()
-      const raw = d.choices?.[0]?.message?.content || '[]'
-      const match = raw.match(/[[sS]*]/)
-      if (!match) return
-      const facts: string[] = JSON.parse(match[0])
-      if (!facts.length) return
-      setAutoMemory(prev => {
-        const merged = [...new Set([...prev, ...facts])].slice(0, 20)
-        try { localStorage.setItem(MEMSTORE, JSON.stringify(merged)) } catch {}
-        return merged
-      })
-      setMemBadge(true)
-      setTimeout(() => setMemBadge(false), 3000)
-    } catch {}
   }
 
-  async function extractAndSaveMemory(recentMsgs: Msg[]) {
-    try {
-      const conversation = recentMsgs
-        .map(m => (m.role === 'user' ? 'User' : 'JARVIS') + ': ' + m.content.slice(0, 200))
-        .join('
-')
-      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].
-
-' + conversation
-      const r = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'openai',
-          messages: [{ role: 'system', content: 'Return only a JSON array. No markdown, no explanation.' }, { role: 'user', content: prompt }],
-          max_tokens: 150
-        })
-      })
-      const d = await r.json()
-      const raw = d.choices?.[0]?.message?.content || '[]'
-      const match = raw.match(/[[sS]*]/)
-      if (!match) return
-      const facts: string[] = JSON.parse(match[0])
-      if (!facts.length) return
-      setAutoMemory(prev => {
-        const merged = [...new Set([...prev, ...facts])].slice(0, 20)
-        try { localStorage.setItem(MEMSTORE, JSON.stringify(merged)) } catch {}
-        return merged
-      })
-      setMemBadge(true)
-      setTimeout(() => setMemBadge(false), 3000)
-    } catch {}
   }
 
   function clearChat() {
@@ -703,13 +602,6 @@ export default function Home() {
     URL.revokeObjectURL(a.href)
   }
 
-  function exportChat() {
-    if (!msgs.length) return
-    const lines = msgs.map(m => {
-      const ts  = new Date(m.ts).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-      const who = m.role === 'user' ? '👤 You' : '🤖 JARVIS'
-      return '[' + ts + '] ' + who + ':\n' + m.content
-    }).join('\n\n---\n\n')
     const blob = new Blob([lines], { type: 'text/plain; charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -862,7 +754,7 @@ export default function Home() {
       setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `🔐 **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
       return
     }
-    const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus' }
+    const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus', '/study': '/study', '/xp': '/xp', '/tools': '/tools', '/write': '/write' }
     if (PAGE_CMDS[t]) { window.location.href = PAGE_CMDS[t]; return }
 
     const userMsg: Msg = { id: uid(), role: 'user', content: text, ts: Date.now() }
@@ -885,6 +777,14 @@ export default function Home() {
 
     setStreaming(true); setStreamText(''); setStreamThink(''); setStreamProv('Connecting...')
     abortRef.current = new AbortController()
+    // Smart auto-mode detection
+    const effectiveMode: ChatMode = chatMode === 'auto'
+      ? (/weather|news|image|search|find|khabar|mausam|photo|banao/.test(t) ? 'deep'
+         : /why|explain|samjhao|theorem|formula|kaise.*kaam|difference|compare/.test(t) ? 'think'
+         : t.length < 15 && /^(hi|ok|haan|nahi|thanks|bye|hello|hey)/.test(t) ? 'flash'
+         : 'auto')
+      : chatMode
+
     let full = '', think = '', prov = ''
 
     try {
@@ -933,35 +833,7 @@ export default function Home() {
                 full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
               }
             }
-            else if (ev.type === 'fallback' && ev.message === 'USE_PUTER') {
-              // Puter.js fallback — attempt if loaded, else show helpful message
-              const puter = (window as any).puter
-              if (puter?.ai?.chat) {
-                try {
-                  prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
-                  const pr = await puter.ai.chat('You are JARVIS. Hinglish mein baat karo.\nUser: ' + text)
-                  full = typeof pr === 'string' ? pr : pr?.message?.content?.[0]?.text || ''
-                  if (full) setStreamText(full)
-                  else { full = 'Koi response nahi aaya. Dobara try karo.'; setStreamText(full) }
-                } catch { full = 'Sab providers unavailable hain. Thodi der baad try karo.'; setStreamText(full) }
-              } else {
-                full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
-              }
             }
-            else if (ev.type === 'fallback' && ev.message === 'USE_PUTER') {
-              // Puter.js fallback — attempt if loaded, else show helpful message
-              const puter = (window as any).puter
-              if (puter?.ai?.chat) {
-                try {
-                  prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
-                  const pr = await puter.ai.chat('You are JARVIS. Hinglish mein baat karo.\nUser: ' + text)
-                  full = typeof pr === 'string' ? pr : pr?.message?.content?.[0]?.text || ''
-                  if (full) setStreamText(full)
-                  else { full = 'Koi response nahi aaya. Dobara try karo.'; setStreamText(full) }
-                } catch { full = 'Sab providers unavailable hain. Thodi der baad try karo.'; setStreamText(full) }
-              } else {
-                full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
-              }
             }
           } catch {}
         }
@@ -1093,24 +965,6 @@ export default function Home() {
                     ↺ Regenerate
                   </button>
                 )}
-                {idx === displayMsgs.length - 1 && msg.role === 'assistant' && !streaming && (
-                  <button onClick={() => {
-                    const lastUser = [...msgs].reverse().find(m => m.role === 'user')
-                    if (lastUser) { setMsgs(prev => prev.slice(0, -1)); send(lastUser.content) }
-                  }}
-                    style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '8px', color: '#1e3a52', cursor: 'pointer', padding: '5px 10px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
-                    ↺ Regenerate
-                  </button>
-                )}
-                {idx === displayMsgs.length - 1 && msg.role === 'assistant' && !streaming && (
-                  <button onClick={() => {
-                    const lastUser = [...msgs].reverse().find(m => m.role === 'user')
-                    if (lastUser) { setMsgs(prev => prev.slice(0, -1)); send(lastUser.content) }
-                  }}
-                    style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '8px', color: '#1e3a52', cursor: 'pointer', padding: '5px 10px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>
-                    ↺ Regenerate
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -1130,10 +984,7 @@ export default function Home() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         .math-block { display: block; text-align: center; font-family: 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
-        .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; }
-        .math-block { display: block; text-align: center; font-family: 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
-        .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; }
-        .math-block { display: block; text-align: center; font-family: 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
+        .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; } 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
         .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(5px) } to { opacity:1; transform:translateY(0) } }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
@@ -1173,7 +1024,7 @@ export default function Home() {
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.49</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.50</div>
           </div>
         </div>
 
@@ -1188,43 +1039,6 @@ export default function Home() {
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
             style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
-          <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
-            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
-          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
-            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
-            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
-          </button>
           <button title={'Memory: ' + autoMemory.length + ' facts saved'}
             onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
             style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
