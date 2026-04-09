@@ -546,11 +546,8 @@ export default function Home() {
     try {
       const conversation = recentMsgs
         .map(m => (m.role === 'user' ? 'User' : 'JARVIS') + ': ' + m.content.slice(0, 200))
-        .join('
-')
-      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].
-
-' + conversation
+        .join('\n')
+      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].\n\n' + conversation
       const r = await fetch('https://text.pollinations.ai/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -797,9 +794,7 @@ export default function Home() {
             forcedProvider: forcedProvider || undefined,
             userName: 'Pranshu',
             memoryPrompt: autoMemory.length
-              ? 'JARVIS ko pata hai user ke baare mein:
-' + autoMemory.map(f => '• ' + f).join('
-')
+              ? 'JARVIS ko pata hai user ke baare mein:\n' + autoMemory.map(f => '• ' + f).join('\n')
               : undefined
           }),
         signal: abortRef.current.signal,
