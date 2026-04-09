@@ -15,6 +15,7 @@ type Msg = {
 const STORE = 'j_msgs_v5'
 const MSTORE = 'j_mode_v4'
 const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
+const MEMSTORE = 'j_auto_mem_v1'   // auto-extracted memory facts
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }
 function genPass() {
@@ -477,6 +478,8 @@ export default function Home() {
   const [contextMsg, setContextMsg] = useState<string | null>(null)
   const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
   const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
+  const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
+  const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inpRef = useRef<HTMLTextAreaElement>(null)
@@ -546,6 +549,40 @@ export default function Home() {
   function toggleTts() {
     const nv = !tts; setTts(nv)
     try { localStorage.setItem('j_tts', nv ? '1' : '0') } catch {}
+  }
+
+  async function extractAndSaveMemory(recentMsgs: Msg[]) {
+    try {
+      const conversation = recentMsgs
+        .map(m => (m.role === 'user' ? 'User' : 'JARVIS') + ': ' + m.content.slice(0, 200))
+        .join('
+')
+      const prompt = 'From this conversation, extract 2-3 short personal facts about the user worth remembering (name, location, preferences, goals, habits). Return JSON array of short strings only. If nothing worth remembering, return [].
+
+' + conversation
+      const r = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'openai',
+          messages: [{ role: 'system', content: 'Return only a JSON array. No markdown, no explanation.' }, { role: 'user', content: prompt }],
+          max_tokens: 150
+        })
+      })
+      const d = await r.json()
+      const raw = d.choices?.[0]?.message?.content || '[]'
+      const match = raw.match(/[[sS]*]/)
+      if (!match) return
+      const facts: string[] = JSON.parse(match[0])
+      if (!facts.length) return
+      setAutoMemory(prev => {
+        const merged = [...new Set([...prev, ...facts])].slice(0, 20)
+        try { localStorage.setItem(MEMSTORE, JSON.stringify(merged)) } catch {}
+        return merged
+      })
+      setMemBadge(true)
+      setTimeout(() => setMemBadge(false), 3000)
+    } catch {}
   }
 
   async function extractAndSaveMemory(recentMsgs: Msg[]) {
@@ -1107,8 +1144,18 @@ export default function Home() {
             style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
             🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
           </button>
+          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
+            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
+            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
+            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
+          </button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
             style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>💾</button>
+          <button title={'Memory: ' + autoMemory.length + ' facts saved'}
+            onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
+            style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
+            🧠{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
+          </button>
           <button title={'Memory: ' + autoMemory.length + ' facts saved'}
             onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
             style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
