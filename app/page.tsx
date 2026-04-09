@@ -656,6 +656,9 @@ export default function Home() {
       return
     }
 
+    // Auto-detect best mode if currently on auto
+    const effectiveMode = chatMode === 'auto' ? detectBestMode(text) : chatMode
+
     setStreaming(true); setStreamText(''); setStreamThink(''); setStreamProv('Connecting...')
     abortRef.current = new AbortController()
     let full = '', think = '', prov = ''
@@ -663,7 +666,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode, forcedProvider: forcedProvider || undefined, userName: 'Pranshu' }),
+        body: JSON.stringify({ message: text, history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })), chatMode: effectiveMode, forcedProvider: forcedProvider || undefined, userName: 'Pranshu' }),
         signal: abortRef.current.signal,
       })
       if (!res.ok || !res.body) throw new Error('Stream failed')

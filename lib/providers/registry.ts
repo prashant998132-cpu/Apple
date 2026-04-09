@@ -130,7 +130,7 @@ export const IMAGE_PROVIDERS: Provider[] = [
     name: 'Google Gemini Imagen 3',
     tier: 'free_key',
     limit: 'Generous free tier',
-    keyEnv: 'NEXT_PUBLIC_GEMINI_API_KEY',
+    keyEnv: 'GEMINI_API_KEY',
     quality: 5,
     mobile: true, offline: false, hindi: false,
     notes: 'Best quality. Uses existing Gemini key.'
@@ -331,7 +331,7 @@ export const LLM_PROVIDERS = [
     name: 'Gemini 2.0 Flash',
     tier: 'free_key',
     limit: '1500 req/day free',
-    keyEnv: 'NEXT_PUBLIC_GEMINI_API_KEY',
+    keyEnv: 'GEMINI_API_KEY',
     quality: 5,
     tools: true,
     notes: 'Primary brain. Best function calling.'

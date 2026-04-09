@@ -24,7 +24,7 @@ export interface LLMResult {
 
 // ── 1. Gemini 2.0 Flash ──────────────────────────────────
 export async function askGemini(messages: any[], systemPrompt: string, tools?: any[]): Promise<LLMResult> {
-  const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY
+  const key = process.env.GEMINI_API_KEY
   if (!key) throw new Error('no_key')
   const start = Date.now()
   const body: any = {

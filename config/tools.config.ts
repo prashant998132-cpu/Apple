@@ -447,7 +447,7 @@ export const TOOLS_CONFIG: ToolDefinition[] = [
     description: 'Generate high-quality AI images using Gemini Imagen or HuggingFace Flux. Better quality than fast generation. Use for important/detailed requests.',
     category: 'image-gen',
     requiresKey: true,
-    envKey: 'NEXT_PUBLIC_GEMINI_API_KEY',
+    envKey: 'GEMINI_API_KEY',
     autoTrigger: ['high quality image', 'realistic image', 'detailed image', 'best image', 'AI art', 'flux', 'stable diffusion', 'बढ़िया तस्वीर'],
     inputSchema: {
       type: 'object',

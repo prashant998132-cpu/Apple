@@ -14,7 +14,7 @@ const ENV = {
   GIPHY: process.env.GIPHY_API_KEY || '',
   PIXABAY: process.env.PIXABAY_API_KEY || '',
   HF: process.env.HUGGINGFACE_TOKEN || '',
-  GEMINI: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
+  GEMINI: process.env.GEMINI_API_KEY || '',
   GUARDIAN: process.env.GUARDIAN_API_KEY || '',
 };
 

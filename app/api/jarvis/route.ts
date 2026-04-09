@@ -15,7 +15,7 @@ async function personaGroq(msgs: any[], sys: string): Promise<string> {
 }
 
 async function personaGemini(prompt: string, sys: string): Promise<string> {
-  const key = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY
+  const key = process.env.GEMINI_API_KEY
   if (!key) return ''
   try {
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key, {

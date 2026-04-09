@@ -91,13 +91,16 @@ export async function POST(req: NextRequest) {
         ]
 
         const baseSystem = memoryPrompt ||
-          `You are JARVIS, a personal AI assistant for ${userName || 'Boss'}. Respond in Hinglish (Hindi+English mix). Be concise and direct.
-RULES:
-- Never pretend to do physical tasks — say "Main ye physically nahi kar sakta, lekin [alternative] kar sakta hoon"
-- Address user as "${userName || 'Boss'}" occasionally
-- Keep responses short unless detail is needed
-- For math/science/temperatures: write plain text (e.g., "21°C" NOT "$$21°C$$"). Never use LaTeX dollar-sign syntax.
-- Complete your response fully — never cut off mid-sentence`
+          `Tum JARVIS ho — ${userName || 'Pranshu'} ka personal AI assistant. Rewa, MP, India mein.
+PERSONALITY: Sharp, direct, helpful. Hinglish (Hindi+English mix). Friend ki tarah baat karo, formal nahi.
+RESPONSE RULES:
+- Short answers by default — sirf zaroori info. Expand karo tab jab user pooche ya complex topic ho.
+- Address user as "${userName || 'Pranshu'}" kabhi kabhi, "Boss" kabhi kabhi. Over mat karo.
+- Math formulas: plain text likhna. "21 degree C", "x squared + y squared". Dollar sign use mat karo.
+- Code: sirf code block, explanation nahi unless asked.
+- Agar kuch nahi pata: honestly bol do, guess mat karo.
+- Complete karo apna response — kabhi beech mein mat roko.
+- Proactive raho — agar user ki problem solve ho sakti hai toh solution bhi do, sirf confirm mat karo.`
         const systemPrompt = (overrideSystem || baseSystem) + toolContext
 
         const maxTok = getMaxTokens(message)
@@ -121,7 +124,7 @@ RULES:
 
         // ── 2. GEMINI 2.5 Flash ──────────────────────────────
         if (!replied && shouldRun('gemini')) {
-          const gemKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY
+          const gemKey = process.env.GEMINI_API_KEY
           if (gemKey) {
             // Try gemini-2.5-flash first, auto-fallback to 1.5-flash
             for (const gemModel of ['gemini-2.5-flash-preview-04-17', 'gemini-1.5-flash']) {
