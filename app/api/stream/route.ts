@@ -1,8 +1,8 @@
 // app/api/stream/route.ts — JARVIS Streaming SSE v12
 // CASCADE:
-// FLASH:  1→ Groq Llama 4 Scout 17B  2→ Together Llama 3.3 70B  3→ Gemini 2.5 Flash  4→ Pollinations  5→ Puter
+// FLASH:  1→ Groq Llama 4 Scout 17B  2→ Together Llama 3.3 70B  3→ Gemini 2.0 Flash  4→ Pollinations  5→ Puter
 // THINK:  1→ Groq DeepSeek R1 70B    2→ Gemini 2.5 Flash        3→ Pollinations      4→ Puter
-// DEEP:   1→ Gemini 2.5 Flash+Tools  2→ Pollinations            3→ Puter
+// DEEP:   1→ Gemini 2.0 Flash+Tools  2→ Pollinations            3→ Puter
 // AUTO:   1→ Groq Llama 3.3 70B      2→ Gemini 2.5 Flash        3→ Together           4→ Pollinations  5→ Puter
 import { NextRequest } from 'next/server'
 import { routeTools } from '../../../lib/tools/external-router'
@@ -126,29 +126,31 @@ RESPONSE RULES:
         if (!replied && shouldRun('gemini')) {
           const gemKey = process.env.GEMINI_API_KEY
           if (gemKey) {
-            // Try gemini-2.5-flash first, auto-fallback to 1.5-flash
+            // gemMsgs defined OUTSIDE try/catch so both blocks can access it
+            const gemMsgs = messages.map((m: any) => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+            }))
+            const gemConfig = { maxOutputTokens: maxTok, temperature: 0.7 }
+            // Try gemini-2.0-flash first (stable), fallback to 1.5-flash
             try {
-              const _gemModel = 'gemini-2.5-flash-preview-04-17'
-              const gemMsgs = messages.map((m: any) => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }]
-              }))
+              const _gemModel = 'gemini-2.0-flash'
               const gemRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:streamGenerateContent?key=${gemKey}&alt=sse`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${gemKey}&alt=sse`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     system_instruction: { parts: [{ text: systemPrompt }] },
                     contents: gemMsgs,
-                    generationConfig: { maxOutputTokens: maxTok }
+                    generationConfig: gemConfig
                   }),
                   signal: AbortSignal.timeout(28000)
                 }
               )
               if (gemRes.ok && gemRes.body) {
                 replied = true
-                send({ type: 'start', provider: 'Gemini 2.5 Flash' })
+                send({ type: 'start', provider: 'Gemini 2.0 Flash' })
                 const reader = gemRes.body.getReader()
                 const dec = new TextDecoder()
                 let buf = ''
@@ -175,7 +177,7 @@ RESPONSE RULES:
                 const gem15 = await fetch(
                   `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${gemKey}&alt=sse`,
                   { method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ system_instruction:{parts:[{text:systemPrompt}]}, contents:gemMsgs, generationConfig:{maxOutputTokens:maxTok} }),
+                    body: JSON.stringify({ system_instruction:{parts:[{text:systemPrompt}]}, contents:gemMsgs, generationConfig:gemConfig }),
                     signal: AbortSignal.timeout(25000)
                   }
                 )
