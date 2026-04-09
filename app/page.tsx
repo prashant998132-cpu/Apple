@@ -145,7 +145,6 @@ function MdText({ text }: { text: string }) {
       if (p.startsWith('`') && p.endsWith('`') && p.length > 2) return <code key={j} style={{ background: 'rgba(0,229,255,0.07)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '4px', padding: '1px 5px', fontSize: '12px', fontFamily: "'Space Mono',monospace", color: '#6dc8f0' }}>{p.slice(1,-1)}</code>
       const lm = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
       if (lm) return <a key={j} href={lm[2]} target="_blank" rel="noreferrer" style={{ color: '#00e5ff', textDecoration: 'underline' }}>{lm[1]}</a>
-      if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
       return <span key={j}>{p}</span>
     })
 
