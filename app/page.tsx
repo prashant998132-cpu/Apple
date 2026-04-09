@@ -94,20 +94,13 @@ function getSmartSuggestions(aiReply: string, userQuery: string): string[] {
 function getSuggestions(text: string): string[] { return getSmartSuggestions(text, '') }
 
 // Strip LaTeX markers: $$...$$ and $...$ → plain text
-// Render LaTeX inline: $$...$$ block, $...$ inline → styled span
+// Safe LaTeX stripping — no HTML, no crash
 function renderInlineMath(text: string): string {
-  // Block math $$...$$
-  text = text.replace(/\$\$([^$]+?)\$\$/g, (_, m) =>
-    '<span class="math-block">' + m.trim() + '</span>'
-  )
-  // Inline math $...$  (skip $$ already replaced, skip lone $)
-  text = text.replace(/(?<!\$)\$([^$\n]{1,120}?)\$(?!\$)/g, (_, m) =>
-    '<span class="math-inline">' + m.trim() + '</span>'
-  )
   return text
+    .replace(/\$\$([^$\n]+?)\$\$/g, (_: string, m: string) => '[ ' + m.trim() + ' ]')
+    .replace(/\$([^$\n]{1,80}?)\$/g, (_: string, m: string) => m.trim())
 }
-// Keep stripLatex as alias for backward compat
-function stripLatex(text: string): string { return text }
+function stripLatex(text: string): string { return renderInlineMath(text) }
 
 function MdText({ text }: { text: string }) {
   const lines = renderInlineMath(text).split('\n')
@@ -141,16 +134,15 @@ function MdText({ text }: { text: string }) {
     const isHr = line === '---' || line === '***'
 
     if (isHr) { els.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '8px 0' }} />); continue }
-    if (line.includes('<span class="math-block')) { els.push(<div key={i} dangerouslySetInnerHTML={{ __html: line }} />); continue }
-    if (line.includes('<span class="math-block')) { els.push(<div key={i} dangerouslySetInnerHTML={{ __html: line }} />); continue }
-    if (line.includes('<span class="math-block')) { els.push(<div key={i} dangerouslySetInnerHTML={{ __html: line }} />); continue }
+
+
+
 
     const styled = raw.split(/(\*\*[^*]+\*\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\))/).map((p, j) => {
       if (p.startsWith('**') && p.endsWith('**') && p.length > 4) return <strong key={j} style={{ color: '#e8f4ff' }}>{p.slice(2,-2)}</strong>
       if (p.startsWith('`') && p.endsWith('`') && p.length > 2) return <code key={j} style={{ background: 'rgba(0,229,255,0.07)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '4px', padding: '1px 5px', fontSize: '12px', fontFamily: "'Space Mono',monospace", color: '#6dc8f0' }}>{p.slice(1,-1)}</code>
       const lm = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
       if (lm) return <a key={j} href={lm[2]} target="_blank" rel="noreferrer" style={{ color: '#00e5ff', textDecoration: 'underline' }}>{lm[1]}</a>
-      if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
       if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
       if (p.includes('<span class="math')) return <span key={j} dangerouslySetInnerHTML={{ __html: p }} />
       return <span key={j}>{p}</span>
@@ -819,9 +811,6 @@ export default function Home() {
       return
     }
 
-    // Auto-detect best mode if currently on auto
-    const effectiveMode = chatMode === 'auto' ? detectBestMode(text) : chatMode
-
     setStreaming(true); setStreamText(''); setStreamThink(''); setStreamProv('Connecting...')
     abortRef.current = new AbortController()
     let full = '', think = '', prov = ''
@@ -858,60 +847,48 @@ export default function Home() {
             else if (ev.type === 'token') { full += ev.text; setStreamText(full) }
             else if (ev.type === 'think') { think += ev.text; setStreamThink(think) }
             else if (ev.type === 'fallback' && ev.message === 'USE_PUTER') {
-              // Puter.js client-side fallback
-              try {
-                prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
-                const puter = (window as any).puter
-                if (puter?.ai?.chat) {
-                  const sysMsg = 'You are JARVIS, personal AI for Pranshu. Hinglish mein baat karo. Short answers.'
-                  const puterResp = await puter.ai.chat(sysMsg + '\n\nUser: ' + text)
-                  full = typeof puterResp === 'string' ? puterResp : puterResp?.message?.content?.[0]?.text || 'Puter response empty'
-                  setStreamText(full)
-                } else {
-                  full = '⚠️ Puter.js load nahi hua. Retry karo ya provider change karo.'
-                  setStreamText(full)
-                }
-              } catch (pe) {
-                full = '⚠️ Sab providers fail ho gaye. Internet check karo.'
-                setStreamText(full)
+              // Puter.js fallback — attempt if loaded, else show helpful message
+              const puter = (window as any).puter
+              if (puter?.ai?.chat) {
+                try {
+                  prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
+                  const pr = await puter.ai.chat('You are JARVIS. Hinglish mein baat karo.\nUser: ' + text)
+                  full = typeof pr === 'string' ? pr : pr?.message?.content?.[0]?.text || ''
+                  if (full) setStreamText(full)
+                  else { full = 'Koi response nahi aaya. Dobara try karo.'; setStreamText(full) }
+                } catch { full = 'Sab providers unavailable hain. Thodi der baad try karo.'; setStreamText(full) }
+              } else {
+                full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
               }
             }
             else if (ev.type === 'fallback' && ev.message === 'USE_PUTER') {
-              // Puter.js client-side fallback
-              try {
-                prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
-                const puter = (window as any).puter
-                if (puter?.ai?.chat) {
-                  const sysMsg = 'You are JARVIS, personal AI for Pranshu. Hinglish mein baat karo. Short answers.'
-                  const puterResp = await puter.ai.chat(sysMsg + '\n\nUser: ' + text)
-                  full = typeof puterResp === 'string' ? puterResp : puterResp?.message?.content?.[0]?.text || 'Puter response empty'
-                  setStreamText(full)
-                } else {
-                  full = '⚠️ Puter.js load nahi hua. Retry karo ya provider change karo.'
-                  setStreamText(full)
-                }
-              } catch (pe) {
-                full = '⚠️ Sab providers fail ho gaye. Internet check karo.'
-                setStreamText(full)
+              // Puter.js fallback — attempt if loaded, else show helpful message
+              const puter = (window as any).puter
+              if (puter?.ai?.chat) {
+                try {
+                  prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
+                  const pr = await puter.ai.chat('You are JARVIS. Hinglish mein baat karo.\nUser: ' + text)
+                  full = typeof pr === 'string' ? pr : pr?.message?.content?.[0]?.text || ''
+                  if (full) setStreamText(full)
+                  else { full = 'Koi response nahi aaya. Dobara try karo.'; setStreamText(full) }
+                } catch { full = 'Sab providers unavailable hain. Thodi der baad try karo.'; setStreamText(full) }
+              } else {
+                full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
               }
             }
             else if (ev.type === 'fallback' && ev.message === 'USE_PUTER') {
-              // Puter.js client-side fallback
-              try {
-                prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
-                const puter = (window as any).puter
-                if (puter?.ai?.chat) {
-                  const sysMsg = 'You are JARVIS, personal AI for Pranshu. Hinglish mein baat karo. Short answers.'
-                  const puterResp = await puter.ai.chat(sysMsg + '\n\nUser: ' + text)
-                  full = typeof puterResp === 'string' ? puterResp : puterResp?.message?.content?.[0]?.text || 'Puter response empty'
-                  setStreamText(full)
-                } else {
-                  full = '⚠️ Puter.js load nahi hua. Retry karo ya provider change karo.'
-                  setStreamText(full)
-                }
-              } catch (pe) {
-                full = '⚠️ Sab providers fail ho gaye. Internet check karo.'
-                setStreamText(full)
+              // Puter.js fallback — attempt if loaded, else show helpful message
+              const puter = (window as any).puter
+              if (puter?.ai?.chat) {
+                try {
+                  prov = 'Puter · GPT-4o-mini'; setStreamProv(prov)
+                  const pr = await puter.ai.chat('You are JARVIS. Hinglish mein baat karo.\nUser: ' + text)
+                  full = typeof pr === 'string' ? pr : pr?.message?.content?.[0]?.text || ''
+                  if (full) setStreamText(full)
+                  else { full = 'Koi response nahi aaya. Dobara try karo.'; setStreamText(full) }
+                } catch { full = 'Sab providers unavailable hain. Thodi der baad try karo.'; setStreamText(full) }
+              } else {
+                full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
               }
             }
           } catch {}

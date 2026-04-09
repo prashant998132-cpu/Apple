@@ -127,15 +127,14 @@ RESPONSE RULES:
           const gemKey = process.env.GEMINI_API_KEY
           if (gemKey) {
             // Try gemini-2.5-flash first, auto-fallback to 1.5-flash
-            for (const gemModel of ['gemini-2.5-flash-preview-04-17', 'gemini-1.5-flash']) {
             try {
-              const _gemModel = gemModel
+              const _gemModel = 'gemini-2.5-flash-preview-04-17'
               const gemMsgs = messages.map((m: any) => ({
                 role: m.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: m.content }]
               }))
               const gemRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${_gemModel}:streamGenerateContent?key=${gemKey}&alt=sse`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:streamGenerateContent?key=${gemKey}&alt=sse`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -149,7 +148,7 @@ RESPONSE RULES:
               )
               if (gemRes.ok && gemRes.body) {
                 replied = true
-                send({ type: 'start', provider: _gemModel.includes('2.5') ? 'Gemini 2.5 Flash' : 'Gemini 1.5 Flash' })
+                send({ type: 'start', provider: 'Gemini 2.5 Flash' })
                 const reader = gemRes.body.getReader()
                 const dec = new TextDecoder()
                 let buf = ''
@@ -170,9 +169,29 @@ RESPONSE RULES:
                 }
                 send({ type: 'done' })
               }
-            } catch { /* this gemini model failed, try next */ }
-            if (replied) break
-            } // end for gemModel
+            } catch {
+              // Try 1.5-flash as fallback
+              try {
+                const gem15 = await fetch(
+                  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${gemKey}&alt=sse`,
+                  { method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ system_instruction:{parts:[{text:systemPrompt}]}, contents:gemMsgs, generationConfig:{maxOutputTokens:maxTok} }),
+                    signal: AbortSignal.timeout(25000)
+                  }
+                )
+                if(gem15.ok && gem15.body){
+                  replied=true; send({type:'start',provider:'Gemini 1.5 Flash'})
+                  const rd=gem15.body.getReader(); const dc=new TextDecoder(); let b=''
+                  while(true){ const {done,value}=await rd.read(); if(done)break; b+=dc.decode(value,{stream:true})
+                    const ls=b.split('\n');b=ls.pop()||''
+                    for(const l of ls){ if(!l.startsWith('data: '))continue; const rw=l.slice(6).trim(); if(!rw||rw==='[DONE]')continue
+                      try{const t=JSON.parse(rw).candidates?.[0]?.content?.parts?.[0]?.text||'';if(t)send({type:'token',text:t})}catch{}
+                    }
+                  }
+                  send({type:'done'})
+                }
+              } catch { /* 1.5 also failed */ }
+            }
           }
         }
 
