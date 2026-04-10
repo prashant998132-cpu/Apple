@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Script from 'next/script'
 import Sidebar from '../components/shared/Sidebar'
 import { initProactiveScheduler } from '../lib/proactive'
 import { awardXP } from '../lib/xp'
@@ -157,6 +158,22 @@ function MdText({ text }: { text: string }) {
     else els.push(<div key={i} style={{ margin: '2px 0', lineHeight: '1.7' }}>{styled}</div>)
   }
   return <div>{els}</div>
+}
+
+// Smart mode detection based on message content & complexity
+function detectBestMode(message: string): ChatMode {
+  const m = message.toLowerCase().trim()
+  const words = m.split(/\s+/).length
+  // Deep mode: long research / essay / analysis requests
+  if (words > 60 || /research|analyze|comprehensive|write.*essay|in[- ]depth|compare.*contrast|full.*report|explain.*detail/.test(m))
+    return 'deep'
+  // Think mode: math, code debugging, logic problems
+  if (/solve|calculate|proof|algorithm|debug|fix.*bug|optimiz|why.*error|logic|step[- ]by[- ]step|differentiate|integrate|theorem/.test(m))
+    return 'think'
+  // Flash mode: quick lookups, simple questions
+  if (words < 8 || /^(what|who|when|where|weather|time|date|translate|define|spell|capital|how many|how much)/.test(m))
+    return 'flash'
+  return 'auto'
 }
 
 function CopyInline({ text }: { text: string }) {
@@ -518,6 +535,11 @@ export default function Home() {
       setCmdOpen(true)
     } else {
       setCmdOpen(false)
+      // Auto-detect best mode when user is in auto mode and types enough
+      if (chatMode === 'auto' && inp.trim().split(/\s+/).length >= 5) {
+        const suggested = detectBestMode(inp)
+        if (suggested !== 'auto') setChatMode(suggested)
+      }
     }
   }, [inp])
 
@@ -976,10 +998,11 @@ export default function Home() {
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
     >
+      {/* Puter.js — client-side GPT-4o-mini fallback */}
+      <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         .math-block { display: block; text-align: center; font-family: 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
-        .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; } 'Georgia', serif; font-size: 16px; color: #a8d8ff; padding: 8px 0; letter-spacing: 0.5px; }
         .math-inline { font-family: 'Georgia', serif; font-size: 14px; color: #a8d8ff; font-style: italic; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(5px) } to { opacity:1; transform:translateY(0) } }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
