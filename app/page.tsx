@@ -595,12 +595,6 @@ export default function Home() {
     } catch {}
   }
 
-  }
-
-  }
-
-  }
-
   function clearChat() {
     setMsgs([]); setSuggestions([])
     try { localStorage.removeItem(STORE) } catch {}
