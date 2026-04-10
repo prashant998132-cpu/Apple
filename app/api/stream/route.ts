@@ -166,12 +166,10 @@ RESPONSE RULES:
 
             // 2a. gemini-2.5-flash (primary — fastest & smartest)
             if (!replied) replied = await tryGemini('gemini-2.5-flash', 'Gemini 2.5 Flash', 15000)
-            // 2b. gemini-2.0-flash (stable fallback)
-            if (!replied) replied = await tryGemini('gemini-2.0-flash', 'Gemini 2.0 Flash', 15000)
-            // 2c. gemini-2.0-flash-lite (ultra-fast last resort)
-            if (!replied) replied = await tryGemini('gemini-2.0-flash-lite', 'Gemini 2.0 Flash Lite', 12000)
-            // 2d. gemini-1.5-flash (oldest but most stable)
-            if (!replied) replied = await tryGemini('gemini-1.5-flash', 'Gemini 1.5 Flash', 12000)
+            // 2b. gemini-2.5-flash-lite (ultra-fast 2.5 family)
+            if (!replied) replied = await tryGemini('gemini-2.5-flash-lite', 'Gemini 2.5 Flash Lite', 12000)
+            // 2c. gemini-2.0-flash (stable fallback — shuts down June 2026)
+            if (!replied) replied = await tryGemini('gemini-2.0-flash', 'Gemini 2.0 Flash', 12000)
           }
         }
 
