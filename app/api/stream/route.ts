@@ -26,6 +26,8 @@ async function streamOpenAI(
         ...extraBody
       }),
       signal: AbortSignal.timeout(20000)
+    })
+    if (!res.ok || !res.body) return false
     send({ type: 'start', provider: providerName })
     const reader = res.body.getReader()
     const dec = new TextDecoder()
