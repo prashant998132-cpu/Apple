@@ -10,7 +10,7 @@ type ChatMode = 'auto' | 'flash' | 'think' | 'deep'
 type Msg = {
   id: string; role: Role; content: string; provider?: string
   thinking?: string; imageUrl?: string; videoUrl?: string
-  ts: number; reactions?: string[]
+  ts: number; reactions?: string[]; bookmarked?: boolean
 }
 
 const STORE = 'j_msgs_v5'
@@ -226,10 +226,10 @@ function ImageMsg({ url, prompt }: { url: string; prompt: string }) {
 }
 
 const MODES: Array<{ id: ChatMode; label: string; desc: string; color: string; icon: string }> = [
-  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: 'ü§ñ' },
+  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: 'Ì†æÌ¥ñ' },
   { id: 'flash', label: 'Flash', desc: 'Fastest speed',  color: '#f87171', icon: '‚ö°' },
-  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: 'üß†' },
-  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: 'üî¨' },
+  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: 'Ì†æÌ∑†' },
+  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: 'Ì†ΩÌ¥¨' },
 ]
 
 const CASCADES: Record<ChatMode, Array<{ num: number; key: string; model: string; speed: string; note: string }>> = {
@@ -283,7 +283,7 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
           <div style={{ fontSize: '12px', color: curMode.color, fontWeight: 700, marginBottom: '2px' }}>{curMode.icon} {curMode.label} Mode ‚Äî Cascade Priority</div>
           <div style={{ fontSize: '11px', color: '#1e3248' }}>
             {forcedProvider
-              ? 'üìå Provider locked ‚Äî tap row again to unlock'
+              ? 'Ì†ΩÌ≥å Provider locked ‚Äî tap row again to unlock'
               : 'Tap a provider to pin/force it ‚Ä¢ auto-fallback on error'}
           </div>
         </div>
@@ -307,7 +307,7 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
                 </span>
                 <span style={{ fontSize: '13px', color: isPinned ? '#e8f4ff' : c.num === 1 ? '#c4dff0' : '#3a6080', fontWeight: isPinned ? 700 : c.num === 1 ? 600 : 400 }}>{c.model}</span>
                 <span style={{ fontSize: '11px', color: isPinned ? curMode.color + 'aa' : '#1e3248', textAlign: 'right' }}>{c.speed}</span>
-                <span style={{ fontSize: '13px', textAlign: 'right', color: isPinned ? curMode.color : '#1a2a38' }}>{isPinned ? 'üìå' : '¬∑'}</span>
+                <span style={{ fontSize: '13px', textAlign: 'right', color: isPinned ? curMode.color : '#1a2a38' }}>{isPinned ? 'Ì†ΩÌ≥å' : '¬∑'}</span>
               </div>
             )
           })}
@@ -315,7 +315,7 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
         {forcedProvider && (
           <button onClick={() => onForceProvider(null)}
             style={{ marginTop: '10px', width: '100%', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.18)', borderRadius: '8px', color: '#f87171', cursor: 'pointer', padding: '8px', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }}>
-            üîì Unlock ‚Äî resume auto cascade
+            Ì†ΩÌ¥ì Unlock ‚Äî resume auto cascade
           </button>
         )}
         <div style={{ marginTop: '8px', fontSize: '10px', color: '#0a1820', textAlign: 'center' }}>Tap outside to close</div>
@@ -325,95 +325,97 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
 }
 
 const CMDS = [
-  { cmd: '/clear',    desc: 'Chat clear karo',      icon: 'üóëÔ∏è' },
-  { cmd: '/pass',     desc: 'Strong password banao', icon: 'üîê' },
-  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: 'üå∏' },
-  { cmd: '/era',      desc: 'Era page pe jao',       icon: 'üíó' },
-  { cmd: '/mood',     desc: 'Mood tracker',          icon: 'üòä' },
-  { cmd: '/notes',    desc: 'Quick notes',           icon: 'üìù' },
+  { cmd: '/clear',    desc: 'Chat clear karo',      icon: 'Ì†ΩÌ∑ëÔ∏è' },
+  { cmd: '/pass',     desc: 'Strong password banao', icon: 'Ì†ΩÌ¥ê' },
+  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: 'Ì†ºÌº∏' },
+  { cmd: '/era',      desc: 'Era page pe jao',       icon: 'Ì†ΩÌ≤ó' },
+  { cmd: '/mood',     desc: 'Mood tracker',          icon: 'Ì†ΩÌ∏ä' },
+  { cmd: '/notes',    desc: 'Quick notes',           icon: 'Ì†ΩÌ≥ù' },
   { cmd: '/timer',    desc: 'Pomodoro timer',        icon: '‚è±Ô∏è' },
-  { cmd: '/dash',     desc: 'Dashboard',             icon: 'üìä' },
-  { cmd: '/calc',     desc: 'Calculator',            icon: 'üî¢' },
-  { cmd: '/habits',   desc: 'Habit tracker',         icon: 'üí™' },
+  { cmd: '/dash',     desc: 'Dashboard',             icon: 'Ì†ΩÌ≥ä' },
+  { cmd: '/calc',     desc: 'Calculator',            icon: 'Ì†ΩÌ¥¢' },
+  { cmd: '/habits',   desc: 'Habit tracker',         icon: 'Ì†ΩÌ≤™' },
   { cmd: '/todo',     desc: 'Todo list',             icon: '‚úÖ' },
-  { cmd: '/qr',       desc: 'QR generator',          icon: 'üì±' },
-  { cmd: '/focus',    desc: 'Focus mode',            icon: 'üéØ' },
-  { cmd: '/study',    desc: 'Study mode',            icon: 'üìö' },
+  { cmd: '/qr',       desc: 'QR generator',          icon: 'Ì†ΩÌ≥±' },
+  { cmd: '/focus',    desc: 'Focus mode',            icon: 'Ì†ºÌæØ' },
+  { cmd: '/study',    desc: 'Study mode',            icon: 'Ì†ΩÌ≥ö' },
   { cmd: '/xp',       desc: 'XP & Level',            icon: '‚≠ê' },
-  { cmd: '/tools',    desc: 'All Tools',             icon: 'üõ†Ô∏è' },
+  { cmd: '/tools',    desc: 'All Tools',             icon: 'Ì†ΩÌª†Ô∏è' },
   { cmd: '/write',    desc: 'AI Writer',             icon: '‚úçÔ∏è' },
+  { cmd: '/bookmarks',desc: 'Starred messages',       icon: '‚≠ê' },
+  { cmd: '/export',   desc: 'Export JSON',            icon: 'Ì†ΩÌ≤æ' },
 ]
 
 // ‚îÄ‚îÄ Smart Dynamic Prompts ‚Äî time/day aware ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
 // All prompt pools by context
 const ALL_PROMPTS = {
   morning: [
-    { l: 'üåÖ Subah ki news',      m: 'aaj subah ki top headlines kya hain?',          cat: 'news' },
+    { l: 'Ì†ºÌºÖ Subah ki news',      m: 'aaj subah ki top headlines kya hain?',          cat: 'news' },
     { l: '‚òÄÔ∏è Rewa mausam',         m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
-    { l: 'üí™ Motivation do',       m: 'mujhe aaj ke liye ek powerful motivation do',   cat: 'motivation' },
-    { l: 'üìÖ Aaj ka plan',         m: 'mera aaj ka productive schedule banao',         cat: 'planning' },
-    { l: 'üßò Morning routine',     m: 'best morning routine batao jo energy de',       cat: 'health' },
-    { l: 'üì∞ Headlines summary',   m: 'aaj ki top 5 khabar short mein batao',          cat: 'news' },
+    { l: 'Ì†ΩÌ≤™ Motivation do',       m: 'mujhe aaj ke liye ek powerful motivation do',   cat: 'motivation' },
+    { l: 'Ì†ΩÌ≥Ö Aaj ka plan',         m: 'mera aaj ka productive schedule banao',         cat: 'planning' },
+    { l: 'Ì†æÌ∑ò Morning routine',     m: 'best morning routine batao jo energy de',       cat: 'health' },
+    { l: 'Ì†ΩÌ≥∞ Headlines summary',   m: 'aaj ki top 5 khabar short mein batao',          cat: 'news' },
     { l: '‚òï Nashta idea',          m: 'quick healthy breakfast idea batao',            cat: 'health' },
-    { l: 'üí° Aaj ka thought',      m: 'ek powerful thought of the day do',             cat: 'motivation' },
+    { l: 'Ì†ΩÌ≤° Aaj ka thought',      m: 'ek powerful thought of the day do',             cat: 'motivation' },
   ],
   afternoon: [
-    { l: 'üî¢ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
-    { l: 'üíª Python code',         m: 'Python mein ',                                  cat: 'code' },
-    { l: 'üìñ Topic samjhao',       m: 'samjhao mujhe: ',                               cat: 'study' },
-    { l: 'üåç Translate karo',      m: 'Hindi mein translate karo: ',                   cat: 'language' },
-    { l: 'üñºÔ∏è Image banao',         m: 'image banao ',                                  cat: 'creative' },
+    { l: 'Ì†ΩÌ¥¢ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
+    { l: 'Ì†ΩÌ≤ª Python code',         m: 'Python mein ',                                  cat: 'code' },
+    { l: 'Ì†ΩÌ≥ñ Topic samjhao',       m: 'samjhao mujhe: ',                               cat: 'study' },
+    { l: 'Ì†ºÌºç Translate karo',      m: 'Hindi mein translate karo: ',                   cat: 'language' },
+    { l: 'Ì†ΩÌ∂ºÔ∏è Image banao',         m: 'image banao ',                                  cat: 'creative' },
     { l: '‚ö° Code debug karo',     m: 'ye code fix karo: ',                            cat: 'code' },
-    { l: 'üìù Essay likhao',        m: 'ek short essay likho topic: ',                  cat: 'study' },
-    { l: 'üß™ Science explain',     m: 'science concept explain karo: ',                cat: 'study' },
+    { l: 'Ì†ΩÌ≥ù Essay likhao',        m: 'ek short essay likho topic: ',                  cat: 'study' },
+    { l: 'Ì†æÌ∑™ Science explain',     m: 'science concept explain karo: ',                cat: 'study' },
   ],
   evening: [
-    { l: 'üì∞ Sham ki news',        m: 'aaj ki top news kya rahi?',                     cat: 'news' },
-    { l: 'üé¨ Movie recommend',     m: 'aaj raat ke liye ek achhi movie recommend karo', cat: 'entertainment' },
-    { l: 'üçΩÔ∏è Dinner idea',         m: 'aaj raat kya banayein? simple recipe batao',    cat: 'health' },
-    { l: 'üñºÔ∏è Art banao',           m: 'ek creative wallpaper image banao: ',           cat: 'creative' },
-    { l: 'üí° New ideas do',        m: 'mujhe ek creative project idea do',             cat: 'creative' },
-    { l: 'üéµ Music mood',          m: 'iske liye songs suggest karo: ',                cat: 'entertainment' },
-    { l: 'üí™ Workout plan',        m: 'aaj raat ke liye quick workout plan do',        cat: 'health' },
-    { l: 'üåê Tech news',           m: 'aaj ki latest tech news kya hai?',              cat: 'news' },
+    { l: 'Ì†ΩÌ≥∞ Sham ki news',        m: 'aaj ki top news kya rahi?',                     cat: 'news' },
+    { l: 'Ì†ºÌæ¨ Movie recommend',     m: 'aaj raat ke liye ek achhi movie recommend karo', cat: 'entertainment' },
+    { l: 'Ì†ºÌΩΩÔ∏è Dinner idea',         m: 'aaj raat kya banayein? simple recipe batao',    cat: 'health' },
+    { l: 'Ì†ΩÌ∂ºÔ∏è Art banao',           m: 'ek creative wallpaper image banao: ',           cat: 'creative' },
+    { l: 'Ì†ΩÌ≤° New ideas do',        m: 'mujhe ek creative project idea do',             cat: 'creative' },
+    { l: 'Ì†ºÌæµ Music mood',          m: 'iske liye songs suggest karo: ',                cat: 'entertainment' },
+    { l: 'Ì†ΩÌ≤™ Workout plan',        m: 'aaj raat ke liye quick workout plan do',        cat: 'health' },
+    { l: 'Ì†ºÌºê Tech news',           m: 'aaj ki latest tech news kya hai?',              cat: 'news' },
   ],
   night: [
-    { l: 'üåô Raat ki baat',        m: 'koi interesting fact batao jo mind blow kare',  cat: 'fun' },
-    { l: 'üìö Story sunao',         m: 'mujhe ek interesting short story sunao',        cat: 'entertainment' },
-    { l: 'üß† Quiz khelo',          m: 'mujhse ek interesting quiz lo',                 cat: 'fun' },
-    { l: 'üí≠ Deep question',       m: 'ek deep philosophical question ka jawab do: ',  cat: 'philosophy' },
-    { l: 'üåå Space baat',          m: 'universe ke baare mein kuch mind-blowing batao', cat: 'science' },
-    { l: 'üñºÔ∏è Dream image',        m: 'ek surreal dreamy night sky image banao',        cat: 'creative' },
-    { l: 'üé≠ Poem likho',          m: 'ek beautiful Hinglish poem likho: ',            cat: 'creative' },
-    { l: 'üò¥ Neend tips',          m: 'achhi neend ke liye tips do',                   cat: 'health' },
+    { l: 'Ì†ºÌºô Raat ki baat',        m: 'koi interesting fact batao jo mind blow kare',  cat: 'fun' },
+    { l: 'Ì†ΩÌ≥ö Story sunao',         m: 'mujhe ek interesting short story sunao',        cat: 'entertainment' },
+    { l: 'Ì†æÌ∑† Quiz khelo',          m: 'mujhse ek interesting quiz lo',                 cat: 'fun' },
+    { l: 'Ì†ΩÌ≤≠ Deep question',       m: 'ek deep philosophical question ka jawab do: ',  cat: 'philosophy' },
+    { l: 'Ì†ºÌºå Space baat',          m: 'universe ke baare mein kuch mind-blowing batao', cat: 'science' },
+    { l: 'Ì†ΩÌ∂ºÔ∏è Dream image',        m: 'ek surreal dreamy night sky image banao',        cat: 'creative' },
+    { l: 'Ì†ºÌæ≠ Poem likho',          m: 'ek beautiful Hinglish poem likho: ',            cat: 'creative' },
+    { l: 'Ì†ΩÌ∏¥ Neend tips',          m: 'achhi neend ke liye tips do',                   cat: 'health' },
   ],
   // day-specific bonus prompts
   monday: [
-    { l: 'üìã Week plan banao',     m: 'is hafte ka productive plan banao mere liye',   cat: 'planning' },
-    { l: 'üéØ Goals set karo',      m: 'is hafte ke top 3 goals set karne mein help karo', cat: 'planning' },
+    { l: 'Ì†ΩÌ≥ã Week plan banao',     m: 'is hafte ka productive plan banao mere liye',   cat: 'planning' },
+    { l: 'Ì†ºÌæØ Goals set karo',      m: 'is hafte ke top 3 goals set karne mein help karo', cat: 'planning' },
   ],
   friday: [
-    { l: 'üéâ Weekend plan',        m: 'is weekend ke liye fun plan do',                cat: 'entertainment' },
-    { l: 'üé¨ Binge list',          m: 'weekend mein dekhne layak web series recommend karo', cat: 'entertainment' },
+    { l: 'Ì†ºÌæâ Weekend plan',        m: 'is weekend ke liye fun plan do',                cat: 'entertainment' },
+    { l: 'Ì†ºÌæ¨ Binge list',          m: 'weekend mein dekhne layak web series recommend karo', cat: 'entertainment' },
   ],
   saturday: [
-    { l: 'üèñÔ∏è Outing idea',        m: 'aaj ghumne ke liye Rewa ke aas paas koi jagah batao', cat: 'travel' },
-    { l: 'üì∏ Photo idea',          m: 'ek creative photo wallpaper banao sunset theme',  cat: 'creative' },
+    { l: 'Ì†ºÌøñÔ∏è Outing idea',        m: 'aaj ghumne ke liye Rewa ke aas paas koi jagah batao', cat: 'travel' },
+    { l: 'Ì†ΩÌ≥∏ Photo idea',          m: 'ek creative photo wallpaper banao sunset theme',  cat: 'creative' },
   ],
   sunday: [
-    { l: 'üîÆ Week ahead',          m: 'aane wale hafte ki tayari kaise karein?',        cat: 'planning' },
-    { l: 'üßπ Organize karo',       m: 'apni life organize karne ke tips do',            cat: 'planning' },
+    { l: 'Ì†ΩÌ¥Æ Week ahead',          m: 'aane wale hafte ki tayari kaise karein?',        cat: 'planning' },
+    { l: 'Ì†æÌ∑π Organize karo',       m: 'apni life organize karne ke tips do',            cat: 'planning' },
   ],
   // always-available utility
   utility: [
-    { l: 'üå°Ô∏è Mausam batao',        m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
-    { l: 'üí± Crypto rate',         m: 'Bitcoin aur Ethereum ka aaj ka rate kya hai?',  cat: 'finance' },
-    { l: 'üìä Stock market',        m: 'aaj Sensex aur Nifty kaise hai?',               cat: 'finance' },
-    { l: 'üîê Password banao',      m: '/pass',                                          cat: 'utility' },
-    { l: 'üåç Translate',           m: 'Hindi mein translate karo: ',                   cat: 'language' },
-    { l: 'üñºÔ∏è Image banao',         m: 'image banao ',                                  cat: 'creative' },
-    { l: 'üì∞ Aaj ki khabar',       m: 'aaj ki top news kya hai?',                      cat: 'news' },
-    { l: 'üî¢ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
+    { l: 'Ì†ºÌº°Ô∏è Mausam batao',        m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
+    { l: 'Ì†ΩÌ≤± Crypto rate',         m: 'Bitcoin aur Ethereum ka aaj ka rate kya hai?',  cat: 'finance' },
+    { l: 'Ì†ΩÌ≥ä Stock market',        m: 'aaj Sensex aur Nifty kaise hai?',               cat: 'finance' },
+    { l: 'Ì†ΩÌ¥ê Password banao',      m: '/pass',                                          cat: 'utility' },
+    { l: 'Ì†ºÌºç Translate',           m: 'Hindi mein translate karo: ',                   cat: 'language' },
+    { l: 'Ì†ΩÌ∂ºÔ∏è Image banao',         m: 'image banao ',                                  cat: 'creative' },
+    { l: 'Ì†ΩÌ≥∞ Aaj ki khabar',       m: 'aaj ki top news kya hai?',                      cat: 'news' },
+    { l: 'Ì†ΩÌ¥¢ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
   ]
 }
 
@@ -604,17 +606,9 @@ export default function Home() {
     if (!msgs.length) return
     const lines = msgs.map(m => {
       const ts  = new Date(m.ts).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-      const who = m.role === 'user' ? 'üë§ You' : 'ü§ñ JARVIS'
+      const who = m.role === 'user' ? 'Ì†ΩÌ±§ You' : 'Ì†æÌ¥ñ JARVIS'
       return '[' + ts + '] ' + who + ':\n' + m.content
     }).join('\n\n---\n\n')
-    const blob = new Blob([lines], { type: 'text/plain; charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = 'JARVIS-' + new Date().toISOString().slice(0, 10) + '.txt'
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
     const blob = new Blob([lines], { type: 'text/plain; charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -632,6 +626,21 @@ export default function Home() {
   function deleteMsg(id: string) {
     setMsgs(prev => prev.filter(m => m.id !== id))
     setContextMsg(null)
+  }
+
+  function toggleBookmark(id: string) {
+    setMsgs(prev => prev.map(m => m.id === id ? { ...m, bookmarked: !m.bookmarked } : m))
+  }
+
+  function calcInline(expr: string): string {
+    try {
+      const s = expr.replace(/[^0-9+\-*/().\s%]/g, '')
+      if (!s.trim()) return 'Empty'
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('return (' + s + ')')
+      const r = fn()
+      return typeof r === 'number' ? (Number.isFinite(r) ? String(r) : 'Infinity') : String(r)
+    } catch { return 'Invalid' }
   }
 
   async function speak(text: string) {
@@ -690,7 +699,7 @@ export default function Home() {
       mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
-        setInp('üéô Transcribing...')
+        setInp('Ì†ºÌæô Transcribing...')
         const fd = new FormData()
         fd.append('audio', new Blob(chunks, { type: mimeType }), 'audio.webm')
         try {
@@ -762,13 +771,36 @@ export default function Home() {
 
     const t = text.toLowerCase()
     if (t === '/clear') { clearChat(); return }
+    if (/^\/(calc|c) .+/i.test(t)) {
+      const expr = text.slice(text.indexOf(' ') + 1).trim()
+      const res  = calcInline(expr)
+      setMsgs(m => [...m,
+        { id: uid(), role: 'user', content: '/calc ' + expr, ts: Date.now() },
+        { id: uid(), role: 'assistant', content: '\uD83D\uDD22 **' + expr + ' = ' + res + '**\n\n_No API used ‚Äî instant result._', ts: Date.now() }
+      ])
+      return
+    }
     if (t === '/pass' || t === '/password') {
       const p = genPass()
-      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `üîê **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
+      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `Ì†ΩÌ¥ê **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
       return
     }
     const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus', '/study': '/study', '/xp': '/xp', '/tools': '/tools', '/write': '/write' }
     if (PAGE_CMDS[t]) { window.location.href = PAGE_CMDS[t]; return }
+    if (t === '/bookmarks') { setShowBookmarks(v => !v); setInp(''); return }
+    if (t === '/export' || t === '/exportjson') {
+      if (!msgs.length) return
+      const jb = new Blob([JSON.stringify(msgs, null, 2)], { type: 'application/json' })
+      const ja = document.createElement('a')
+      ja.href = URL.createObjectURL(jb)
+      ja.download = 'JARVIS-' + new Date().toISOString().slice(0, 10) + '.json'
+      ja.click(); URL.revokeObjectURL(ja.href)
+      setMsgs(m => [...m,
+        { id: uid(), role: 'user', content: text, ts: Date.now() },
+        { id: uid(), role: 'assistant', content: '\uD83D\uDCBE Exported **' + msgs.length + ' messages** as JSON!', ts: Date.now() }
+      ])
+      return
+    }
 
     const userMsg: Msg = { id: uid(), role: 'user', content: text, ts: Date.now() }
     const newMsgs = [...msgs, userMsg]
@@ -844,8 +876,6 @@ export default function Home() {
                 full = 'Network ya API issue. Groq/Gemini key Vercel mein check karo.'; setStreamText(full)
               }
             }
-            }
-            }
           } catch {}
         }
       }
@@ -881,7 +911,11 @@ export default function Home() {
 
   const curMode = MODES.find(m => m.id === chatMode) || MODES[0]
   const filteredCmds = CMDS.filter(c => c.cmd.slice(1).includes(cmdFilter) || c.desc.toLowerCase().includes(cmdFilter))
-  const displayMsgs = search.trim() ? msgs.filter(m => m.content.toLowerCase().includes(search.toLowerCase())) : msgs
+  const displayMsgs = showBookmarks
+    ? msgs.filter(m => m.bookmarked)
+    : search.trim()
+      ? msgs.filter(m => m.content.toLowerCase().includes(search.toLowerCase()))
+      : msgs
 
   function renderMessages() {
     const els: React.ReactNode[] = []
@@ -911,9 +945,9 @@ export default function Home() {
               <div style={{ maxWidth: '82%', position: 'relative' }}>
                 {isContextOpen && (
                   <div style={{ position: 'absolute', top: '0', right: '110%', background: 'rgba(8,13,24,0.98)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '10px', padding: '4px', zIndex: 20, display: 'flex', gap: '4px', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>üìã Copy</button>
+                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>Ì†ΩÌ≥ã Copy</button>
                     <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>‚úèÔ∏è Edit</button>
-                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>üóëÔ∏è</button>
+                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>Ì†ΩÌ∑ëÔ∏è</button>
                   </div>
                 )}
                 <div onContextMenu={e => { e.preventDefault(); setContextMsg(isContextOpen ? null : msg.id) }}
@@ -947,19 +981,30 @@ export default function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '7px', flexWrap: 'wrap' }}>
                   {!msg.imageUrl && !msg.videoUrl && <CopyBtn text={msg.content} />}
                   {tts && !msg.imageUrl && (
-                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>üîä Suno</button>
+                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>Ì†ΩÌ¥ä Suno</button>
                   )}
-                  {['üëç','‚ù§Ô∏è','üòÇ','üíØ'].map(em => (
+                  <button onClick={() => toggleBookmark(msg.id)}
+                      title={msg.bookmarked ? 'Remove bookmark' : 'Bookmark'}
+                      style={{ background: msg.bookmarked ? 'rgba(251,191,36,0.12)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 5px', borderRadius: '5px', opacity: msg.bookmarked ? 1 : 0.28, color: '#fbbf24', transition: 'all 0.12s' }}>
+                      {msg.bookmarked ? '‚≠ê' : '‚òÜ'}
+                    </button>
+                  {['Ì†ΩÌ±ç','‚ù§Ô∏è','Ì†ΩÌ∏Ç','Ì†ΩÌ≤Ø'].map(em => (
                     <button key={em} onClick={() => addReaction(msg.id, em)}
                       style={{ background: msg.reactions?.includes(em) ? 'rgba(255,255,255,0.1)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', borderRadius: '5px', opacity: msg.reactions?.includes(em) ? 1 : 0.25, transition: 'all 0.12s' }}>
                       {em}
                     </button>
                   ))}
+                  {!msg.imageUrl && !msg.videoUrl && msg.content.split(/\s+/).length > 150 && (
+                    <span style={{ fontSize: '10px', color: '#1e3248', padding: '1px 4px' }}
+                      title='Estimated reading time'>
+                      Ì†ΩÌ≥ñ {Math.ceil(msg.content.split(/\s+/).length / 200)}min
+                    </span>
+                  )}
                   {msg.provider && (
                     <button onClick={() => setCascadeOpen(true)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#1e3248', marginLeft: 'auto', padding: '2px 5px', borderRadius: '4px', fontFamily: 'inherit', transition: 'color 0.1s' }}
                       title="Model cascade">
-                      ü§ñ {msg.provider} ‚ñæ
+                      Ì†æÌ¥ñ {msg.provider} ‚ñæ
                     </button>
                   )}
                   {!msg.provider && <span style={{ fontSize: '10px', color: '#0e2030', marginLeft: 'auto' }}>{timeStr(msg.ts)}</span>}
@@ -1019,7 +1064,7 @@ export default function Home() {
       {isDragging && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,229,255,0.06)', border: '2px dashed rgba(0,229,255,0.3)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{ fontSize: '18px', color: '#00e5ff88', fontWeight: 700, textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>üñºÔ∏è</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>Ì†ΩÌ∂ºÔ∏è</div>
             Drop image here to analyze
           </div>
         </div>
@@ -1036,25 +1081,27 @@ export default function Home() {
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v13</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.60</div>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <button onClick={() => setShowBookmarks(v => !v)} className="tool-btn"
+            style={{ background: showBookmarks ? 'rgba(251,191,36,0.1)' : 'none', border: '1px solid', borderColor: showBookmarks ? 'rgba(251,191,36,0.3)' : 'transparent', borderRadius: '6px', color: showBookmarks ? '#fbbf24' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Bookmarks">{showBookmarks ? '‚≠ê' : '‚òÜ'}</button>
           <button onClick={() => setSearchOpen(v => !v)} className="tool-btn"
-            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">üîç</button>
+            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">Ì†ΩÌ¥ç</button>
           <button onClick={toggleTts} className="tool-btn"
             style={{ background: tts ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: tts ? 'rgba(0,229,255,0.2)' : 'rgba(255,255,255,0.04)', borderRadius: '6px', color: tts ? '#00e5ff' : '#1e3248', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.12s' }}>
-            {tts ? 'üîä ON' : 'üîá TTS'}
+            {tts ? 'Ì†ΩÌ¥ä ON' : 'Ì†ΩÌ¥á TTS'}
           </button>
           <button onClick={clearChat} className="tool-btn"
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
-            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>üíæ</button>
+            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Ì†ΩÌ≤æ</button>
           <button title={'Memory: ' + autoMemory.length + ' facts saved'}
             onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
             style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            üß†{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
+            Ì†æÌ∑†{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
           </button>
         </div>
       </header>
@@ -1079,8 +1126,8 @@ export default function Home() {
   {(() => {
     const h = new Date().getHours()
     return h >= 5 && h < 12 ? 'Subah Bakhair Pranshu ‚òÄÔ∏è' :
-           h >= 12 && h < 17 ? 'Namaste Pranshu üëã' :
-           h >= 17 && h < 21 ? 'Shubh Sham Pranshu üåÜ' : 'Raat Mubarak Pranshu üåô'
+           h >= 12 && h < 17 ? 'Namaste Pranshu Ì†ΩÌ±ã' :
+           h >= 17 && h < 21 ? 'Shubh Sham Pranshu Ì†ºÌºÜ' : 'Raat Mubarak Pranshu Ì†ºÌºô'
   })()}
 </div>
               <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai ‚Ä¢ Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
@@ -1177,7 +1224,7 @@ export default function Home() {
               ref={inpRef} value={inp}
               onChange={e => setInp(e.target.value)}
               onKeyDown={handleKey} onPaste={handlePaste}
-              placeholder={recording ? 'üéô Listening...' : 'Message JARVIS... (/ for commands)'}
+              placeholder={recording ? 'Ì†ºÌæô Listening...' : 'Message JARVIS... (/ for commands)'}
               disabled={streaming} rows={1}
               style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#ddeeff', fontSize: '14px', lineHeight: '1.5', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
@@ -1185,14 +1232,14 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button onClick={() => setCascadeOpen(true)}
                   style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
-                  {curMode.icon} {curMode.label}{forcedProvider ? <span style={{ fontSize: '9px', background: curMode.color + '22', borderRadius: '4px', padding: '1px 4px', color: curMode.color, marginLeft: '2px' }}>üìå</span> : <span style={{ opacity: 0.4, fontSize: '9px' }}>‚ñæ</span>}
+                  {curMode.icon} {curMode.label}{forcedProvider ? <span style={{ fontSize: '9px', background: curMode.color + '22', borderRadius: '4px', padding: '1px 4px', color: curMode.color, marginLeft: '2px' }}>Ì†ΩÌ≥å</span> : <span style={{ opacity: 0.4, fontSize: '9px' }}>‚ñæ</span>}
                 </button>
                 <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
                 <button onClick={() => photoRef.current?.click()} className="tool-btn"
-                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">üì∑</button>
+                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">Ì†ΩÌ≥∑</button>
                 <button onClick={toggleVoice} className="tool-btn"
                   style={{ background: recording ? 'rgba(248,113,113,0.08)' : 'rgba(0,229,255,0.03)', border: '1px solid', borderColor: recording ? 'rgba(248,113,113,0.25)' : 'rgba(0,229,255,0.07)', borderRadius: '6px', color: recording ? '#f87171' : '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', animation: recording ? 'recording 1.5s infinite' : 'none', transition: 'all 0.12s', fontFamily: 'inherit' }}>
-                  {recording ? '‚èπ' : 'üéô'}
+                  {recording ? '‚èπ' : 'Ì†ºÌæô'}
                 </button>
               </div>
 
