@@ -790,7 +790,7 @@ export default function Home() {
         body: JSON.stringify({
             message: text,
             history: newMsgs.slice(-8).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', content: x.content })),
-            chatMode: effectiveMode,
+            chatMode,
             forcedProvider: forcedProvider || undefined,
             userName: 'Pranshu',
             memoryPrompt: autoMemory.length
