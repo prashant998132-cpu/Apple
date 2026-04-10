@@ -1,8 +1,8 @@
-// app/api/stream/route.ts — JARVIS Streaming SSE v12
+// app/api/stream/route.ts — JARVIS Streaming SSE v13
 // CASCADE:
-// FLASH:  1→ Groq Llama 4 Scout 17B  2→ Together Llama 3.3 70B  3→ Gemini 2.0 Flash  4→ Pollinations  5→ Puter
+// FLASH:  1→ Groq Llama 4 Scout 17B  2→ Together Llama 3.3 70B  3→ Gemini 2.5 Flash  4→ Gemini 2.0 Flash Lite  5→ Pollinations  6→ Puter
 // THINK:  1→ Groq DeepSeek R1 70B    2→ Gemini 2.5 Flash        3→ Pollinations      4→ Puter
-// DEEP:   1→ Gemini 2.0 Flash+Tools  2→ Pollinations            3→ Puter
+// DEEP:   1→ Gemini 2.5 Flash+Tools  2→ Gemini 2.0 Flash        3→ Pollinations      4→ Puter
 // AUTO:   1→ Groq Llama 3.3 70B      2→ Gemini 2.5 Flash        3→ Together           4→ Pollinations  5→ Puter
 import { NextRequest } from 'next/server'
 import { routeTools } from '../../../lib/tools/external-router'
@@ -25,9 +25,7 @@ async function streamOpenAI(
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
         ...extraBody
       }),
-      signal: AbortSignal.timeout(28000)
-    })
-    if (!res.ok || !res.body) return false
+      signal: AbortSignal.timeout(20000)
     send({ type: 'start', provider: providerName })
     const reader = res.body.getReader()
     const dec = new TextDecoder()
@@ -132,68 +130,48 @@ RESPONSE RULES:
               parts: [{ text: m.content }]
             }))
             const gemConfig = { maxOutputTokens: maxTok, temperature: 0.7 }
-            // Try gemini-2.0-flash first (stable), fallback to 1.5-flash
-            try {
-              const _gemModel = 'gemini-2.0-flash'
-              const gemRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${gemKey}&alt=sse`,
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    system_instruction: { parts: [{ text: systemPrompt }] },
-                    contents: gemMsgs,
-                    generationConfig: gemConfig
-                  }),
-                  signal: AbortSignal.timeout(28000)
-                }
-              )
-              if (gemRes.ok && gemRes.body) {
-                replied = true
-                send({ type: 'start', provider: 'Gemini 2.0 Flash' })
-                const reader = gemRes.body.getReader()
-                const dec = new TextDecoder()
-                let buf = ''
+
+            // Helper: stream one Gemini model
+            const tryGemini = async (modelId: string, label: string, timeoutMs: number): Promise<boolean> => {
+              try {
+                const r = await fetch(
+                  `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${gemKey}&alt=sse`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      system_instruction: { parts: [{ text: systemPrompt }] },
+                      contents: gemMsgs,
+                      generationConfig: gemConfig
+                    }),
+                    signal: AbortSignal.timeout(timeoutMs)
+                  }
+                )
+                if (!r.ok || !r.body) return false
+                send({ type: 'start', provider: label })
+                const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = ''
                 while (true) {
-                  const { done, value } = await reader.read()
-                  if (done) break
+                  const { done, value } = await reader.read(); if (done) break
                   buf += dec.decode(value, { stream: true })
                   const lines = buf.split('\n'); buf = lines.pop() || ''
                   for (const line of lines) {
                     if (!line.startsWith('data: ')) continue
-                    const raw = line.slice(6).trim()
-                    if (!raw || raw === '[DONE]') continue
-                    try {
-                      const text = JSON.parse(raw).candidates?.[0]?.content?.parts?.[0]?.text || ''
-                      if (text) send({ type: 'token', text })
-                    } catch { /* skip */ }
+                    const raw = line.slice(6).trim(); if (!raw || raw === '[DONE]') continue
+                    try { const text = JSON.parse(raw).candidates?.[0]?.content?.parts?.[0]?.text || ''; if (text) send({ type: 'token', text }) } catch { /* skip */ }
                   }
                 }
-                send({ type: 'done' })
-              }
-            } catch {
-              // Try 1.5-flash as fallback
-              try {
-                const gem15 = await fetch(
-                  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${gemKey}&alt=sse`,
-                  { method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ system_instruction:{parts:[{text:systemPrompt}]}, contents:gemMsgs, generationConfig:gemConfig }),
-                    signal: AbortSignal.timeout(25000)
-                  }
-                )
-                if(gem15.ok && gem15.body){
-                  replied=true; send({type:'start',provider:'Gemini 1.5 Flash'})
-                  const rd=gem15.body.getReader(); const dc=new TextDecoder(); let b=''
-                  while(true){ const {done,value}=await rd.read(); if(done)break; b+=dc.decode(value,{stream:true})
-                    const ls=b.split('\n');b=ls.pop()||''
-                    for(const l of ls){ if(!l.startsWith('data: '))continue; const rw=l.slice(6).trim(); if(!rw||rw==='[DONE]')continue
-                      try{const t=JSON.parse(rw).candidates?.[0]?.content?.parts?.[0]?.text||'';if(t)send({type:'token',text:t})}catch{}
-                    }
-                  }
-                  send({type:'done'})
-                }
-              } catch { /* 1.5 also failed */ }
+                send({ type: 'done' }); return true
+              } catch { return false }
             }
+
+            // 2a. gemini-2.5-flash (primary — fastest & smartest)
+            if (!replied) replied = await tryGemini('gemini-2.5-flash', 'Gemini 2.5 Flash', 15000)
+            // 2b. gemini-2.0-flash (stable fallback)
+            if (!replied) replied = await tryGemini('gemini-2.0-flash', 'Gemini 2.0 Flash', 15000)
+            // 2c. gemini-2.0-flash-lite (ultra-fast last resort)
+            if (!replied) replied = await tryGemini('gemini-2.0-flash-lite', 'Gemini 2.0 Flash Lite', 12000)
+            // 2d. gemini-1.5-flash (oldest but most stable)
+            if (!replied) replied = await tryGemini('gemini-1.5-flash', 'Gemini 1.5 Flash', 12000)
           }
         }
 
@@ -244,7 +222,7 @@ RESPONSE RULES:
                 max_tokens: maxTok,
                 stream: true
               }),
-              signal: AbortSignal.timeout(28000)
+              signal: AbortSignal.timeout(20000)
             })
             if (coRes.ok && coRes.body) {
               replied = true
@@ -298,7 +276,7 @@ RESPONSE RULES:
                 model: orModel, stream: true, max_tokens: maxTok,
                 messages: [{ role: 'system', content: systemPrompt }, ...messages]
               }),
-              signal: AbortSignal.timeout(30000)
+              signal: AbortSignal.timeout(22000)
             })
             if (orRes.ok && orRes.body) {
               replied = true
@@ -349,7 +327,7 @@ RESPONSE RULES:
                   parameters: { max_new_tokens: maxTok, return_full_text: false },
                   stream: false
                 }),
-                signal: AbortSignal.timeout(25000)
+                signal: AbortSignal.timeout(18000)
               }
             )
             if (hfRes.ok) {
@@ -377,7 +355,7 @@ RESPONSE RULES:
                 messages: [{ role: 'system', content: systemPrompt }, ...messages],
                 seed: Math.floor(Math.random() * 9999)
               }),
-              signal: AbortSignal.timeout(30000)
+              signal: AbortSignal.timeout(22000)
             })
             if (polRes.ok && polRes.body) {
               replied = true
@@ -408,7 +386,7 @@ RESPONSE RULES:
         if (!replied && shouldRun('pollinations')) {
           try {
             const url = `https://text.pollinations.ai/${encodeURIComponent(message)}?model=openai&seed=${Date.now()}&system=${encodeURIComponent(systemPrompt.slice(0,200))}`
-            const r = await fetch(url, { signal: AbortSignal.timeout(25000) })
+            const r = await fetch(url, { signal: AbortSignal.timeout(18000) })
             if (r.ok) {
               const text = await r.text()
               if (text) {
@@ -429,8 +407,10 @@ RESPONSE RULES:
 
       } catch (err: any) {
         try {
+          const isTimeout = err?.name === 'TimeoutError' || (err?.message || '').includes('timeout')
+          const errMsg = isTimeout ? 'All providers timed out — try again in a moment.' : (err?.message || 'Unknown error')
           controller.enqueue(encoder.encode(
-            `data: ${JSON.stringify({ type: 'error', message: err?.message || 'Unknown error' })}\n\n`
+            `data: ${JSON.stringify({ type: 'error', message: errMsg })}\n\n`
           ))
         } catch { /* stream already closed */ }
       } finally {
