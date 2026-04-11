@@ -490,6 +490,7 @@ export default function Home() {
   const [contextMsg, setContextMsg] = useState<string | null>(null)
   const [autoMemory, setAutoMemory] = useState<string[]>([])  // auto-saved facts
   const [memBadge, setMemBadge] = useState(false)             // "memory saved" flash
+  const [moodGlow, setMoodGlow] = useState('#00e5ff')
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inpRef = useRef<HTMLTextAreaElement>(null)
@@ -806,6 +807,69 @@ export default function Home() {
     const newMsgs = [...msgs, userMsg]
     setMsgs(newMsgs)
 
+    if (/^\/run (.+)/i.test(text)) {
+      const jsCode = text.slice(text.indexOf(' ')+1).trim()
+      const logs: string[] = []
+      const origLog = console.log
+      try {
+        console.log = (...a: any[]) => { logs.push(a.map(String).join(' ')); origLog(...a) }
+        // eslint-disable-next-line no-new-func
+        const fn = new Function(jsCode)
+        const result = fn()
+        console.log = origLog
+        const out = logs.length ? logs.join('\n') : (result !== undefined ? String(result) : '(void — no output)')
+        setMsgs(m => [...m,
+          { id: uid(), role: 'user', content: '/run ' + jsCode, ts: Date.now() },
+          { id: uid(), role: 'assistant', content: '\u25B6 **Output:**\n```\n' + out + '\n```\n\n_JS executed in your browser — zero API cost. Try: /run Date.now()_', ts: Date.now() }
+        ])
+      } catch(e: any) {
+        console.log = origLog
+        setMsgs(m => [...m,
+          { id: uid(), role: 'user', content: '/run ' + jsCode, ts: Date.now() },
+          { id: uid(), role: 'assistant', content: '\u274C **Error:** `' + e.message + '`\n\nTip: `/run 2**10` or `/run [1,2,3].map(x=>x*2).join(", ")`', ts: Date.now() }
+        ])
+      }
+      return
+    }
+
+    if (t === '/cards' || t === '/flashcards') {
+      const lastAI = [...msgs].reverse().find(m => m.role === 'assistant' && m.content.length > 50)
+      if (!lastAI) {
+        setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: '\u274C Pehle koi AI reply hona chahiye jisse cards banaun.', ts: Date.now() }])
+        return
+      }
+      const cardMsgs: Msg[] = [...msgs, { id: uid(), role: 'user', content: '/cards', ts: Date.now() }]
+      setMsgs(cardMsgs); setStreaming(true); setStreamProv('Card Generator')
+      try {
+        const prompt = encodeURIComponent('Generate exactly 5 flashcards from this text as numbered Q&A. Format:\nQ1: question\nA1: answer\n\nText: ' + lastAI.content.slice(0,600))
+        const r = await fetch('https://text.pollinations.ai/' + prompt, { signal: AbortSignal.timeout(15000) })
+        const raw = await r.text()
+        const clean = raw.replace(/```[\s\S]*?```/g,'').trim()
+        setMsgs([...cardMsgs, { id: uid(), role: 'assistant', content: '\uD83C\uDFAF **Flashcards Generated!**\n\n' + clean + '\n\n_Tip: /cards dobara type karo for new set!_', ts: Date.now() }])
+      } catch {
+        setMsgs([...cardMsgs, { id: uid(), role: 'assistant', content: '\u26A0\uFE0F Cards generate nahi ho payi. Dobara try karo.', ts: Date.now() }])
+      }
+      setStreaming(false); setStreamText(''); setStreamProv('')
+      return
+    }
+
+    if (t === '/roast') {
+      const lastUser = [...msgs].reverse().find(m => m.role === 'user')
+      if (!lastUser) { setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: 'Roast kya karein? Pehle kuch toh likho! \uD83D\uDE02', ts: Date.now() }]); return }
+      const roastMsgs: Msg[] = [...msgs, { id: uid(), role: 'user', content: '/roast', ts: Date.now() }]
+      setMsgs(roastMsgs); setStreaming(true); setStreamProv('Roast Mode \uD83D\uDD25')
+      try {
+        const roastPrompt = encodeURIComponent('You are a savage but friendly roast master. Roast this message in funny Hinglish (Hindi+English mix), max 3 lines, no offensive content, keep it playful: "' + lastUser.content.slice(0,200) + '"')
+        const r = await fetch('https://text.pollinations.ai/' + roastPrompt, { signal: AbortSignal.timeout(12000) })
+        const roast = await r.text()
+        setMsgs([...roastMsgs, { id: uid(), role: 'assistant', content: '\uD83D\uDD25 **Roast incoming...**\n\n' + roast.trim() + '\n\n_No hard feelings! \uD83D\uDE02_', ts: Date.now() }])
+      } catch {
+        setMsgs([...roastMsgs, { id: uid(), role: 'assistant', content: 'Roast mode crash ho gaya... aap khud hi roasty ho! \uD83D\uDE02', ts: Date.now() }])
+      }
+      setStreaming(false); setStreamText(''); setStreamProv('')
+      return
+    }
+
     if (/image banao|photo banao|generate image|draw|wallpaper|sketch|create image/i.test(t)) {
       const prompt = text.replace(/image banao|photo banao|generate image|draw|wallpaper|sketch|create image/gi, '').trim() || text
       const seed = Math.floor(Math.random() * 999999)
@@ -884,6 +948,15 @@ export default function Home() {
       speak(full)
       awardXP('chat_message')
       setSuggestions(getSmartSuggestions(full, text))
+      // Mood ambient glow
+      const moodTxt = full.toLowerCase()
+      setMoodGlow(
+        /happy|great|amazing|perfect|haan|bilkul|zabardast|mast|awesome|\u0916\u0941\u0936|badhiya/.test(moodTxt) ? '#34d399' :
+        /sorry|sad|error|fail|problem|tension|nahi|mushkil|issue|bug/.test(moodTxt) ? '#f87171' :
+        /think|explain|analyze|calculate|theorem|formula|samjhao|kyun|kaise|logic/.test(moodTxt) ? '#a78bfa' :
+        /news|weather|today|aaj|khabar|search|found|result/.test(moodTxt) ? '#fbbf24' :
+        '#00e5ff'
+      )
 
       // Auto-memory: extract facts every 6 messages
       const allMsgs = [...newMsgs, { role: 'assistant', content: full }]
@@ -1032,7 +1105,7 @@ export default function Home() {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: '#080d18', color: '#ddeeff', fontFamily: "'Inter','Noto Sans Devanagari',sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse 80% 40% at 50% 0%, ' + moodGlow + '11 0%, #080d18 65%)', transition: 'background 1.5s ease', color: '#ddeeff', fontFamily: "'Inter','Noto Sans Devanagari',sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
@@ -1081,7 +1154,7 @@ export default function Home() {
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.61</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.62</div>
           </div>
         </div>
 
