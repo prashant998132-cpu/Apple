@@ -226,10 +226,10 @@ function ImageMsg({ url, prompt }: { url: string; prompt: string }) {
 }
 
 const MODES: Array<{ id: ChatMode; label: string; desc: string; color: string; icon: string }> = [
-  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: 'í ¾í´–' },
+  { id: 'auto',  label: 'Auto',  desc: 'Smart routing', color: '#00e5ff', icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
   { id: 'flash', label: 'Flash', desc: 'Fastest speed',  color: '#f87171', icon: 'âš¡' },
-  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: 'í ¾í· ' },
-  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: 'í ½í´¬' },
+  { id: 'think', label: 'Think', desc: 'Deep reasoning', color: '#a78bfa', icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { id: 'deep',  label: 'Deep',  desc: '46 tools',       color: '#34d399', icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
 ]
 
 const CASCADES: Record<ChatMode, Array<{ num: number; key: string; model: string; speed: string; note: string }>> = {
@@ -283,7 +283,7 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
           <div style={{ fontSize: '12px', color: curMode.color, fontWeight: 700, marginBottom: '2px' }}>{curMode.icon} {curMode.label} Mode â€” Cascade Priority</div>
           <div style={{ fontSize: '11px', color: '#1e3248' }}>
             {forcedProvider
-              ? 'í ½í³Œ Provider locked â€” tap row again to unlock'
+              ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Provider locked â€” tap row again to unlock'
               : 'Tap a provider to pin/force it â€¢ auto-fallback on error'}
           </div>
         </div>
@@ -307,7 +307,7 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
                 </span>
                 <span style={{ fontSize: '13px', color: isPinned ? '#e8f4ff' : c.num === 1 ? '#c4dff0' : '#3a6080', fontWeight: isPinned ? 700 : c.num === 1 ? 600 : 400 }}>{c.model}</span>
                 <span style={{ fontSize: '11px', color: isPinned ? curMode.color + 'aa' : '#1e3248', textAlign: 'right' }}>{c.speed}</span>
-                <span style={{ fontSize: '13px', textAlign: 'right', color: isPinned ? curMode.color : '#1a2a38' }}>{isPinned ? 'í ½í³Œ' : 'Â·'}</span>
+                <span style={{ fontSize: '13px', textAlign: 'right', color: isPinned ? curMode.color : '#1a2a38' }}>{isPinned ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' : 'Â·'}</span>
               </div>
             )
           })}
@@ -315,7 +315,7 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
         {forcedProvider && (
           <button onClick={() => onForceProvider(null)}
             style={{ marginTop: '10px', width: '100%', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.18)', borderRadius: '8px', color: '#f87171', cursor: 'pointer', padding: '8px', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }}>
-            í ½í´“ Unlock â€” resume auto cascade
+            ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Unlock â€” resume auto cascade
           </button>
         )}
         <div style={{ marginTop: '8px', fontSize: '10px', color: '#0a1820', textAlign: 'center' }}>Tap outside to close</div>
@@ -325,97 +325,97 @@ function CascadeDrawer({ mode, onClose, onChange, forcedProvider, onForceProvide
 }
 
 const CMDS = [
-  { cmd: '/clear',    desc: 'Chat clear karo',      icon: 'í ½í·‘ï¸' },
-  { cmd: '/pass',     desc: 'Strong password banao', icon: 'í ½í´' },
-  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: 'í ¼í¼¸' },
-  { cmd: '/era',      desc: 'Era page pe jao',       icon: 'í ½í²—' },
-  { cmd: '/mood',     desc: 'Mood tracker',          icon: 'í ½í¸Š' },
-  { cmd: '/notes',    desc: 'Quick notes',           icon: 'í ½í³' },
+  { cmd: '/clear',    desc: 'Chat clear karo',      icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸' },
+  { cmd: '/pass',     desc: 'Strong password banao', icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/luna',     desc: 'Luna page pe jao',      icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/era',      desc: 'Era page pe jao',       icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/mood',     desc: 'Mood tracker',          icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/notes',    desc: 'Quick notes',           icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
   { cmd: '/timer',    desc: 'Pomodoro timer',        icon: 'â±ï¸' },
-  { cmd: '/dash',     desc: 'Dashboard',             icon: 'í ½í³Š' },
-  { cmd: '/calc',     desc: 'Calculator',            icon: 'í ½í´¢' },
-  { cmd: '/habits',   desc: 'Habit tracker',         icon: 'í ½í²ª' },
+  { cmd: '/dash',     desc: 'Dashboard',             icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/calc',     desc: 'Calculator',            icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/habits',   desc: 'Habit tracker',         icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
   { cmd: '/todo',     desc: 'Todo list',             icon: 'âœ…' },
-  { cmd: '/qr',       desc: 'QR generator',          icon: 'í ½í³±' },
-  { cmd: '/focus',    desc: 'Focus mode',            icon: 'í ¼í¾¯' },
-  { cmd: '/study',    desc: 'Study mode',            icon: 'í ½í³š' },
+  { cmd: '/qr',       desc: 'QR generator',          icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/focus',    desc: 'Focus mode',            icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
+  { cmd: '/study',    desc: 'Study mode',            icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
   { cmd: '/xp',       desc: 'XP & Level',            icon: 'â­' },
-  { cmd: '/tools',    desc: 'All Tools',             icon: 'í ½í» ï¸' },
+  { cmd: '/tools',    desc: 'All Tools',             icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸' },
   { cmd: '/write',    desc: 'AI Writer',             icon: 'âœï¸' },
   { cmd: '/bookmarks',desc: 'Starred messages',       icon: 'â­' },
-  { cmd: '/export',   desc: 'Export JSON',            icon: 'í ½í²¾' },
+  { cmd: '/export',   desc: 'Export JSON',            icon: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' },
 ]
 
 // â”€â”€ Smart Dynamic Prompts â€” time/day aware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // All prompt pools by context
 const ALL_PROMPTS = {
   morning: [
-    { l: 'í ¼í¼… Subah ki news',      m: 'aaj subah ki top headlines kya hain?',          cat: 'news' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Subah ki news',      m: 'aaj subah ki top headlines kya hain?',          cat: 'news' },
     { l: 'â˜€ï¸ Rewa mausam',         m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
-    { l: 'í ½í²ª Motivation do',       m: 'mujhe aaj ke liye ek powerful motivation do',   cat: 'motivation' },
-    { l: 'í ½í³… Aaj ka plan',         m: 'mera aaj ka productive schedule banao',         cat: 'planning' },
-    { l: 'í ¾í·˜ Morning routine',     m: 'best morning routine batao jo energy de',       cat: 'health' },
-    { l: 'í ½í³° Headlines summary',   m: 'aaj ki top 5 khabar short mein batao',          cat: 'news' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Motivation do',       m: 'mujhe aaj ke liye ek powerful motivation do',   cat: 'motivation' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aaj ka plan',         m: 'mera aaj ka productive schedule banao',         cat: 'planning' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Morning routine',     m: 'best morning routine batao jo energy de',       cat: 'health' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Headlines summary',   m: 'aaj ki top 5 khabar short mein batao',          cat: 'news' },
     { l: 'â˜• Nashta idea',          m: 'quick healthy breakfast idea batao',            cat: 'health' },
-    { l: 'í ½í²¡ Aaj ka thought',      m: 'ek powerful thought of the day do',             cat: 'motivation' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aaj ka thought',      m: 'ek powerful thought of the day do',             cat: 'motivation' },
   ],
   afternoon: [
-    { l: 'í ½í´¢ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
-    { l: 'í ½í²» Python code',         m: 'Python mein ',                                  cat: 'code' },
-    { l: 'í ½í³– Topic samjhao',       m: 'samjhao mujhe: ',                               cat: 'study' },
-    { l: 'í ¼í¼ Translate karo',      m: 'Hindi mein translate karo: ',                   cat: 'language' },
-    { l: 'í ½í¶¼ï¸ Image banao',         m: 'image banao ',                                  cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Python code',         m: 'Python mein ',                                  cat: 'code' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Topic samjhao',       m: 'samjhao mujhe: ',                               cat: 'study' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Translate karo',      m: 'Hindi mein translate karo: ',                   cat: 'language' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Image banao',         m: 'image banao ',                                  cat: 'creative' },
     { l: 'âš¡ Code debug karo',     m: 'ye code fix karo: ',                            cat: 'code' },
-    { l: 'í ½í³ Essay likhao',        m: 'ek short essay likho topic: ',                  cat: 'study' },
-    { l: 'í ¾í·ª Science explain',     m: 'science concept explain karo: ',                cat: 'study' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Essay likhao',        m: 'ek short essay likho topic: ',                  cat: 'study' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Science explain',     m: 'science concept explain karo: ',                cat: 'study' },
   ],
   evening: [
-    { l: 'í ½í³° Sham ki news',        m: 'aaj ki top news kya rahi?',                     cat: 'news' },
-    { l: 'í ¼í¾¬ Movie recommend',     m: 'aaj raat ke liye ek achhi movie recommend karo', cat: 'entertainment' },
-    { l: 'í ¼í½½ï¸ Dinner idea',         m: 'aaj raat kya banayein? simple recipe batao',    cat: 'health' },
-    { l: 'í ½í¶¼ï¸ Art banao',           m: 'ek creative wallpaper image banao: ',           cat: 'creative' },
-    { l: 'í ½í²¡ New ideas do',        m: 'mujhe ek creative project idea do',             cat: 'creative' },
-    { l: 'í ¼í¾µ Music mood',          m: 'iske liye songs suggest karo: ',                cat: 'entertainment' },
-    { l: 'í ½í²ª Workout plan',        m: 'aaj raat ke liye quick workout plan do',        cat: 'health' },
-    { l: 'í ¼í¼ Tech news',           m: 'aaj ki latest tech news kya hai?',              cat: 'news' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Sham ki news',        m: 'aaj ki top news kya rahi?',                     cat: 'news' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Movie recommend',     m: 'aaj raat ke liye ek achhi movie recommend karo', cat: 'entertainment' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Dinner idea',         m: 'aaj raat kya banayein? simple recipe batao',    cat: 'health' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Art banao',           m: 'ek creative wallpaper image banao: ',           cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ New ideas do',        m: 'mujhe ek creative project idea do',             cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Music mood',          m: 'iske liye songs suggest karo: ',                cat: 'entertainment' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Workout plan',        m: 'aaj raat ke liye quick workout plan do',        cat: 'health' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Tech news',           m: 'aaj ki latest tech news kya hai?',              cat: 'news' },
   ],
   night: [
-    { l: 'í ¼í¼™ Raat ki baat',        m: 'koi interesting fact batao jo mind blow kare',  cat: 'fun' },
-    { l: 'í ½í³š Story sunao',         m: 'mujhe ek interesting short story sunao',        cat: 'entertainment' },
-    { l: 'í ¾í·  Quiz khelo',          m: 'mujhse ek interesting quiz lo',                 cat: 'fun' },
-    { l: 'í ½í²­ Deep question',       m: 'ek deep philosophical question ka jawab do: ',  cat: 'philosophy' },
-    { l: 'í ¼í¼Œ Space baat',          m: 'universe ke baare mein kuch mind-blowing batao', cat: 'science' },
-    { l: 'í ½í¶¼ï¸ Dream image',        m: 'ek surreal dreamy night sky image banao',        cat: 'creative' },
-    { l: 'í ¼í¾­ Poem likho',          m: 'ek beautiful Hinglish poem likho: ',            cat: 'creative' },
-    { l: 'í ½í¸´ Neend tips',          m: 'achhi neend ke liye tips do',                   cat: 'health' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Raat ki baat',        m: 'koi interesting fact batao jo mind blow kare',  cat: 'fun' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Story sunao',         m: 'mujhe ek interesting short story sunao',        cat: 'entertainment' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Quiz khelo',          m: 'mujhse ek interesting quiz lo',                 cat: 'fun' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Deep question',       m: 'ek deep philosophical question ka jawab do: ',  cat: 'philosophy' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Space baat',          m: 'universe ke baare mein kuch mind-blowing batao', cat: 'science' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Dream image',        m: 'ek surreal dreamy night sky image banao',        cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Poem likho',          m: 'ek beautiful Hinglish poem likho: ',            cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Neend tips',          m: 'achhi neend ke liye tips do',                   cat: 'health' },
   ],
   // day-specific bonus prompts
   monday: [
-    { l: 'í ½í³‹ Week plan banao',     m: 'is hafte ka productive plan banao mere liye',   cat: 'planning' },
-    { l: 'í ¼í¾¯ Goals set karo',      m: 'is hafte ke top 3 goals set karne mein help karo', cat: 'planning' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Week plan banao',     m: 'is hafte ka productive plan banao mere liye',   cat: 'planning' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Goals set karo',      m: 'is hafte ke top 3 goals set karne mein help karo', cat: 'planning' },
   ],
   friday: [
-    { l: 'í ¼í¾‰ Weekend plan',        m: 'is weekend ke liye fun plan do',                cat: 'entertainment' },
-    { l: 'í ¼í¾¬ Binge list',          m: 'weekend mein dekhne layak web series recommend karo', cat: 'entertainment' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Weekend plan',        m: 'is weekend ke liye fun plan do',                cat: 'entertainment' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Binge list',          m: 'weekend mein dekhne layak web series recommend karo', cat: 'entertainment' },
   ],
   saturday: [
-    { l: 'í ¼í¿–ï¸ Outing idea',        m: 'aaj ghumne ke liye Rewa ke aas paas koi jagah batao', cat: 'travel' },
-    { l: 'í ½í³¸ Photo idea',          m: 'ek creative photo wallpaper banao sunset theme',  cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Outing idea',        m: 'aaj ghumne ke liye Rewa ke aas paas koi jagah batao', cat: 'travel' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Photo idea',          m: 'ek creative photo wallpaper banao sunset theme',  cat: 'creative' },
   ],
   sunday: [
-    { l: 'í ½í´® Week ahead',          m: 'aane wale hafte ki tayari kaise karein?',        cat: 'planning' },
-    { l: 'í ¾í·¹ Organize karo',       m: 'apni life organize karne ke tips do',            cat: 'planning' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Week ahead',          m: 'aane wale hafte ki tayari kaise karein?',        cat: 'planning' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Organize karo',       m: 'apni life organize karne ke tips do',            cat: 'planning' },
   ],
   // always-available utility
   utility: [
-    { l: 'í ¼í¼¡ï¸ Mausam batao',        m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
-    { l: 'í ½í²± Crypto rate',         m: 'Bitcoin aur Ethereum ka aaj ka rate kya hai?',  cat: 'finance' },
-    { l: 'í ½í³Š Stock market',        m: 'aaj Sensex aur Nifty kaise hai?',               cat: 'finance' },
-    { l: 'í ½í´ Password banao',      m: '/pass',                                          cat: 'utility' },
-    { l: 'í ¼í¼ Translate',           m: 'Hindi mein translate karo: ',                   cat: 'language' },
-    { l: 'í ½í¶¼ï¸ Image banao',         m: 'image banao ',                                  cat: 'creative' },
-    { l: 'í ½í³° Aaj ki khabar',       m: 'aaj ki top news kya hai?',                      cat: 'news' },
-    { l: 'í ½í´¢ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Mausam batao',        m: 'Rewa ka aaj ka mausam kya hai?',                cat: 'weather' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Crypto rate',         m: 'Bitcoin aur Ethereum ka aaj ka rate kya hai?',  cat: 'finance' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Stock market',        m: 'aaj Sensex aur Nifty kaise hai?',               cat: 'finance' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Password banao',      m: '/pass',                                          cat: 'utility' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Translate',           m: 'Hindi mein translate karo: ',                   cat: 'language' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸ Image banao',         m: 'image banao ',                                  cat: 'creative' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aaj ki khabar',       m: 'aaj ki top news kya hai?',                      cat: 'news' },
+    { l: 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Math solve',          m: 'solve karo: ',                                  cat: 'study' },
   ]
 }
 
@@ -606,7 +606,7 @@ export default function Home() {
     if (!msgs.length) return
     const lines = msgs.map(m => {
       const ts  = new Date(m.ts).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-      const who = m.role === 'user' ? 'í ½í±¤ You' : 'í ¾í´– JARVIS'
+      const who = m.role === 'user' ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ You' : 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ JARVIS'
       return '[' + ts + '] ' + who + ':\n' + m.content
     }).join('\n\n---\n\n')
     const blob = new Blob([lines], { type: 'text/plain; charset=utf-8' })
@@ -699,7 +699,7 @@ export default function Home() {
       mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
-        setInp('í ¼í¾™ Transcribing...')
+        setInp('ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Transcribing...')
         const fd = new FormData()
         fd.append('audio', new Blob(chunks, { type: mimeType }), 'audio.webm')
         try {
@@ -782,7 +782,7 @@ export default function Home() {
     }
     if (t === '/pass' || t === '/password') {
       const p = genPass()
-      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `í ½í´ **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
+      setMsgs(m => [...m, { id: uid(), role: 'user', content: text, ts: Date.now() }, { id: uid(), role: 'assistant', content: `ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ **Strong Password Generated:**\n\n\`${p}\`\n\n18 characters, mixed case + symbols. Copy karo!`, ts: Date.now() }])
       return
     }
     const PAGE_CMDS: Record<string, string> = { '/luna': '/luna', '/era': '/era', '/mood': '/mood', '/notes': '/notes', '/timer': '/timer', '/dash': '/dashboard', '/calc': '/calculator', '/habits': '/habits', '/todo': '/todo', '/qr': '/qr', '/focus': '/focus', '/study': '/study', '/xp': '/xp', '/tools': '/tools', '/write': '/write' }
@@ -879,7 +879,7 @@ export default function Home() {
           } catch {}
         }
       }
-      const finalMsg: Msg = { id: uid(), role: 'assistant', content: full || 'No response', thinking: think.replace(/<\/?think>/g, '').trim() || undefined, provider: prov || undefined, ts: Date.now() }
+      const finalMsg: Msg = { id: uid(), role: 'assistant', content: full || 'âš ï¸ Reply nahi mila. Mode switch karke retry karo.', thinking: think.replace(/<\/?think>/g, '').trim() || undefined, provider: prov || undefined, ts: Date.now() }
       setMsgs([...newMsgs, finalMsg])
       speak(full)
       awardXP('chat_message')
@@ -945,9 +945,9 @@ export default function Home() {
               <div style={{ maxWidth: '82%', position: 'relative' }}>
                 {isContextOpen && (
                   <div style={{ position: 'absolute', top: '0', right: '110%', background: 'rgba(8,13,24,0.98)', border: '1px solid rgba(0,229,255,0.12)', borderRadius: '10px', padding: '4px', zIndex: 20, display: 'flex', gap: '4px', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>í ½í³‹ Copy</button>
+                    <button onClick={() => { navigator.clipboard?.writeText(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Copy</button>
                     <button onClick={() => { setInp(msg.content); setContextMsg(null) }} style={{ background: 'none', border: 'none', color: '#7ca5c0', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>âœï¸ Edit</button>
-                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>í ½í·‘ï¸</button>
+                    <button onClick={() => deleteMsg(msg.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px', fontFamily: 'inherit' }}>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸</button>
                   </div>
                 )}
                 <div onContextMenu={e => { e.preventDefault(); setContextMsg(isContextOpen ? null : msg.id) }}
@@ -981,14 +981,14 @@ export default function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '7px', flexWrap: 'wrap' }}>
                   {!msg.imageUrl && !msg.videoUrl && <CopyBtn text={msg.content} />}
                   {tts && !msg.imageUrl && (
-                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>í ½í´Š Suno</button>
+                    <button onClick={() => speak(msg.content)} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '5px', color: '#00e5ff55', cursor: 'pointer', fontSize: '12px', padding: '3px 8px', fontFamily: 'inherit' }}>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Suno</button>
                   )}
                   <button onClick={() => toggleBookmark(msg.id)}
                       title={msg.bookmarked ? 'Remove bookmark' : 'Bookmark'}
                       style={{ background: msg.bookmarked ? 'rgba(251,191,36,0.12)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 5px', borderRadius: '5px', opacity: msg.bookmarked ? 1 : 0.28, color: '#fbbf24', transition: 'all 0.12s' }}>
                       {msg.bookmarked ? 'â­' : 'â˜†'}
                     </button>
-                  {['í ½í±','â¤ï¸','í ½í¸‚','í ½í²¯'].map(em => (
+                  {['ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½','â¤ï¸','ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½','ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'].map(em => (
                     <button key={em} onClick={() => addReaction(msg.id, em)}
                       style={{ background: msg.reactions?.includes(em) ? 'rgba(255,255,255,0.1)' : 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', borderRadius: '5px', opacity: msg.reactions?.includes(em) ? 1 : 0.25, transition: 'all 0.12s' }}>
                       {em}
@@ -997,14 +997,14 @@ export default function Home() {
                   {!msg.imageUrl && !msg.videoUrl && msg.content.split(/\s+/).length > 150 && (
                     <span style={{ fontSize: '10px', color: '#1e3248', padding: '1px 4px' }}
                       title='Estimated reading time'>
-                      í ½í³– {Math.ceil(msg.content.split(/\s+/).length / 200)}min
+                      ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {Math.ceil(msg.content.split(/\s+/).length / 200)}min
                     </span>
                   )}
                   {msg.provider && (
                     <button onClick={() => setCascadeOpen(true)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: '#1e3248', marginLeft: 'auto', padding: '2px 5px', borderRadius: '4px', fontFamily: 'inherit', transition: 'color 0.1s' }}
                       title="Model cascade">
-                      í ¾í´– {msg.provider} â–¾
+                      ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {msg.provider} â–¾
                     </button>
                   )}
                   {!msg.provider && <span style={{ fontSize: '10px', color: '#0e2030', marginLeft: 'auto' }}>{timeStr(msg.ts)}</span>}
@@ -1064,7 +1064,7 @@ export default function Home() {
       {isDragging && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,229,255,0.06)', border: '2px dashed rgba(0,229,255,0.3)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{ fontSize: '18px', color: '#00e5ff88', fontWeight: 700, textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>í ½í¶¼ï¸</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¸</div>
             Drop image here to analyze
           </div>
         </div>
@@ -1081,7 +1081,7 @@ export default function Home() {
           <div style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #003fa3, #00e5ff)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: '#000', boxShadow: '0 0 10px rgba(0,229,255,0.25)', flexShrink: 0 }}>J</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#ddeeff', letterSpacing: '0.8px', lineHeight: 1.1 }}>JARVIS</div>
-            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.60</div>
+            <div style={{ fontSize: '9px', color: '#1a3048', letterSpacing: '2px' }}>LIFE OS v10.61</div>
           </div>
         </div>
 
@@ -1089,19 +1089,19 @@ export default function Home() {
           <button onClick={() => setShowBookmarks(v => !v)} className="tool-btn"
             style={{ background: showBookmarks ? 'rgba(251,191,36,0.1)' : 'none', border: '1px solid', borderColor: showBookmarks ? 'rgba(251,191,36,0.3)' : 'transparent', borderRadius: '6px', color: showBookmarks ? '#fbbf24' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Bookmarks">{showBookmarks ? 'â­' : 'â˜†'}</button>
           <button onClick={() => setSearchOpen(v => !v)} className="tool-btn"
-            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">í ½í´</button>
+            style={{ background: searchOpen ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: searchOpen ? 'rgba(0,229,255,0.2)' : 'transparent', borderRadius: '6px', color: searchOpen ? '#00e5ff' : '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.12s' }} title="Search (Ctrl+F)">ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</button>
           <button onClick={toggleTts} className="tool-btn"
             style={{ background: tts ? 'rgba(0,229,255,0.08)' : 'none', border: '1px solid', borderColor: tts ? 'rgba(0,229,255,0.2)' : 'rgba(255,255,255,0.04)', borderRadius: '6px', color: tts ? '#00e5ff' : '#1e3248', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.12s' }}>
-            {tts ? 'í ½í´Š ON' : 'í ½í´‡ TTS'}
+            {tts ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ON' : 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ TTS'}
           </button>
           <button onClick={clearChat} className="tool-btn"
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#2a5070', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>Clear</button>
           <button onClick={exportChat} className="tool-btn" title="Export chat as .txt"
-            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>í ½í²¾</button>
+            style={{ background: 'none', border: '1px solid rgba(0,229,255,0.08)', borderRadius: '6px', color: '#1e4a60', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.12s' }}>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</button>
           <button title={'Memory: ' + autoMemory.length + ' facts saved'}
             onClick={() => { if (autoMemory.length && confirm('Memory clear karein? (' + autoMemory.length + ' facts)')) { setAutoMemory([]); try { localStorage.removeItem(MEMSTORE) } catch {} } }}
             style={{ position: 'relative', background: memBadge ? 'rgba(52,211,153,0.1)' : 'none', border: '1px solid ' + (memBadge ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.04)'), borderRadius: '6px', color: autoMemory.length ? '#34d399' : '#1a2a38', cursor: 'pointer', padding: '5px 7px', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.3s' }}>
-            í ¾í· {autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
+            ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½{autoMemory.length > 0 && <span style={{ position: 'absolute', top: '-3px', right: '-3px', background: '#34d399', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700 }}>{autoMemory.length}</span>}
           </button>
         </div>
       </header>
@@ -1126,8 +1126,8 @@ export default function Home() {
   {(() => {
     const h = new Date().getHours()
     return h >= 5 && h < 12 ? 'Subah Bakhair Pranshu â˜€ï¸' :
-           h >= 12 && h < 17 ? 'Namaste Pranshu í ½í±‹' :
-           h >= 17 && h < 21 ? 'Shubh Sham Pranshu í ¼í¼†' : 'Raat Mubarak Pranshu í ¼í¼™'
+           h >= 12 && h < 17 ? 'Namaste Pranshu ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' :
+           h >= 17 && h < 21 ? 'Shubh Sham Pranshu ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' : 'Raat Mubarak Pranshu ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'
   })()}
 </div>
               <div style={{ fontSize: '12px', color: '#1e3248' }}>JARVIS ready hai â€¢ Type <code style={{ color: '#00e5ff55', background: 'rgba(0,229,255,0.06)', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/</code> for commands</div>
@@ -1224,7 +1224,7 @@ export default function Home() {
               ref={inpRef} value={inp}
               onChange={e => setInp(e.target.value)}
               onKeyDown={handleKey} onPaste={handlePaste}
-              placeholder={recording ? 'í ¼í¾™ Listening...' : 'Message JARVIS... (/ for commands)'}
+              placeholder={recording ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Listening...' : 'Message JARVIS... (/ for commands)'}
               disabled={streaming} rows={1}
               style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#ddeeff', fontSize: '14px', lineHeight: '1.5', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
@@ -1232,14 +1232,14 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button onClick={() => setCascadeOpen(true)}
                   style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: '6px', color: curMode.color, cursor: 'pointer', padding: '4px 8px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'inherit' }}>
-                  {curMode.icon} {curMode.label}{forcedProvider ? <span style={{ fontSize: '9px', background: curMode.color + '22', borderRadius: '4px', padding: '1px 4px', color: curMode.color, marginLeft: '2px' }}>í ½í³Œ</span> : <span style={{ opacity: 0.4, fontSize: '9px' }}>â–¾</span>}
+                  {curMode.icon} {curMode.label}{forcedProvider ? <span style={{ fontSize: '9px', background: curMode.color + '22', borderRadius: '4px', padding: '1px 4px', color: curMode.color, marginLeft: '2px' }}>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</span> : <span style={{ opacity: 0.4, fontSize: '9px' }}>â–¾</span>}
                 </button>
                 <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
                 <button onClick={() => photoRef.current?.click()} className="tool-btn"
-                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">í ½í³·</button>
+                  style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid rgba(0,229,255,0.07)', borderRadius: '6px', color: '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', transition: 'all 0.12s', fontFamily: 'inherit' }} title="Photo upload (or paste)">ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</button>
                 <button onClick={toggleVoice} className="tool-btn"
                   style={{ background: recording ? 'rgba(248,113,113,0.08)' : 'rgba(0,229,255,0.03)', border: '1px solid', borderColor: recording ? 'rgba(248,113,113,0.25)' : 'rgba(0,229,255,0.07)', borderRadius: '6px', color: recording ? '#f87171' : '#1e3a52', cursor: 'pointer', padding: '4px 8px', fontSize: '13px', animation: recording ? 'recording 1.5s infinite' : 'none', transition: 'all 0.12s', fontFamily: 'inherit' }}>
-                  {recording ? 'â¹' : 'í ¼í¾™'}
+                  {recording ? 'â¹' : 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'}
                 </button>
               </div>
 
